@@ -1,0 +1,746 @@
+{
+  "specVersion": 2,
+  "component": "Button",
+  "props": [
+    {
+      "name": "label",
+      "optional": false,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "icon",
+      "optional": true,
+      "type": "React.ReactNode",
+      "values": null
+    },
+    {
+      "name": "iconPosition",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "left",
+        "right"
+      ],
+      "default": "left"
+    },
+    {
+      "name": "variant",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "primary",
+        "secondary",
+        "outline",
+        "ghost"
+      ],
+      "default": "primary"
+    },
+    {
+      "name": "size",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "default": "medium"
+    },
+    {
+      "name": "onClick",
+      "optional": true,
+      "type": "(event: React.MouseEvent<HTMLButtonElement>) => void",
+      "values": null
+    },
+    {
+      "name": "type",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "button",
+        "submit",
+        "reset"
+      ],
+      "default": "button"
+    },
+    {
+      "name": "disabled",
+      "optional": true,
+      "type": "boolean",
+      "values": null,
+      "default": "false"
+    },
+    {
+      "name": "className",
+      "optional": true,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "ariaLabel",
+      "optional": true,
+      "type": "string",
+      "values": null
+    }
+  ],
+  "styleBlocks": [
+    {
+      "selector": ".button",
+      "kind": "base",
+      "ciaCalls": [
+        {
+          "fn": "flex",
+          "args": [
+            "$justify: center",
+            "$gap: xs"
+          ],
+          "property": "layout",
+          "state": "default"
+        },
+        {
+          "fn": "pad-asym",
+          "args": [
+            "xs",
+            "md"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "base",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "font-family",
+          "args": [
+            "primary"
+          ],
+          "property": "font-family",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-muted"
+          ],
+          "property": "background-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "lg"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "transition",
+          "args": [
+            "background-color",
+            "border-color",
+            "color",
+            "box-shadow"
+          ],
+          "property": "transition",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "background-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-emphasis"
+          ],
+          "property": "border-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "outline-color",
+          "state": "focus"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "box-shadow",
+          "state": "focus"
+        }
+      ]
+    },
+    {
+      "selector": ".icon",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "flex",
+          "args": [
+            "$justify: center"
+          ],
+          "property": "layout",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "transition",
+          "args": [
+            "color"
+          ],
+          "property": "transition",
+          "state": "default"
+        }
+      ]
+    },
+    {
+      "selector": ".primary",
+      "kind": "variant",
+      "prop": "variant",
+      "value": "primary",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "background-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-hover"
+          ],
+          "property": "background-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "border-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "outline-color",
+          "state": "focus"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "box-shadow",
+          "state": "focus"
+        }
+      ]
+    },
+    {
+      "selector": ".secondary",
+      "kind": "variant",
+      "prop": "variant",
+      "value": "secondary",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "action-secondary-default"
+          ],
+          "property": "background-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-secondary-default"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-secondary-hover"
+          ],
+          "property": "background-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-secondary-default"
+          ],
+          "property": "border-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "outline-color",
+          "state": "focus"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-secondary-default"
+          ],
+          "property": "box-shadow",
+          "state": "focus"
+        }
+      ]
+    },
+    {
+      "selector": ".outline",
+      "kind": "variant",
+      "prop": "variant",
+      "value": "outline",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-emphasis"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "background-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "outline-color",
+          "state": "focus"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "box-shadow",
+          "state": "focus"
+        }
+      ]
+    },
+    {
+      "selector": ".ghost",
+      "kind": "variant",
+      "prop": "variant",
+      "value": "ghost",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-subtle"
+          ],
+          "property": "background-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-subtle"
+          ],
+          "property": "border-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "outline-color",
+          "state": "focus"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "box-shadow",
+          "state": "focus"
+        }
+      ]
+    },
+    {
+      "selector": ".small",
+      "kind": "variant",
+      "prop": "size",
+      "value": "small",
+      "ciaCalls": [
+        {
+          "fn": "pad-asym",
+          "args": [
+            "2xs",
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "sm",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "2xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ]
+    },
+    {
+      "selector": ".medium",
+      "kind": "variant",
+      "prop": "size",
+      "value": "medium",
+      "ciaCalls": [
+        {
+          "fn": "pad-asym",
+          "args": [
+            "xs",
+            "md"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "base",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ]
+    },
+    {
+      "selector": ".large",
+      "kind": "variant",
+      "prop": "size",
+      "value": "large",
+      "ciaCalls": [
+        {
+          "fn": "pad-asym",
+          "args": [
+            "sm",
+            "lg"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "lg",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ]
+    },
+    {
+      "selector": "@include cia.mobile-only",
+      "kind": "other",
+      "ciaCalls": [
+        {
+          "fn": "space-raw",
+          "args": [
+            "2xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "xs",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "2xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "sm",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "2xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        },
+        {
+          "fn": "pad-asym",
+          "args": [
+            "xs",
+            "md"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "semibold",
+            "base",
+            "normal"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ]
+    }
+  ]
+}

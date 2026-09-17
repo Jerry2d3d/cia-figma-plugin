@@ -8,6 +8,33 @@ body {
   padding: 12px;
 }
 
+.app h1 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.panel {
+  border-top: 1px solid #e0e0e0;
+  padding: 10px 0;
+}
+
+.panel h2 {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.field {
+  display: block;
+  margin: 6px 0;
+}
+
+.field select,
+.field input {
+  display: block;
+  margin-top: 2px;
+  max-width: 100%;
+}
+
 .error {
   color: #d32f2f;
 }
@@ -15,4 +42,8 @@ body {
 .result ul {
   padding-left: 16px;
   margin: 4px 0;
+}
+
+.skipped {
+  color: #666;
 }
