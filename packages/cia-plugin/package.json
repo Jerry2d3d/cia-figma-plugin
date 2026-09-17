@@ -1,0 +1,46 @@
+{
+  "name": "@cia/figma-plugin",
+  "version": "0.0.0",
+  "description": "cia's own Figma plugin — reads/writes Figma Variables and components directly against the Plugin API",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "cross-env NODE_ENV=production webpack --mode=production",
+    "build:dev": "cross-env NODE_ENV=development webpack --mode=development",
+    "start": "cross-env webpack --mode=development --watch",
+    "lint": "eslint . --quiet --fix",
+    "lint:nofix": "eslint .",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.96.0",
+    "@swc/core": "^1.6.13",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "cross-env": "^7.0.3",
+    "css-loader": "^6.11.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.4",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "fork-ts-checker-webpack-plugin": "^9.0.2",
+    "html-inline-script-webpack-plugin": "^3.2.1",
+    "html-webpack-plugin": "^5.0.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "style-loader": "^3.3.4",
+    "swc-loader": "^0.2.6",
+    "typescript": "^5.5.3",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
