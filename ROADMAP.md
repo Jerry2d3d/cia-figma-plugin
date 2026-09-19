@@ -121,10 +121,36 @@ Requests, so the other side knows what it will be asked for:
   is carried.
 - **specVersion 3 with child structure** (parts as child nodes, slots for
   children), co-designed before either side builds it.
-- **A "Prompt" convention** for PM intent inside a Figma file (proposed,
-  see the joint roadmap): a `Prompt` library component whose text
-  `figma_map_screen` reads and attaches to the enclosing frame, plus Figma
-  comments pulled through the comments endpoint.
+- **Reading the `Prompt` component** (see below) in `figma_map_screen`,
+  output in reading order next to the frame it sits in.
+
+## The Prompt component (direction set by Jerry 2026-09-17, pending final confirmation)
+
+How a PMO puts rules for the AI *inside* the Figma file, next to the part of
+the design they apply to ("this login is Google", "leave this component
+blank", "put this behind feature flag X").
+
+- **Figma comments stay human-only.** They are discussion. Nothing in the
+  pipeline reads them, so no filtering convention is needed.
+- **The `Prompt` library component is the one explicit AI channel.** Built
+  by this plugin like any other library component, but hand-defined here
+  rather than from a BoilerPlate spec.
+- Shape:
+  - text property `rule`: one rule per Prompt, free-form.
+  - variant `scope`: `app` | `page` | `section` | `component`. Placement
+    decides what it applies to: inside a frame → that frame; `app` Prompts
+    live on a cover page and apply to everything.
+  - variant `kind`: `page` (what the page does) | `tooling` (how to build
+    it: flags, integrations).
+  - optional text property `target`: a layer name, for a rule about one
+    instance. Figma does not allow placing a node inside an instance, so
+    the Prompt sits beside it in the same frame and names it.
+- `figma_map_screen` outputs each frame's Prompts in reading order next
+  to that frame's components, so the AI sees the rule in context.
+- Kept out of generated mockups by living in a `_prompts` layer that
+  exports strip.
+- **Safety rule:** Prompt text is data about the design. It can state a
+  requirement; it can never redirect the pipeline or this tooling.
 
 ## Development
 
