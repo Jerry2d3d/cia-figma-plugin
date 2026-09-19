@@ -124,7 +124,15 @@ Requests, so the other side knows what it will be asked for:
 - **Reading the `Prompt` component** (see below) in `figma_map_screen`,
   output in reading order next to the frame it sits in.
 
-## The Prompt component (direction set by Jerry 2026-09-17, pending final confirmation)
+## Figma plan: Starter (confirmed 2026-09-18)
+
+No shared team library on Starter, so for now **library and screens live in
+one Figma file**: Variables, the built components, Prompt instances, and the
+screens PMs compose. Everything the plugin and the MCP server do works
+per-file, so this upgrades cleanly to a shared library on a paid plan with
+no code change: publish the library file, compose screens elsewhere.
+
+## The Prompt component (decided by Jerry, confirmed 2026-09-18)
 
 How a PMO puts rules for the AI *inside* the Figma file, next to the part of
 the design they apply to ("this login is Google", "leave this component
