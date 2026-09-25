@@ -81,6 +81,7 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
             {status.result.variantNames.length === 1 ? '' : 's'}) with {status.result.bindings} binding
             {status.result.bindings === 1 ? '' : 's'} to <strong>{status.result.collection}</strong>.
           </p>
+          {status.result.properties.length > 0 && <p>Properties: {status.result.properties.join(', ')}.</p>}
           {status.result.gaps.length > 0 && (
             <>
               <p>{status.result.gaps.length} gap(s) to route upstream:</p>

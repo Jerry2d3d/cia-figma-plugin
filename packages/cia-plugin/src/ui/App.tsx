@@ -2,13 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { PluginToUiMessage, postToPlugin } from '@/shared/messages';
 import { SyncResult } from '@/plugin/syncTokens';
 import { BuildResult } from '@/plugin/buildComponent';
+import { PromptBuildResult } from '@/plugin/buildPrompt';
 import { TokenSyncPanel, TokenSyncStatus } from '@/ui/TokenSyncPanel';
 import { ComponentBuildPanel, ComponentBuildStatus } from '@/ui/ComponentBuildPanel';
+import { PromptPanel, PromptStatus } from '@/ui/PromptPanel';
 
 export function App() {
   const [collections, setCollections] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<TokenSyncStatus>({ kind: 'idle' });
   const [buildStatus, setBuildStatus] = useState<ComponentBuildStatus>({ kind: 'idle' });
+  const [promptStatus, setPromptStatus] = useState<PromptStatus>({ kind: 'idle' });
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
@@ -32,6 +35,12 @@ export function App() {
         case 'build-error':
           setBuildStatus({ kind: 'error', message: message.message });
           break;
+        case 'prompt-result':
+          setPromptStatus({ kind: 'result', result: message.result as PromptBuildResult });
+          break;
+        case 'prompt-error':
+          setPromptStatus({ kind: 'error', message: message.message });
+          break;
       }
     };
     window.addEventListener('message', onMessage);
@@ -44,6 +53,7 @@ export function App() {
       <h1>cia</h1>
       <TokenSyncPanel status={syncStatus} onStatusChange={setSyncStatus} />
       <ComponentBuildPanel collections={collections} status={buildStatus} onStatusChange={setBuildStatus} />
+      <PromptPanel status={promptStatus} onStatusChange={setPromptStatus} />
     </div>
   );
 }

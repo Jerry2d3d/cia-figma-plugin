@@ -3,10 +3,11 @@ import { validateTokenContract } from '@/shared/tokenContract';
 import { validateComponentSpec } from '@/shared/componentSpec';
 import { syncTokenContract } from '@/plugin/syncTokens';
 import { BuildApi, buildComponent } from '@/plugin/buildComponent';
+import { PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
 
-figma.showUI(__html__, { width: 380, height: 560 });
+figma.showUI(__html__, { width: 380, height: 600 });
 
-const buildApi: BuildApi = {
+const buildApi: BuildApi & PromptApi = {
   getLocalVariableCollectionsAsync: () => figma.variables.getLocalVariableCollectionsAsync(),
   getLocalVariablesAsync: () => figma.variables.getLocalVariablesAsync(),
   createComponent: () => figma.createComponent(),
@@ -19,6 +20,11 @@ const buildApi: BuildApi = {
     return figma.currentPage;
   },
 };
+
+function reveal(node: SceneNode): void {
+  figma.currentPage.selection = [node];
+  figma.viewport.scrollAndZoomIntoView([node]);
+}
 
 async function sendCollections(): Promise<void> {
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -47,11 +53,20 @@ async function handleBuildComponent(spec: unknown, collection: string): Promise<
   }
   try {
     const { result, node } = await buildComponent(validation.spec, { collectionName: collection }, buildApi);
-    figma.currentPage.selection = [node];
-    figma.viewport.scrollAndZoomIntoView([node]);
+    reveal(node);
     postToUi({ type: 'build-result', result });
   } catch (error) {
     postToUi({ type: 'build-error', message: (error as Error).message });
+  }
+}
+
+async function handleBuildPrompt(): Promise<void> {
+  try {
+    const { result, node } = await buildPromptComponent(buildApi);
+    reveal(node);
+    postToUi({ type: 'prompt-result', result });
+  } catch (error) {
+    postToUi({ type: 'prompt-error', message: (error as Error).message });
   }
 }
 
@@ -67,6 +82,9 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
       break;
     case 'build-component':
       await handleBuildComponent(message.spec, message.collection);
+      break;
+    case 'build-prompt':
+      await handleBuildPrompt();
       break;
   }
 };

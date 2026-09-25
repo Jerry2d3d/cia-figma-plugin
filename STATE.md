@@ -1,4 +1,7 @@
-# Where we are — 2026-09-25
+# Where we are — 2026-09-26
+
+A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
+`K:\repo\figma-import-export\ROADMAP.md`.
 
 ## THE BLOCKING TEST PASSED (2026-09-25)
 
@@ -35,6 +38,73 @@ screenshot is too small to read or Figma disagrees with the code. Ask
 Jerry to select that variant and read the **Fill** row in the right
 sidebar: it should name `action-secondary-default`. Resolve before
 scaling to other components.
+
+## Built since the test passed (2026-09-26, committed)
+
+The test unblocked real work. All of it is unit-tested; none of it has been
+re-run inside Figma yet.
+
+**Builder coverage widened after surveying all 35 real specs.** Button was
+the only component the v1 resolver fully understood. Now also handled:
+- `background` as well as `background-color` (cia emits both; the old code
+  silently skipped the first, which would have left Badge and Avatar unfilled).
+- `brand(x)` as a colour, resolving to the `brand-x` variable.
+- `font-size(x)` and `font-weight(x)` as independent bindings, rather than
+  only the combined `font()`.
+- `font()`'s first argument read as a **cia type preset**, not a weight key.
+  `$_font-types` is copied from css-is-awesome, so `font(reg, ...)` correctly
+  looks up `font-weight-normal` and `medium-it` yields Figma's "Medium
+  Italic". Before this it looked up a nonexistent `font-weight-reg`.
+- `padding: a b` arriving as two same-property calls, collapsed per CSS
+  shorthand rules.
+- `line-height()`, `z()`, `animate()`, `shadow()` reported as skipped with
+  reasons instead of "unsupported".
+- `type(preset)` reported as a **gap**: it is a Sass preset with no token to
+  bind, and guessing its expansion is exactly what the contract forbids.
+
+**Figma component properties.** Every component now exposes its text prop as a
+TEXT property and its boolean props as BOOLEAN properties, so a PM sets them
+on an instance and the screen read-back can report them. Button gets
+`label: TEXT` and `disabled: BOOLEAN`. Booleans carry intent only for now;
+that limitation is reported in the skipped list rather than left implicit.
+
+**The Prompt component is built** (`src/plugin/buildPrompt.ts`), matching the
+decided shape: 8 variants over `scope` (app/page/section/component) and
+`kind` (page/tooling), plus `rule` and `target` as TEXT properties. It uses
+flat colours, never Variables, so it looks the same in every theme and is
+never mistaken for a design element. A new Prompt panel in the plugin UI adds
+it with one click.
+
+33 tests pass, lint and build clean.
+
+## The one thing blocking every component except Button
+
+Surveying all the real specs showed the same structural problem everywhere:
+**figma-import-export classifies their variant blocks as `part`, not
+`variant`**, so they build flat with no variants at all.
+
+Button works only because its SCSS class names happen to equal its prop enum
+values (`.primary`, `.small`). Everywhere else the selector is prefixed and
+camelCased, and the classifier gives up:
+
+| Component | Prop and value | Selector in the spec |
+|---|---|---|
+| Badge | `variant=primary` | `.badgePrimary` |
+| Badge | `size=sm` | `.badgeSm` |
+| Text | `weight=medium` | `.textWeightMedium` |
+| Text | `size=sm` | `.textSm` |
+| Avatar | `size=lg` | `.avatarLg` |
+| Heading | `level=1` | `.heading1` |
+| Card, Container, Spinner | same pattern | same pattern |
+
+The plugin reports this as a named contract gap and refuses to invent a
+selector naming convention, because a wrong mapping would silently produce
+wrong components. **The fix belongs upstream**, in the spec producer, which
+already knows both the prop enums and the selectors.
+
+Two smaller upstream items found in the same survey: `Heading` and
+`Container` have **no base style block at all** (every block is a part), and
+`Card` uses `shadow(sm)`, which has no Figma Variable type.
 
 ---
 
@@ -126,21 +196,22 @@ our shared decisions.
   has a leftover name change to "cia Tokens (dev)". Left alone on purpose;
   that package is read-only until removal.
 
-## Next steps, in order (revised 2026-09-25, after the test passed)
+## Next steps, in order (revised 2026-09-26)
 
-1. **Jerry, one quick check:** the Fill row on `variant=secondary,
-   size=large` (see the visual item above).
-2. **Claude:** build the `Prompt` component (shape in `ROADMAP.md`),
-   hand-defined, unit-tested like Button. Not blocked by anything.
-3. **Claude:** scale the builder to the simple components — Badge, Link,
-   Text, Heading, Avatar, Spinner, Tooltip fit the frame + label model
-   as-is. Then turn `disabled` / `icon` into Figma boolean properties, so
-   the AI can read flags off an instance.
-4. **figma-import-export session, unblocked now:** per-instance detail
-   from `figma_map_screen` (component name, variant props, flags, text
-   overrides, enclosing frame). A real 12-variant Button now exists in a
-   Figma file to read `componentProperties` from. Then `Prompt` reading,
+1. **Jerry, in Figma:** rebuild from the current `dist/`, then (a) check the
+   Fill row on `variant=secondary, size=large`, (b) click **Add Prompt
+   component** in the new Prompt panel and confirm the 8 variants and the
+   `rule`/`target` fields, (c) rebuild Button and confirm the new `label`
+   and `disabled` properties appear on an instance.
+2. **Jerry, relay:** paste the message below into the figma-import-export
+   session. The variant-classification fix there unblocks every component
+   except Button.
+3. **figma-import-export session:** the variant classification fix, then
+   per-instance detail from `figma_map_screen` (component name, variant
+   props, flags, text overrides, enclosing frame), then `Prompt` reading,
    then layout read-back reporting token *names* not pixels.
+4. **Claude, once specs carry real variants:** re-run the builder across
+   all 35 components and fix whatever that surfaces.
 5. **Both sessions together:** specVersion 3 with child structure, for the
    components a single frame + label cannot express (DataTable, Modal,
    DashboardNav, MultiStepForm, Card).
@@ -149,6 +220,30 @@ our shared decisions.
 ## Message to paste into the figma-import-export session
 
 ```
+THE BIG ONE: your spec classifier marks variant blocks as "part" for every
+component except Button, so the plugin builds them flat with no variants.
+Button only works because its SCSS class names happen to equal its prop enum
+values (.primary, .small). Everywhere else the selector is the component name
+plus the value, camelCased, and the classifier gives up:
+
+  Badge   variant=primary -> .badgePrimary      size=sm -> .badgeSm
+  Text    weight=medium   -> .textWeightMedium  size=sm -> .textSm
+  Avatar  size=lg         -> .avatarLg
+  Heading level=1         -> .heading1
+  Card, Container, Spinner: same pattern
+
+You already have both halves (the prop enums from the TSX, the selectors from
+the SCSS), so please match them there and emit kind:"variant" with prop/value.
+The plugin deliberately will not invent this naming convention, because a
+wrong mapping produces silently wrong components.
+
+Also found while surveying all 35 specs:
+- Heading and Container have NO base style block at all; every block is a
+  part, so they build unstyled.
+- Card uses shadow(sm), which has no Figma Variable type. The plugin skips it
+  with a reason, matching how your token export reports shadows as gaps.
+- border-width is still missing from the spec (Button's SCSS says 2px).
+
 The first real-Figma run happened on 2026-09-25 and it worked. Three things:
 
 1. UNBLOCKED: a real 12-variant Button component set now exists in a Figma
@@ -170,3 +265,20 @@ The first real-Figma run happened on 2026-09-25 and it worked. Three things:
    added, no gaps, colors and numbers and strings all landed correctly in
    Figma's Variables panel.
 ```
+
+
+## Message to paste into the Figma-export session
+Built Button (12 variants) with 235 bindings to boilerplate.
+
+9 gap(s) to route upstream:
+
+.button: no variable named "font-weight-semibold" in the collection (needed for font(semibold, base, normal) as font weight)
+.small: no variable named "space-2xs" in the collection (needed for pad-asym(2xs, sm) as vertical padding)
+.small: no variable named "font-weight-semibold" in the collection (needed for font(semibold, sm, normal) as font weight)
+.small: no variable named "font-size-sm" in the collection (needed for font(semibold, sm, normal) as font size)
+.small: no variable named "space-2xs" in the collection (needed for space(2xs) as gap)
+.medium: no variable named "font-weight-semibold" in the collection (needed for font(semibold, base, normal) as font weight)
+.large: no variable named "font-weight-semibold" in the collection (needed for font(semibold, lg, normal) as font weight)
+.large: no variable named "font-size-lg" in the collection (needed for font(semibold, lg, normal) as font size)
+contract: spec carries border-color but no border width; stroke weight defaulted to 1px
+18 thing(s) not built in v1

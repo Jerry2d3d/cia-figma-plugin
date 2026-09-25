@@ -27,12 +27,27 @@ class FakeText {
 
   bound: Record<string, string> = {};
 
+  componentPropertyReferences: Record<string, string> | null = null;
+
   setBoundVariable(field: string, variable: Variable) {
     this.bound[field] = variable.id;
   }
 }
 
-class FakeComponent {
+/** Figma returns the property name with a unique suffix; mimic that. */
+class FakeProperties {
+  properties: Record<string, { type: string; defaultValue: string | boolean }> = {};
+
+  private counter = 0;
+
+  addComponentProperty(name: string, type: string, defaultValue: string | boolean) {
+    this.counter += 1;
+    this.properties[name] = { type, defaultValue };
+    return `${name}#${this.counter}:0`;
+  }
+}
+
+class FakeComponent extends FakeProperties {
   name = '';
 
   fills: SolidPaint[] = [];
@@ -66,10 +81,12 @@ class FakeComponent {
   }
 }
 
-class FakeComponentSet {
+class FakeComponentSet extends FakeProperties {
   name = '';
 
-  constructor(public children: FakeComponent[]) {}
+  constructor(public children: FakeComponent[]) {
+    super();
+  }
 }
 
 /** Variable names exactly as figma-import-export's boilerplate token export has them today. */
@@ -85,7 +102,11 @@ const BOILERPLATE_COLORS = [
   'action-secondary-hover',
   'border-emphasis',
   'border-subtle',
+  'surface-subtle',
+  'brand-primary',
 ];
+// Deliberately no `space-2xs`: the real combined boilerplate export is missing
+// it, and the gap tests below pin that behaviour.
 const BOILERPLATE_FLOATS = [
   'space-xs',
   'space-sm',
@@ -93,7 +114,9 @@ const BOILERPLATE_FLOATS = [
   'space-lg',
   'radius-lg',
   'font-size-base',
+  'font-size-xs',
   'font-weight-medium',
+  'font-weight-bold',
   'line-height-normal',
 ];
 
@@ -275,7 +298,164 @@ describe('buildComponent', () => {
     expect(components[0].name).toBe('Card');
     expect(components[0].bound.paddingTop).toBe('space-md');
     expect(components[0].bound.paddingLeft).toBe('space-md');
-    expect(result).toMatchObject({ variantNames: ['Card'], bindings: 9, gaps: [] });
+    expect(result).toMatchObject({ variantNames: ['Card'], bindings: 9, gaps: [], properties: [] });
+  });
+
+  it('exposes the label as a TEXT property and boolean props as BOOLEAN properties', async () => {
+    const { api, sets, components } = createFakeApi();
+
+    const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.properties).toEqual(['label: TEXT', 'disabled: BOOLEAN']);
+    expect(sets[0].properties).toEqual({
+      label: { type: 'TEXT', defaultValue: 'Button' },
+      disabled: { type: 'BOOLEAN', defaultValue: false },
+    });
+    // Every variant's label follows the set's TEXT property.
+    components.forEach((component) => {
+      expect(component.children[0].componentPropertyReferences?.characters).toBe(sets[0].properties.label && 'label#1:0');
+    });
+    expect(result.skipped).toContainEqual({
+      where: 'props',
+      reason: 'boolean property "disabled" added for read-back but drives nothing visually in v1',
+    });
+  });
+
+  it('binds background, brand, font-size and font-weight the way the other components use them', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Badgeish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.badge',
+          kind: 'base',
+          ciaCalls: [
+            // cia emits `background`, not only `background-color`.
+            { fn: 'color', args: ['surface-subtle'], property: 'background', state: 'default' },
+            { fn: 'brand', args: ['primary'], property: 'border-color', state: 'default' },
+            { fn: 'font-size', args: ['xs'], property: 'font-size', state: 'default' },
+            { fn: 'font-weight', args: ['bold'], property: 'font-weight', state: 'default' },
+            // `padding: xs md` arrives as two same-property calls.
+            { fn: 'space', args: ['xs'], property: 'padding', state: 'default' },
+            { fn: 'space', args: ['md'], property: 'padding', state: 'default' },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const built = components[0];
+    expect(boundColor(built.fills[0])).toBe('surface-subtle');
+    expect(boundColor(built.strokes[0])).toBe('brand-primary');
+    expect(built.children[0].fontName.style).toBe('Bold');
+    expect(built.children[0].bound).toEqual({ fontSize: 'font-size-xs', fontWeight: 'font-weight-bold' });
+    expect(built.bound.paddingTop).toBe('space-xs');
+    expect(built.bound.paddingLeft).toBe('space-md');
+    expect(result.gaps.filter((gap) => gap.where === '.badge')).toEqual([]);
+  });
+
+  it('resolves font() through cia font type presets, not the preset spelling', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Noteish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.note',
+          kind: 'base',
+          // `reg` is a type preset meaning weight `normal`, not a weight key.
+          ciaCalls: [{ fn: 'font', args: ['reg', 'base'], property: 'typography', state: 'default' }],
+        },
+        {
+          selector: '.emphasis',
+          kind: 'base',
+          ciaCalls: [{ fn: 'font', args: ['medium-it', 'base'], property: 'typography', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps.map((gap) => gap.reason)).toEqual([
+      'no variable named "font-weight-normal" in the collection (needed for font(reg, base) as font weight)',
+    ]);
+    // The italic preset resolves to a real Figma style and a real weight token.
+    expect(components[0].children[0].fontName).toEqual({ family: 'Inter', style: 'Medium Italic' });
+    expect(components[0].children[0].bound.fontWeight).toBe('font-weight-medium');
+  });
+
+  it('names the two structural problems the real component specs have', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Headingish',
+      props: [
+        { name: 'variant', optional: true, type: 'enum', values: ['a', 'b'] },
+      ],
+      styleBlocks: [
+        {
+          selector: '.headingA',
+          kind: 'part',
+          ciaCalls: [{ fn: 'type', args: ['display'], property: 'typography', state: 'default' }],
+        },
+        {
+          selector: '.headingB',
+          kind: 'part',
+          ciaCalls: [],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps).toEqual([
+      { where: 'contract', reason: 'spec has no base style block, so the component is built unstyled' },
+      {
+        where: 'contract',
+        reason:
+          'spec declares enum prop(s) variant but no variant style blocks; ' +
+          '2 part block(s) look like unclassified variants, so the component was built without variants',
+      },
+    ]);
+  });
+
+  it('reports a Sass type preset as a gap rather than guessing which tokens it expands to', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Titleish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.title',
+          kind: 'base',
+          ciaCalls: [
+            { fn: 'type', args: ['display'], property: 'typography', state: 'default' },
+            { fn: 'z', args: ['tooltip'], property: 'z-index', state: 'default' },
+            { fn: 'line-height', args: ['normal'], property: 'line-height', state: 'default' },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps).toEqual([
+      {
+        where: '.title',
+        reason:
+          'type(display) is a Sass type preset with no token to bind; ' +
+          'needs upstream expansion into font-size/font-weight',
+      },
+    ]);
+    expect(result.skipped.map((skip) => skip.reason)).toEqual([
+      'z(tooltip) skipped: z-index has no Figma equivalent',
+      'line-height(normal) skipped: cia line height is a unitless multiplier, Figma binds px',
+    ]);
   });
 
   it('reports a type mismatch instead of binding the wrong kind of variable', async () => {

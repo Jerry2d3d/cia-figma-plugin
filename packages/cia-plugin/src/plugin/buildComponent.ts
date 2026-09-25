@@ -1,4 +1,4 @@
-import { CiaCall, ComponentSpec, StyleBlock } from '@/shared/componentSpec';
+import { CiaCall, ComponentProp, ComponentSpec, StyleBlock } from '@/shared/componentSpec';
 
 export interface BuildGap {
   /** The style block selector the gap came from, or `contract` for a spec-level gap. */
@@ -16,6 +16,8 @@ export interface BuildResult {
   collection: string;
   variantNames: string[];
   bindings: number;
+  /** Figma component properties added (boolean flags, text overrides), as `name: TYPE`. */
+  properties: string[];
   /** Things that should have resolved but did not. Route these upstream. */
   gaps: BuildGap[];
   /** Things v1 deliberately does not build (non-default states, parts, media queries, transitions). */
@@ -52,14 +54,48 @@ export const DEFAULT_FONT_FAMILY = 'Inter';
 /** specVersion 2 carries `border-color` but no border width, so strokes get this until the contract does. */
 export const DEFAULT_STROKE_WEIGHT = 1;
 
-const FONT_STYLE_BY_WEIGHT: Record<string, string> = {
+/**
+ * cia's `$_font-types` presets, which is what `font()`'s first argument is —
+ * not a weight token key. Each preset names a weight in `$font-weights` plus
+ * an italic flag. Copied from css-is-awesome's `scss/_mixins.scss` so the
+ * lookup is faithful rather than guessed from the preset's spelling.
+ */
+const FONT_TYPE_PRESETS: Record<string, { weight: string; italic: boolean }> = {
+  reg: { weight: 'normal', italic: false },
+  regular: { weight: 'normal', italic: false },
+  italic: { weight: 'normal', italic: true },
+  light: { weight: 'light', italic: false },
+  'light-it': { weight: 'light', italic: true },
+  medium: { weight: 'medium', italic: false },
+  'medium-it': { weight: 'medium', italic: true },
+  semibold: { weight: 'semibold', italic: false },
+  'semibold-it': { weight: 'semibold', italic: true },
+  bold: { weight: 'bold', italic: false },
+  'bold-it': { weight: 'bold', italic: true },
+  black: { weight: 'black', italic: false },
+  'black-it': { weight: 'black', italic: true },
+};
+
+/** cia weight keys to the matching style name in Figma's Inter family. */
+const FIGMA_STYLE_BY_WEIGHT: Record<string, string> = {
   light: 'Light',
-  reg: 'Regular',
-  regular: 'Regular',
+  normal: 'Regular',
   medium: 'Medium',
   semibold: 'Semi Bold',
   bold: 'Bold',
+  black: 'Black',
 };
+
+function figmaFontStyle(weight: string, italic: boolean): string {
+  const base = FIGMA_STYLE_BY_WEIGHT[weight] ?? 'Regular';
+  if (!italic) {
+    return base;
+  }
+  return base === 'Regular' ? 'Italic' : `${base} Italic`;
+}
+
+/** Prop names that carry a component's visible text, best first. */
+const TEXT_PROP_NAMES = ['label', 'text', 'children', 'title', 'name'];
 
 const PRIMARY_AXIS_ALIGN: Record<string, 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN'> = {
   start: 'MIN',
@@ -80,6 +116,9 @@ const COUNTER_AXIS_ALIGN: Record<string, 'MIN' | 'CENTER' | 'MAX' | 'BASELINE'> 
   baseline: 'BASELINE',
 };
 
+/** CSS properties that mean "the node's fill". cia emits both spellings. */
+const FILL_PROPERTIES = ['background-color', 'background'];
+
 type Op =
   | { kind: 'fill'; variable: Variable }
   | { kind: 'textFill'; variable: Variable }
@@ -94,15 +133,15 @@ type Op =
       align: 'MIN' | 'CENTER' | 'MAX' | 'BASELINE';
       gap?: Variable;
     }
-  | { kind: 'typography'; fontStyle: string; fontSize?: Variable; fontWeight?: Variable };
-
-type TypographyOp = Extract<Op, { kind: 'typography' }>;
+  | { kind: 'fontStyle'; style: string }
+  | { kind: 'fontSize'; variable: Variable }
+  | { kind: 'fontWeight'; variable: Variable };
 
 /**
  * Turns a style block's default-state cia calls into Figma operations,
  * resolving token names against the collection and recording every miss.
  * Blocks are resolved once, not once per variant, so a missing token shows up
- * as one gap under its selector instead of twelve copies.
+ * as one gap under its selector instead of once per variant combination.
  */
 class Resolver {
   gaps: BuildGap[] = [];
@@ -137,17 +176,25 @@ class Resolver {
   resolveBlock(block: StyleBlock): Op[] {
     const ops: Op[] = [];
     const skippedStates = new Map<string, number>();
+    // `padding: a b` arrives as several same-property calls in source order;
+    // they are collapsed per CSS shorthand rules after the loop.
+    const paddingArgs: string[] = [];
 
     block.ciaCalls.forEach((call) => {
       if (call.state !== 'default') {
         skippedStates.set(call.state, (skippedStates.get(call.state) ?? 0) + 1);
         return;
       }
-      const op = this.resolveCall(call, block.selector);
-      if (op) {
-        ops.push(op);
+      if (isSpacingCall(call) && call.property === 'padding') {
+        paddingArgs.push(call.args[0]);
+        return;
       }
+      ops.push(...this.resolveCall(call, block.selector));
     });
+
+    if (paddingArgs.length > 0) {
+      ops.push(this.resolvePadding(paddingArgs, block.selector, `padding: ${paddingArgs.join(' ')}`));
+    }
 
     skippedStates.forEach((count, state) => {
       this.skipped.push({
@@ -159,81 +206,115 @@ class Resolver {
     return ops;
   }
 
-  private resolveCall(call: CiaCall, where: string): Op | undefined {
+  /** CSS shorthand: 1 value = all sides, 2 = vertical/horizontal, 3+ = top/horizontal/bottom. */
+  private resolvePadding(args: string[], where: string, signature: string): Op {
+    const verticalKey = args[0];
+    const horizontalKey = args.length > 1 ? args[1] : args[0];
+    return {
+      kind: 'padding',
+      vertical: this.lookup(`space-${verticalKey}`, 'FLOAT', where, `${signature} as vertical padding`),
+      horizontal: this.lookup(`space-${horizontalKey}`, 'FLOAT', where, `${signature} as horizontal padding`),
+    };
+  }
+
+  private resolveCall(call: CiaCall, where: string): Op[] {
     const signature = `${call.fn}(${call.args.join(', ')})`;
     switch (call.fn) {
       case 'color':
-        return this.resolveColor(call, where, signature);
+        return this.resolvePaint(call.args[0], call, where, signature);
+      // cia's `brand(x)` resolves to `var(--brand-x)`, a colour like any other.
+      case 'brand':
+        return this.resolvePaint(`brand-${call.args[0]}`, call, where, signature);
       case 'radius': {
         const variable = this.lookup(`radius-${call.args[0]}`, 'FLOAT', where, `${signature} as border-radius`);
-        return variable ? { kind: 'radius', variable } : undefined;
+        return variable ? [{ kind: 'radius', variable }] : [];
       }
       case 'pad-asym': {
         // cia: `pad-asym($y: 2, $x: 4)` is vertical first, then horizontal.
         const [y = '2', x = '4'] = call.args;
-        return {
-          kind: 'padding',
-          vertical: this.lookup(`space-${y}`, 'FLOAT', where, `${signature} as vertical padding`),
-          horizontal: this.lookup(`space-${x}`, 'FLOAT', where, `${signature} as horizontal padding`),
-        };
+        return [this.resolvePadding([y, x], where, signature)];
       }
       case 'space':
       case 'space-raw': {
         const variable = this.lookup(`space-${call.args[0]}`, 'FLOAT', where, `${signature} as ${call.property}`);
         if (!variable) {
-          return undefined;
+          return [];
         }
         if (call.property === 'gap') {
-          return { kind: 'gap', variable };
-        }
-        if (call.property === 'padding') {
-          return { kind: 'padding', vertical: variable, horizontal: variable };
+          return [{ kind: 'gap', variable }];
         }
         this.skipped.push({ where, reason: `${signature} sets ${call.property}, which has no Figma equivalent` });
-        return undefined;
+        return [];
       }
       case 'flex':
-        return this.resolveFlex(call, where, signature);
+        return [this.resolveFlex(call, where, signature)];
       case 'font':
         return this.resolveFont(call, where, signature);
+      case 'font-size': {
+        const variable = this.lookup(`font-size-${call.args[0]}`, 'FLOAT', where, `${signature} as font size`);
+        return variable ? [{ kind: 'fontSize', variable }] : [];
+      }
+      // `font-weight(x)` takes a weight key straight from cia's `$font-weights`.
+      case 'font-weight':
+        return this.resolveWeight(call.args[0], false, where, signature);
+      case 'shadow':
+        this.skipped.push({
+          where,
+          reason: `${signature} skipped: a composite shadow has no Figma Variable type (the token export reports shadows as gaps too)`,
+        });
+        return [];
+      case 'line-height':
+        this.skipped.push({
+          where,
+          reason: `${signature} skipped: cia line height is a unitless multiplier, Figma binds px`,
+        });
+        return [];
       case 'font-family':
         this.skipped.push({
           where,
           reason: `${signature} skipped: token value is a CSS font stack, not a Figma family; using ${DEFAULT_FONT_FAMILY}`,
         });
-        return undefined;
+        return [];
       case 'transition':
-        this.skipped.push({ where, reason: `${signature} skipped: transitions have no Figma equivalent` });
-        return undefined;
+      case 'animate':
+      case 'z':
+        this.skipped.push({ where, reason: `${signature} skipped: ${call.property} has no Figma equivalent` });
+        return [];
+      case 'type':
+        // A Sass type preset expanding to size + weight + line height at
+        // compile time. There is no single token to bind, and guessing which
+        // variables it resolves to would be exactly the kind of guess the
+        // contract exists to prevent.
+        this.gaps.push({
+          where,
+          reason: `${signature} is a Sass type preset with no token to bind; needs upstream expansion into font-size/font-weight`,
+        });
+        return [];
       default:
         this.gaps.push({ where, reason: `unsupported call ${signature} for property ${call.property}` });
-        return undefined;
+        return [];
     }
   }
 
-  private resolveColor(call: CiaCall, where: string, signature: string): Op | undefined {
-    const name = call.args[0];
-    switch (call.property) {
-      case 'background-color': {
-        const variable = this.lookup(name, 'COLOR', where, `${signature} as fill`);
-        return variable ? { kind: 'fill', variable } : undefined;
-      }
-      case 'color': {
-        const variable = this.lookup(name, 'COLOR', where, `${signature} as text fill`);
-        return variable ? { kind: 'textFill', variable } : undefined;
-      }
-      case 'border-color': {
-        const variable = this.lookup(name, 'COLOR', where, `${signature} as stroke`);
-        if (!variable) {
-          return undefined;
-        }
-        this.usesStroke = true;
-        return { kind: 'stroke', variable };
-      }
-      default:
-        this.skipped.push({ where, reason: `${signature} sets ${call.property}, which has no Figma equivalent` });
-        return undefined;
+  private resolvePaint(name: string, call: CiaCall, where: string, signature: string): Op[] {
+    if (call.property && FILL_PROPERTIES.includes(call.property)) {
+      const variable = this.lookup(name, 'COLOR', where, `${signature} as fill`);
+      return variable ? [{ kind: 'fill', variable }] : [];
     }
+    if (call.property === 'color') {
+      const variable = this.lookup(name, 'COLOR', where, `${signature} as text fill`);
+      return variable ? [{ kind: 'textFill', variable }] : [];
+    }
+    if (call.property === 'border-color') {
+      const variable = this.lookup(name, 'COLOR', where, `${signature} as stroke`);
+      if (!variable) {
+        return [];
+      }
+      this.usesStroke = true;
+      return [{ kind: 'stroke', variable }];
+    }
+    this.skipped.push({ where, reason: `${signature} sets ${call.property}, which has no Figma equivalent` });
+    return [];
   }
 
   private resolveFlex(call: CiaCall, where: string, signature: string): Op {
@@ -260,24 +341,41 @@ class Resolver {
     return { kind: 'layout', direction, justify, align, gap };
   }
 
-  private resolveFont(call: CiaCall, where: string, signature: string): Op {
-    const [weight = 'reg', size, lineHeight] = call.args;
+  private resolveFont(call: CiaCall, where: string, signature: string): Op[] {
+    const [type = 'reg', size, lineHeight] = call.args;
+    const preset = FONT_TYPE_PRESETS[type];
+    if (!preset) {
+      this.gaps.push({ where, reason: `${signature} uses unknown cia font type preset "${type}"` });
+      return [];
+    }
+    const ops = this.resolveWeight(preset.weight, preset.italic, where, signature);
+    if (size) {
+      const variable = this.lookup(`font-size-${size}`, 'FLOAT', where, `${signature} as font size`);
+      if (variable) {
+        ops.push({ kind: 'fontSize', variable });
+      }
+    }
     if (lineHeight) {
-      // cia's line-height tokens are unitless multipliers (1.5); a Figma line
-      // height binding is in px, so binding it would render 1.5px. Left unbound
-      // until the contract carries a px value.
       this.skipped.push({
         where,
         reason: `${signature}: line height "${lineHeight}" not bound (cia token is a unitless multiplier, Figma binds px)`,
       });
     }
-    return {
-      kind: 'typography',
-      fontStyle: FONT_STYLE_BY_WEIGHT[weight] ?? 'Regular',
-      fontWeight: this.lookup(`font-weight-${weight}`, 'FLOAT', where, `${signature} as font weight`),
-      fontSize: size ? this.lookup(`font-size-${size}`, 'FLOAT', where, `${signature} as font size`) : undefined,
-    };
+    return ops;
   }
+
+  private resolveWeight(weight: string, italic: boolean, where: string, signature: string): Op[] {
+    const ops: Op[] = [{ kind: 'fontStyle', style: figmaFontStyle(weight, italic) }];
+    const variable = this.lookup(`font-weight-${weight}`, 'FLOAT', where, `${signature} as font weight`);
+    if (variable) {
+      ops.push({ kind: 'fontWeight', variable });
+    }
+    return ops;
+  }
+}
+
+function isSpacingCall(call: CiaCall): boolean {
+  return call.fn === 'space' || call.fn === 'space-raw';
 }
 
 interface VariantAxis {
@@ -343,6 +441,10 @@ function solidPaint(): SolidPaint {
   return { type: 'SOLID', color: { r: 0, g: 0, b: 0 } };
 }
 
+function lastOp<K extends Op['kind']>(ops: Op[], kind: K): Extract<Op, { kind: K }> | undefined {
+  return ops.filter((op): op is Extract<Op, { kind: K }> => op.kind === kind).pop();
+}
+
 async function applyOps(
   api: BuildApi,
   component: ComponentNode,
@@ -353,9 +455,8 @@ async function applyOps(
   let bindings = 0;
 
   // The font has to be loaded before `characters` or any text binding can be
-  // set, so the (last-wins) typography op is settled first.
-  const typography = ops.filter((op): op is TypographyOp => op.kind === 'typography').pop();
-  const fontName: FontName = { family: DEFAULT_FONT_FAMILY, style: typography?.fontStyle ?? 'Regular' };
+  // set, so the (last-wins) font style is settled before anything else.
+  const fontName: FontName = { family: DEFAULT_FONT_FAMILY, style: lastOp(ops, 'fontStyle')?.style ?? 'Regular' };
   await api.loadFontAsync(fontName);
   text.fontName = fontName;
   text.characters = label;
@@ -370,6 +471,9 @@ async function applyOps(
     component.setBoundVariable(field, variable);
     bindings += 1;
   };
+
+  bindText('fontSize', lastOp(ops, 'fontSize')?.variable);
+  bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
 
   ops.forEach((op) => {
     switch (op.kind) {
@@ -416,16 +520,61 @@ async function applyOps(
           bindNode('itemSpacing', op.gap);
         }
         break;
-      case 'typography':
-        if (op === typography) {
-          bindText('fontSize', op.fontSize);
-          bindText('fontWeight', op.fontWeight);
-        }
+      default:
         break;
     }
   });
 
   return bindings;
+}
+
+/** The prop whose value is the component's visible text, if it declares one. */
+function textProp(spec: ComponentSpec): ComponentProp | undefined {
+  for (const name of TEXT_PROP_NAMES) {
+    const prop = spec.props.find((candidate) => candidate.name === name);
+    if (prop) {
+      return prop;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Adds Figma component properties so a PM can set flags and text on an
+ * instance, and the screen read-back can report them. Boolean props have no
+ * visual effect yet (their `:disabled`-style blocks are not built in v1) — they
+ * carry intent, which is reported as a skipped item rather than left implicit.
+ */
+function addComponentProperties(
+  spec: ComponentSpec,
+  owner: ComponentNode | ComponentSetNode,
+  texts: TextNode[],
+  skipped: BuildSkip[],
+): string[] {
+  const added: string[] = [];
+
+  const label = textProp(spec);
+  if (label) {
+    const id = owner.addComponentProperty(label.name, 'TEXT', spec.component);
+    texts.forEach((text) => {
+      text.componentPropertyReferences = { ...(text.componentPropertyReferences ?? {}), characters: id };
+    });
+    added.push(`${label.name}: TEXT`);
+  }
+
+  spec.props
+    .filter((prop) => prop.type === 'boolean')
+    .forEach((prop) => {
+      const defaultValue = prop.default === 'true';
+      owner.addComponentProperty(prop.name, 'BOOLEAN', defaultValue);
+      added.push(`${prop.name}: BOOLEAN`);
+      skipped.push({
+        where: 'props',
+        reason: `boolean property "${prop.name}" added for read-back but drives nothing visually in v1`,
+      });
+    });
+
+  return added;
 }
 
 /**
@@ -473,8 +622,31 @@ export async function buildComponent(
     });
   }
 
+  if (!spec.styleBlocks.some((block) => block.kind === 'base')) {
+    resolver.gaps.push({
+      where: 'contract',
+      reason: 'spec has no base style block, so the component is built unstyled',
+    });
+  }
+
+  // A spec with enum props but no `variant` blocks means the producer could not
+  // tie its style blocks to those props — the component builds flat, losing
+  // every variant. Naming that plainly is the point; inventing a selector
+  // naming convention here would be the guess the contract exists to prevent.
+  const enumProps = spec.props.filter((prop) => prop.values && prop.values.length > 0);
+  const partCount = spec.styleBlocks.filter((block) => block.kind === 'part').length;
+  if (enumProps.length > 0 && variantAxes(spec).length === 0 && partCount > 0) {
+    resolver.gaps.push({
+      where: 'contract',
+      reason:
+        `spec declares enum prop(s) ${enumProps.map((prop) => prop.name).join(', ')} but no variant style blocks; ` +
+        `${partCount} part block(s) look like unclassified variants, so the component was built without variants`,
+    });
+  }
+
   const plans = planVariants(spec);
   const components: ComponentNode[] = [];
+  const texts: TextNode[] = [];
   let bindings = 0;
 
   for (const plan of plans) {
@@ -488,6 +660,7 @@ export async function buildComponent(
     // eslint-disable-next-line no-await-in-loop
     bindings += await applyOps(api, component, text, spec.component, ops);
     components.push(component);
+    texts.push(text);
   }
 
   let node: ComponentNode | ComponentSetNode = components[0];
@@ -496,6 +669,8 @@ export async function buildComponent(
     node.name = spec.component;
   }
 
+  const properties = addComponentProperties(spec, node, texts, resolver.skipped);
+
   return {
     node,
     result: {
@@ -503,6 +678,7 @@ export async function buildComponent(
       collection: collection.name,
       variantNames: plans.map((plan) => plan.name),
       bindings,
+      properties,
       gaps: resolver.gaps,
       skipped: resolver.skipped,
     },
