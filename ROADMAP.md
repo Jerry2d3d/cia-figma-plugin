@@ -106,7 +106,22 @@ other side's future diff tool.
 
 ## What this plugin needs from figma-import-export
 
-Requests, so the other side knows what it will be asked for:
+Requests, so the other side knows what it will be asked for. **The first one
+now blocks every component except Button:**
+
+- **Classify variant style blocks for components whose selectors are
+  prefixed.** Button builds 12 variants only because its SCSS class names
+  equal its prop enum values (`.primary`, `.small`). Every other component
+  names them component-first and camelCased, and the producer falls back to
+  `kind: "part"`, so the plugin builds them flat with no variants at all:
+  `.badgePrimary` for `variant=primary`, `.textWeightMedium` for
+  `weight=medium`, `.avatarLg` for `size=lg`, `.heading1` for `level=1`, and
+  the same in Card, Container and Spinner. The producer already has the prop
+  enums and the selectors; matching them belongs there. The plugin reports
+  this as a named contract gap and will not invent a naming convention,
+  because a wrong mapping produces silently wrong components.
+- **A base style block for `Heading` and `Container`.** Every block in both
+  is a `part`, so they build unstyled.
 
 - **Per-instance detail from `figma_map_screen`.** Today it returns a
   deduped, sorted list of component names. To build a page the AI needs,
