@@ -19,10 +19,16 @@ export const STATUS: StatusItem[] = [
       '128 variables in one collection with Light and Dark modes. Colours, numbers and font stacks all land correctly.',
   },
   {
-    title: 'Button component',
+    title: 'All 99 components build',
     level: 'working',
     detail:
-      '12 variants and 243 live variable bindings, plus a label text field and a disabled flag on every instance.',
+      '202 components and 1072 live bindings across the whole library, 26 of them with real variants. Up from one component with variants a day ago.',
+  },
+  {
+    title: 'Props and flags on instances',
+    level: 'working',
+    detail:
+      'Text props become editable fields and boolean props become flags, so a PM sets them on an instance and the read-back reports them.',
   },
   {
     title: 'Prompt component',
@@ -31,22 +37,16 @@ export const STATUS: StatusItem[] = [
       'Eight variants across scope and kind, so a PM writes a rule next to the part of the design it governs.',
   },
   {
-    title: 'Screen read-back',
+    title: 'Layout reads back as token names',
     level: 'working',
     detail:
-      'Per-instance props, flags, text, auto-layout as token names, and Prompts. Built, not yet run against a real screen.',
+      'The plugin saves a variable map into the file, so a bound gap reports as space-md rather than an opaque id. No Enterprise plan needed.',
   },
   {
-    title: 'The other 34 components',
-    level: 'blocked',
-    detail:
-      'Their variant styles arrive labelled as parts, so they build flat with no variants. The fix belongs in the spec producer.',
-  },
-  {
-    title: 'Component read-back',
+    title: 'The screen read-back',
     level: 'pending',
     detail:
-      'Serialising a Figma component back into a spec, so drift between design and code can be flagged.',
+      'Built and tested on both sides, waiting on one real composed screen in Figma to run against.',
   },
 ];
 
@@ -68,11 +68,44 @@ export const LOG: LogEntry[] = [
     date: 'next',
     level: 'pending',
     body: [
-      'Compose a Login screen from Button and Prompt instances, then read it back with the screen mapper. The first time the whole idea runs end to end.',
+      'Compose a Login screen from Button and Prompt instances, then read it back. Both halves are built and idle; this is the first time the whole idea runs end to end, and the first chance to catch a disagreement about what is in the document rather than about what the contract says.',
     ],
     facts: [
-      { label: 'Watching for', value: 'whether layout returns token names or raw pixels' },
-      { label: 'Also', value: 'whether an untouched Prompt target reads as null' },
+      { label: 'Needs', value: 'one composed frame and its Copy link to selection' },
+      { label: 'Watching for', value: 'whether layout returns token names or raw ids' },
+    ],
+  },
+  {
+    slug: 'library-unblocked',
+    round: 'Both sides',
+    title: 'The whole library builds',
+    date: '2026-09-26',
+    level: 'working',
+    body: [
+      'Only Button could build with variants, because its style class names happened to match its prop values. Every other component named them differently, so the spec producer labelled them parts and they built flat. That fix landed, covering four naming shapes, and the result across all 99 specs went from 35 components to 202 and from 243 bindings to 1072.',
+      'Running the whole library at once found three problems a single component never would. Seven specs were rejected because a border width declared on its own carries no style, and the validator demanded one. Flex multiplied out to 600 variant combinations across four independent axes, which would have made an unusable component set. And several compound mixins were being reported as unsupported when nothing was missing at all.',
+      'Two findings also turned out to be wrong, both mine. The border width was never absent from the contract: the fixture being tested against was nine days stale. And a missing spacing token belonged to the design system rather than the exporter.',
+    ],
+    facts: [
+      { label: 'Specs building', value: '99 of 99, none rejected' },
+      { label: 'Components', value: '202, from 35' },
+      { label: 'Bindings', value: '1072, from 243' },
+      { label: 'Remaining gaps', value: '121, all genuine and all upstream' },
+    ],
+  },
+  {
+    slug: 'variable-map',
+    round: 'Both sides',
+    title: 'Layout can name its own tokens',
+    date: '2026-09-26',
+    level: 'working',
+    body: [
+      'Figma only reports a variable id for a bound field over its API, and resolving ids to names needs an Enterprise plan. So a gap bound to a spacing token read back as an opaque id, which is useless to anything trying to rebuild the layout.',
+      'The plugin is the one place that knows both, because it holds the live document. It now saves that map into the file on every token sync. It covers every local variable rather than only the ones it created, so a variable added by hand resolves too, and anything it has never heard of comes back with its id rather than a pixel value dressed up as a token name.',
+    ],
+    facts: [
+      { label: 'Written', value: 'into the file itself, on every sync' },
+      { label: 'Plan needed', value: 'none, works on Starter' },
     ],
   },
   {
@@ -83,13 +116,11 @@ export const LOG: LogEntry[] = [
     level: 'working',
     body: [
       'Button rebuilt with a label text field and a disabled flag, and the Prompt component built and worked.',
-      'One real bug surfaced on the way. The Prompt build threw "node must be an auto-layout frame or a child of an auto-layout frame" because the text width mode was set before the text was added to its frame. The text nodes now carry an explicit width and the frame hugs them.',
-      'Only real Figma could have caught that: the test double allowed something the real API refuses. It now throws the same error, so the mistake cannot return unnoticed.',
+      'One real bug surfaced on the way. The Prompt build failed because a text layer was given its width mode before it was added to its frame, so it had no auto-layout parent yet. Only real Figma could have caught it: the test double allowed something the real API refuses. It now throws the same error, so the mistake cannot return unnoticed.',
     ],
     facts: [
-      { label: 'Bindings', value: '243, up from 235' },
       { label: 'Prompt', value: '8 variants, rule and target per instance' },
-      { label: 'Fixed after', value: 'an empty default for target, so an untouched Prompt reports none' },
+      { label: 'Lesson', value: 'a fake is only as good as the rules it is taught' },
     ],
   },
   {
@@ -99,15 +130,14 @@ export const LOG: LogEntry[] = [
     date: '2026-09-25',
     level: 'working',
     body: [
-      'The first time either repo executed inside Figma. Tokens synced and Button built as a 12-variant component set, with no errors.',
+      'The first time either half executed inside Figma. Tokens synced and Button built as a 12-variant component set, with no errors.',
       'The large button hugged at 89 by 41, which is the text plus 24 pixels of padding each side and 12 top and bottom. That proved the spacing was live variable bindings rather than baked numbers.',
-      'Every gap reported was already predicted, and the skipped count came back at exactly 18 as expected, which meant the builder\u2019s model of the spec matched reality.',
+      'Every gap reported was already predicted, and the skipped count came back at exactly the expected 18, which meant the builder\u2019s model of the spec matched reality.',
     ],
     facts: [
       { label: 'Variables', value: '128 created, Light and Dark' },
       { label: 'Variants', value: '12' },
       { label: 'Gaps', value: '9, all known and upstream' },
-      { label: 'Found', value: 'the combined export drops space-2xs, still open' },
     ],
   },
   {
@@ -117,7 +147,7 @@ export const LOG: LogEntry[] = [
     date: '2026-09-11 to 09-17',
     level: 'working',
     body: [
-      'The old Tokens Studio fork was set aside for a minimal plugin owned outright, with its own manifest, build and tests.',
+      'The old forked plugin was set aside for a minimal one owned outright, with its own manifest, build and tests.',
       'Phase 1 syncs the token contract into Figma Variables. Phase 2 builds components from a versioned spec, one component per variant combination, with everything that cannot be bound reported rather than approximated.',
     ],
     facts: [{ label: 'Proven', value: 'in unit tests first, in Figma from round 1' }],
@@ -132,21 +162,22 @@ export interface NextStep {
 
 export const NEXT_STEPS: NextStep[] = [
   {
-    owner: 'figma-import-export',
-    title: 'Classify variant styles for every component',
+    owner: 'A person, in Figma',
+    title: 'Compose one screen and send its link',
     detail:
-      'Button builds 12 variants only because its style class names happen to match its prop values. Everywhere else the names are prefixed, the producer labels them parts, and the component builds flat. The producer already has both halves, so matching them belongs there.',
+      'Everything on both sides is built and idle until a real composed screen exists. A frame with three Button instances and two Prompts is enough. This is the only thing blocking the first end-to-end proof.',
   },
   {
-    owner: 'Both',
-    title: 'Run the loop end to end',
-    detail: 'Compose a screen, read it back, and confirm the facts are right. That is round 3.',
+    owner: 'A decision, not a task',
+    title: 'Decide whether layout primitives belong in the library',
+    detail:
+      'Flex declares four independent axes, which multiply out to 600 combinations. Nobody picks "Flex that is row, space-between, stretch, gap-md" from a list of 600: those are props a developer sets, not variants a designer picks. Grid and Stack are the same shape of thing. Container is the genuine edge case, since its five widths are a deliberate design choice.',
   },
   {
-    owner: 'cia-figma-plugin',
-    title: 'Scale to all 35 components',
+    owner: 'css-is-awesome',
+    title: 'Promote thirteen typography tokens',
     detail:
-      'Once specs carry real variants, rebuild across the set and fix whatever that surfaces.',
+      'Thirteen missing tokens account for 482 call sites across the library, and two of them, the small and extra-small font sizes, are 311 of that alone. Both halves measured this independently and agree. It is the single change that would most improve how components look in Figma.',
   },
   {
     owner: 'Both',
@@ -165,12 +196,12 @@ export const NEXT_STEPS: NextStep[] = [
 export const PATHS = {
   manifest: 'K:\\repo\\cia-figma-plugin\\packages\\cia-plugin\\manifest.json',
   tokens: 'K:\\repo\\figma-import-export\\output\\boilerplate.variables.json',
-  spec: 'K:\\repo\\cia-figma-plugin\\packages\\cia-plugin\\src\\__fixtures__\\Button.component-spec.json',
+  spec: 'K:\\repo\\figma-import-export\\output\\Button.component-spec.json',
   state: 'K:\\repo\\cia-figma-plugin\\STATE.md',
   env: 'K:\\repo\\figma-import-export\\.env.local',
   envLine: 'FIGMA_ACCESS_TOKEN=figd_paste_the_token_here',
-  build: 'node ..\\..\\.yarn\\releases\\yarn-1.18.0.cjs build',
-  test: 'node ..\\..\\.yarn\\releases\\yarn-1.18.0.cjs test',
+  build: 'yarn build',
+  test: 'yarn test',
   rule1: 'Login uses Google SSO only. No email or password form.',
   rule2: 'Put the passkey button behind the PASSKEYS feature flag.',
   readRequest: 'Run figma_map_screen on this URL and show me the full result:',

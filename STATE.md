@@ -3,6 +3,51 @@
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
 
+## WHERE IT STANDS NOW (2026-09-26, latest)
+
+**The whole library builds.** The other side landed variant classification, so
+all 99 specs now build: 202 components, 1072 bindings, 26 with real variants,
+up from 35 components and 243 bindings. Nothing is rejected and nothing throws.
+
+**Both of my earlier findings were wrong, and were corrected:**
+- `border-width` was never missing from the contract. It has been there since
+  their commit `13d2e91` on 09-24; our fixture was copied on 09-17. Fixture
+  re-synced, Button strokes are 2px from the spec, and the false gap is gone.
+- `space-2xs` is not an exporter merge bug. The base boilerplate theme never
+  declared it, so it belongs to css-is-awesome. They now report it as
+  `missingVsVariants` per theme.
+
+**Three problems the 99-spec survey found, all fixed here:** 7 specs were
+rejected because `borders[].style` is null for a longhand width (validator was
+too strict); `Flex` multiplies out to 600 variant combinations so the builder
+now declines above `MAX_VARIANT_COMBINATIONS` and names the axes; and calls
+setting a CSS custom property or using compound mixins (`border`, `elevation`,
+`stack`, `contain`, `container`) are now skipped with a reason rather than
+called unsupported.
+
+**The variable map is written** (`src/plugin/variableMap.ts`, commit
+`fad0ee20`). Figma only reports a variable *id* over REST and resolving ids to
+names is Enterprise-only, so the plugin saves the map as shared plugin data on
+`figma.root` after every sync, namespace `cia`, key `variableMap`. Covers every
+local variable (`coverage: "all-local"`), rewritten wholesale each sync. The
+other side has pinned its reader against this exact payload (their `77302da`).
+This is what lets layout read back as `space-md` instead of an id, on Starter.
+
+**121 gaps remain, all genuine and all upstream:** 60 missing typography
+tokens, 14 components with no base block, 7 missing spacing tokens, 5 Sass type
+presets. The other side measured the same typography gap from the component
+side: 13 tokens across 482 call sites, with `font-size-sm` and `font-size-xs`
+alone accounting for 311. Their `docs/token-demand.md` is written up for
+Gremlin Forge.
+
+**Open decision for Jerry, not for either session:** whether layout primitives
+(`Flex`, `Grid`, `Stack`) belong in a Figma library at all. Their axes are
+props a developer sets per usage, not variants a designer picks from a list.
+`Container` is the genuine edge case: five deliberate widths.
+
+**Nothing is blocked except one thing: a real composed screen in Figma.** Both
+halves are built and idle waiting for it.
+
 ## THE SITE (added 2026-09-26)
 
 `site/` is a Next.js app documenting both halves of the pipeline, built with
