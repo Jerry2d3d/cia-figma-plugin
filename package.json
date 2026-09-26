@@ -3,14 +3,16 @@
   "scripts": {
     "bundle": "ts-node ./scripts/bundle.ts",
     "build": "npx turbo run build",
-    "start": "npx turbo run start",
+    "start": "npx turbo run start --filter=@cia/figma-plugin",
     "lint": "npx turbo run lint",
     "test": "npx turbo run test",
     "test:watch": "npx turbo run test:watch",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "format:changed": "git diff --name-only --diff-filter=ACMR main...HEAD | grep -E '\\.(ts|tsx|md)$' | xargs -r prettier --write",
     "release": "changeset publish",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "start:all": "npx turbo run start",
+    "site": "npm --prefix site run dev"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.2",
