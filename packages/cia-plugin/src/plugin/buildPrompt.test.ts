@@ -161,7 +161,9 @@ describe('buildPromptComponent', () => {
 
     expect(result.properties).toEqual(['rule: TEXT', 'target: TEXT']);
     expect(sets[0].properties.rule.type).toBe('TEXT');
-    expect(sets[0].properties.target.type).toBe('TEXT');
+    // Empty on purpose: figma-import-export reads any non-empty `target` as a
+    // real layer name, so a placeholder default would invent one.
+    expect(sets[0].properties.target).toEqual({ type: 'TEXT', defaultValue: '' });
     components.forEach((component) => {
       const [, rule, target] = component.children;
       expect(rule.name).toBe('rule');

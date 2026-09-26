@@ -144,9 +144,11 @@ export async function buildPromptComponent(api: PromptApi): Promise<{
         name: 'target',
         font: FONT,
         size: 10,
-        // Not empty: a zero-height text layer is invisible and awkward to
-        // select, and this doubles as the hint for what the field is for.
-        characters: 'target: (layer name, optional)',
+        // Placeholder for the unbound layer only. The TEXT property default
+        // below is empty on purpose: figma-import-export reads a non-empty
+        // `target` as a real layer name, so a placeholder default would be
+        // read as a target the PM never set.
+        characters: 'target',
         fill: HEADER_FILL,
       });
       component.appendChild(target);
@@ -163,7 +165,7 @@ export async function buildPromptComponent(api: PromptApi): Promise<{
   const ruleId = node.addComponentProperty('rule', 'TEXT', DEFAULT_RULE);
   // A layer name, for a rule about one instance: Figma does not allow placing
   // a node inside an instance, so the Prompt sits beside it and names it.
-  const targetId = node.addComponentProperty('target', 'TEXT', 'target: (layer name, optional)');
+  const targetId = node.addComponentProperty('target', 'TEXT', '');
 
   ruleTexts.forEach((text) => {
     text.componentPropertyReferences = { ...(text.componentPropertyReferences ?? {}), characters: ruleId };
