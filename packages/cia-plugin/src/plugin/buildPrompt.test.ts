@@ -1,4 +1,6 @@
 import {
+  KIND_HINTS,
+  SCOPE_HINTS,
   buildPromptComponent,
   PROMPT_COMPONENT_NAME,
   PROMPT_KINDS,
@@ -165,7 +167,7 @@ describe('buildPromptComponent', () => {
     // real layer name, so a placeholder default would invent one.
     expect(sets[0].properties.target).toEqual({ type: 'TEXT', defaultValue: '' });
     components.forEach((component) => {
-      const [, rule, target] = component.children;
+      const [, , rule, target] = component.children;
       expect(rule.name).toBe('rule');
       expect(rule.componentPropertyReferences?.characters).toBe('rule#1:0');
       expect(target.name).toBe('target');
@@ -180,6 +182,27 @@ describe('buildPromptComponent', () => {
 
     const sectionTooling = components.find((c) => c.name === 'scope=section, kind=tooling') as FakeComponent;
     expect(sectionTooling.children[0].characters).toBe('PROMPT · SECTION · TOOLING');
+  });
+
+  it('says on the component what each scope governs, where the choice is made', () => {
+    const { api, components } = createFakeApi();
+
+    return buildPromptComponent(api).then(() => {
+      const appPage = components.find((c) => c.name === 'scope=app, kind=page') as FakeComponent;
+      expect(appPage.children[1].name).toBe('hint');
+      expect(appPage.children[1].characters).toBe(`${SCOPE_HINTS.app} ${KIND_HINTS.page}`);
+
+      // Scope is authoritative, so an app-scoped note says so even though it
+      // will usually sit inside a frame when one file holds everything.
+      expect(SCOPE_HINTS.app).toContain('wherever this note sits');
+
+      const componentTooling = components.find(
+        (c) => c.name === 'scope=component, kind=tooling',
+      ) as FakeComponent;
+      expect(componentTooling.children[1].characters).toBe(
+        `${SCOPE_HINTS.component} ${KIND_HINTS.tooling}`,
+      );
+    });
   });
 
   it('uses flat colours and vertical auto-layout, never theme Variables', async () => {

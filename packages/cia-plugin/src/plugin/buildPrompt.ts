@@ -24,6 +24,28 @@ export const PROMPT_KINDS = ['page', 'tooling'] as const;
 export type PromptScope = (typeof PROMPT_SCOPES)[number];
 export type PromptKind = (typeof PROMPT_KINDS)[number];
 
+/**
+ * What each scope governs, shown on the component itself.
+ *
+ * Scope is authoritative and placement is the weaker signal: the two are
+ * allowed to differ, and routinely do when the library and the screens share
+ * one file, because there is no separate cover page for app-scoped rules to
+ * live on. Saying so on the component means a PM reads it at the moment they
+ * choose the scope, rather than being expected to remember a convention from a
+ * document they never saw.
+ */
+export const SCOPE_HINTS: Record<PromptScope, string> = {
+  app: 'Governs the whole app, wherever this note sits.',
+  page: 'Governs the frame this note sits inside.',
+  section: 'Governs the section this note sits inside.',
+  component: 'Governs the layer named in target, below.',
+};
+
+export const KIND_HINTS: Record<PromptKind, string> = {
+  page: 'A rule about what the page does.',
+  tooling: 'A rule about how it gets built.',
+};
+
 /** Layer name the Prompt instances live in, so mockup exports can strip them. */
 export const PROMPT_LAYER_NAME = '_prompts';
 
@@ -130,6 +152,15 @@ export async function buildPromptComponent(api: PromptApi): Promise<{
         fill: HEADER_FILL,
       });
       component.appendChild(header);
+
+      const hint = createSizedText(api, {
+        name: 'hint',
+        font: FONT,
+        size: 9,
+        characters: `${SCOPE_HINTS[scope]} ${KIND_HINTS[kind]}`,
+        fill: HEADER_FILL,
+      });
+      component.appendChild(hint);
 
       const rule = createSizedText(api, {
         name: 'rule',
