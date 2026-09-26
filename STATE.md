@@ -3,6 +3,30 @@
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
 
+## ROUND 2 PASSED TOO (2026-09-26)
+
+Jerry re-ran everything in Figma after the day's work and reported it all
+working: Button rebuilt with its new `label: TEXT` and `disabled: BOOLEAN`
+component properties, and the **Prompt component builds and works** (8
+variants over scope x kind, with `rule` and `target` editable per instance).
+
+One real bug was found and fixed in between (`8d82d29c`): the Prompt build
+threw *"node must be an auto-layout frame or a child of an auto-layout
+frame"* because `layoutSizingHorizontal` was set on each text node before
+`appendChild`, so it had no auto-layout parent yet. The text nodes now carry
+an explicit width and the frame hugs them. The test fake was made strict —
+it throws on that same misuse and flags any frame resize — so the mistake
+cannot return unnoticed. Only real Figma could have caught this; the
+permissive fake let it through.
+
+**Still unconfirmed:** whether the Fill row on `variant=secondary,
+size=large` names `action-secondary-default`. Jerry reported everything
+working, which implies yes, but it was never read back explicitly.
+
+**Everything this plugin can build today is proven in Figma.** The next
+move is not here — it is the variant-classification fix upstream (below),
+without which 34 of the 35 components build flat.
+
 ## THE BLOCKING TEST PASSED (2026-09-25)
 
 Jerry ran the first real-Figma run. **No errors.** Both halves work inside
