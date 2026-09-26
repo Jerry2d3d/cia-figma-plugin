@@ -4,7 +4,7 @@ import { validateComponentSpec } from '@/shared/componentSpec';
 import { syncTokenContract } from '@/plugin/syncTokens';
 import { BuildApi, BuildResult, buildComponent } from '@/plugin/buildComponent';
 import { layoutInGrid, originBelow } from '@/plugin/layoutNodes';
-import { PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
+import { PROMPT_COMPONENT_NAME, PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
 import { VariableMapApi, writeVariableMap } from '@/plugin/variableMap';
 
 figma.showUI(__html__, { width: 380, height: 600 });
@@ -26,6 +26,23 @@ const buildApi: BuildApi & PromptApi = {
 function reveal(node: SceneNode): void {
   figma.currentPage.selection = [node];
   figma.viewport.scrollAndZoomIntoView([node]);
+}
+
+/**
+ * Names of the component sets and components already on the page. Building
+ * again makes a second set rather than updating the first, which is easy to do
+ * by accident and leaves duplicates in the assets panel. Nothing is deleted
+ * here: an existing set may already have instances placed from it, and
+ * removing it would detach them. The build is reported instead.
+ */
+function existingComponentNames(): Set<string> {
+  const names = new Set<string>();
+  figma.currentPage.children.forEach((node) => {
+    if (node.type === 'COMPONENT_SET' || node.type === 'COMPONENT') {
+      names.add(node.name);
+    }
+  });
+  return names;
 }
 
 async function sendCollections(): Promise<void> {
@@ -64,6 +81,8 @@ async function handleBuildComponents(
   const results: BuildResult[] = [];
   const failures: { name: string; message: string }[] = [];
   const built: SceneNode[] = [];
+  const alreadyPresent = existingComponentNames();
+  const duplicates: string[] = [];
 
   // Everything already on the page, so a second batch lands below the first
   // rather than on top of it.
@@ -82,6 +101,9 @@ async function handleBuildComponents(
     try {
       // eslint-disable-next-line no-await-in-loop
       const { result, node } = await buildComponent(validation.spec, { collectionName: collection }, buildApi);
+      if (alreadyPresent.has(result.component)) {
+        duplicates.push(result.component);
+      }
       results.push(result);
       built.push(node);
     } catch (error) {
@@ -95,14 +117,15 @@ async function handleBuildComponents(
     figma.viewport.scrollAndZoomIntoView(built);
   }
 
-  postToUi({ type: 'build-result', results, failures });
+  postToUi({ type: 'build-result', results, failures, duplicates });
 }
 
 async function handleBuildPrompt(): Promise<void> {
   try {
+    const duplicate = existingComponentNames().has(PROMPT_COMPONENT_NAME);
     const { result, node } = await buildPromptComponent(buildApi);
     reveal(node);
-    postToUi({ type: 'prompt-result', result });
+    postToUi({ type: 'prompt-result', result, duplicate });
   } catch (error) {
     postToUi({ type: 'prompt-error', message: (error as Error).message });
   }

@@ -47,3 +47,7 @@ body {
 .skipped {
   color: #666;
 }
+
+.warn {
+  color: #b45309;
+}

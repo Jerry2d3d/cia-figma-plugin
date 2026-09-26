@@ -38,13 +38,18 @@ export function App() {
             kind: 'result',
             results: message.results as BuildResult[],
             failures: message.failures,
+            duplicates: message.duplicates,
           });
           break;
         case 'build-error':
           setBuildStatus({ kind: 'error', message: message.message });
           break;
         case 'prompt-result':
-          setPromptStatus({ kind: 'result', result: message.result as PromptBuildResult });
+          setPromptStatus({
+            kind: 'result',
+            result: message.result as PromptBuildResult,
+            duplicate: message.duplicate,
+          });
           break;
         case 'prompt-error':
           setPromptStatus({ kind: 'error', message: message.message });

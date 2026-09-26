@@ -6,7 +6,12 @@ import { readJsonFiles } from '@/ui/readJsonFile';
 export type ComponentBuildStatus =
   | { kind: 'idle' }
   | { kind: 'building' }
-  | { kind: 'result'; results: BuildResult[]; failures: { name: string; message: string }[] }
+  | {
+      kind: 'result';
+      results: BuildResult[];
+      failures: { name: string; message: string }[];
+      duplicates: string[];
+    }
   | { kind: 'error'; message: string };
 
 interface Props {
@@ -102,7 +107,13 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
         {buildLabel()}
       </button>
 
-      {status.kind === 'result' && <BuildSummary results={status.results} failures={status.failures} />}
+      {status.kind === 'result' && (
+        <BuildSummary
+          results={status.results}
+          failures={status.failures}
+          duplicates={status.duplicates}
+        />
+      )}
 
       {status.kind === 'error' && <p className="error">{status.message}</p>}
     </section>
@@ -112,9 +123,11 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
 function BuildSummary({
   results,
   failures,
+  duplicates,
 }: {
   results: BuildResult[];
   failures: { name: string; message: string }[];
+  duplicates: string[];
 }) {
   const variants = results.reduce((total, result) => total + result.variantNames.length, 0);
   const bindings = results.reduce((total, result) => total + result.bindings, 0);
@@ -138,6 +151,14 @@ function BuildSummary({
       )}
 
       {single && single.properties.length > 0 && <p>Properties: {single.properties.join(', ')}.</p>}
+
+      {duplicates.length > 0 && (
+        <p className="warn">
+          A set named {duplicates.join(', ')} was already on this page, so this build made a second
+          copy. Nothing was deleted, because instances may already be placed from the first. Delete
+          whichever you do not want.
+        </p>
+      )}
 
       {failures.length > 0 && (
         <>

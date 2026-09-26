@@ -5,7 +5,7 @@ import { PromptBuildResult } from '@/plugin/buildPrompt';
 export type PromptStatus =
   | { kind: 'idle' }
   | { kind: 'building' }
-  | { kind: 'result'; result: PromptBuildResult }
+  | { kind: 'result'; result: PromptBuildResult; duplicate: boolean }
   | { kind: 'error'; message: string };
 
 interface Props {
@@ -36,6 +36,13 @@ export function PromptPanel({ status, onStatusChange }: Props) {
             Added <strong>{status.result.component}</strong> with {status.result.variantNames.length} variants and
             properties {status.result.properties.join(', ')}.
           </p>
+          {status.duplicate && (
+            <p className="warn">
+              A Prompt set was already on this page, so this is a second copy. Nothing was deleted,
+              because instances may already be placed from the first. Delete whichever you do not
+              want.
+            </p>
+          )}
         </div>
       )}
 

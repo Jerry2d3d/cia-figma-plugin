@@ -17,9 +17,15 @@ export type PluginToUiMessage =
   | { type: 'sync-result'; result: SyncResult; variableMap?: VariableMapSummary }
   | { type: 'sync-error'; message: string }
   | { type: 'collections'; names: string[] }
-  | { type: 'build-result'; results: BuildResult[]; failures: { name: string; message: string }[] }
+  | {
+      type: 'build-result';
+      results: BuildResult[];
+      failures: { name: string; message: string }[];
+      /** Names that already existed on the page before this build ran. */
+      duplicates: string[];
+    }
   | { type: 'build-error'; message: string }
-  | { type: 'prompt-result'; result: PromptBuildResult }
+  | { type: 'prompt-result'; result: PromptBuildResult; duplicate: boolean }
   | { type: 'prompt-error'; message: string };
 
 export function postToPlugin(message: UiToPluginMessage): void {
