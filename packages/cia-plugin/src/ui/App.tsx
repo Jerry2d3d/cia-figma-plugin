@@ -21,7 +21,11 @@ export function App() {
       }
       switch (message.type) {
         case 'sync-result':
-          setSyncStatus({ kind: 'result', result: message.result as SyncResult });
+          setSyncStatus({
+            kind: 'result',
+            result: message.result as SyncResult,
+            variableMap: message.variableMap,
+          });
           break;
         case 'sync-error':
           setSyncStatus({ kind: 'error', message: message.message });

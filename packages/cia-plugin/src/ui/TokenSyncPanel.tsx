@@ -1,12 +1,12 @@
 import React from 'react';
-import { postToPlugin } from '@/shared/messages';
+import { VariableMapSummary, postToPlugin } from '@/shared/messages';
 import { SyncResult } from '@/plugin/syncTokens';
 import { readJsonFile } from '@/ui/readJsonFile';
 
 export type TokenSyncStatus =
   | { kind: 'idle' }
   | { kind: 'syncing' }
-  | { kind: 'result'; result: SyncResult }
+  | { kind: 'result'; result: SyncResult; variableMap?: VariableMapSummary }
   | { kind: 'error'; message: string };
 
 interface Props {
@@ -42,6 +42,13 @@ export function TokenSyncPanel({ status, onStatusChange }: Props) {
             Collection <strong>{status.result.collection}</strong>: {status.result.variablesCreated} created,{' '}
             {status.result.variablesUpdated} updated, {status.result.modesCreated} mode(s) added.
           </p>
+          {status.variableMap && (
+            <p>
+              Variable map saved to the file: {status.variableMap.variables} name(s) across{' '}
+              {status.variableMap.collections} collection(s), so a screen read-back can report token
+              names instead of ids.
+            </p>
+          )}
           {status.result.gaps.length > 0 && (
             <>
               <p>{status.result.gaps.length} gap(s):</p>

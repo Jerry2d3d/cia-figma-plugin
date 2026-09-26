@@ -8,8 +8,13 @@ export type UiToPluginMessage =
   | { type: 'build-component'; spec: unknown; collection: string }
   | { type: 'build-prompt' };
 
+export interface VariableMapSummary {
+  collections: number;
+  variables: number;
+}
+
 export type PluginToUiMessage =
-  | { type: 'sync-result'; result: SyncResult }
+  | { type: 'sync-result'; result: SyncResult; variableMap?: VariableMapSummary }
   | { type: 'sync-error'; message: string }
   | { type: 'collections'; names: string[] }
   | { type: 'build-result'; result: BuildResult }

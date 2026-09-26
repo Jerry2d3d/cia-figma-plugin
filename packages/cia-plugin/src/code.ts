@@ -4,6 +4,7 @@ import { validateComponentSpec } from '@/shared/componentSpec';
 import { syncTokenContract } from '@/plugin/syncTokens';
 import { BuildApi, buildComponent } from '@/plugin/buildComponent';
 import { PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
+import { VariableMapApi, writeVariableMap } from '@/plugin/variableMap';
 
 figma.showUI(__html__, { width: 380, height: 600 });
 
@@ -31,7 +32,13 @@ async function sendCollections(): Promise<void> {
   postToUi({ type: 'collections', names: collections.map((collection) => collection.name) });
 }
 
-function handleSyncTokens(contract: unknown): void {
+const variableMapApi: VariableMapApi = {
+  getLocalVariableCollectionsAsync: () => figma.variables.getLocalVariableCollectionsAsync(),
+  getLocalVariablesAsync: () => figma.variables.getLocalVariablesAsync(),
+  setSharedPluginData: (namespace, key, value) => figma.root.setSharedPluginData(namespace, key, value),
+};
+
+async function handleSyncTokens(contract: unknown): Promise<void> {
   const validation = validateTokenContract(contract);
   if (!validation.valid) {
     postToUi({ type: 'sync-error', message: validation.errors.join('; ') });
@@ -39,7 +46,11 @@ function handleSyncTokens(contract: unknown): void {
   }
   try {
     const result = syncTokenContract(validation.contract, figma.variables);
-    postToUi({ type: 'sync-result', result });
+    // Figma's REST API reports a bound field as a variable id, and only an
+    // Enterprise plan can resolve ids to names. Writing the map here is what
+    // lets the screen read-back report `space-md` instead of an opaque id.
+    const map = await writeVariableMap(variableMapApi);
+    postToUi({ type: 'sync-result', result, variableMap: map });
   } catch (error) {
     postToUi({ type: 'sync-error', message: (error as Error).message });
   }
@@ -76,7 +87,7 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
       await sendCollections();
       break;
     case 'sync-tokens':
-      handleSyncTokens(message.contract);
+      await handleSyncTokens(message.contract);
       // A sync may have created the collection the component panel wants next.
       await sendCollections();
       break;
