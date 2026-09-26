@@ -19,9 +19,34 @@ class FakeText {
 
   textAutoResize = '';
 
-  layoutSizingHorizontal = '';
+  width = 0;
+
+  height = 0;
+
+  parent: FakeComponent | null = null;
 
   componentPropertyReferences: Record<string, string> | null = null;
+
+  resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
+
+  /**
+   * Figma refuses this on a node that is not yet inside an auto-layout frame,
+   * and it threw for real when the builder set it before appendChild. The fake
+   * reproduces that rule so the mistake cannot come back unnoticed.
+   */
+  set layoutSizingHorizontal(value: string) {
+    if (!this.parent || this.parent.layoutMode === 'NONE') {
+      throw new Error(
+        'in set_layoutSizingHorizontal: node must be an auto-layout frame or a child of an auto-layout frame',
+      );
+    }
+    this.sizing = value;
+  }
+
+  sizing = '';
 }
 
 class FakeComponent {
@@ -57,11 +82,16 @@ class FakeComponent {
 
   children: FakeText[] = [];
 
+  /** Figma flips an auto-layout axis to fixed when you resize it; flag any use. */
+  resized = false;
+
   resize(width: number) {
     this.width = width;
+    this.resized = true;
   }
 
   appendChild(child: FakeText) {
+    child.parent = this;
     this.children.push(child);
   }
 }
@@ -131,7 +161,7 @@ describe('buildPromptComponent', () => {
 
     expect(result.properties).toEqual(['rule: TEXT', 'target: TEXT']);
     expect(sets[0].properties.rule.type).toBe('TEXT');
-    expect(sets[0].properties.target).toEqual({ type: 'TEXT', defaultValue: '' });
+    expect(sets[0].properties.target.type).toBe('TEXT');
     components.forEach((component) => {
       const [, rule, target] = component.children;
       expect(rule.name).toBe('rule');
@@ -158,11 +188,31 @@ describe('buildPromptComponent', () => {
     const first = components[0];
     expect(first.layoutMode).toBe('VERTICAL');
     expect(first.primaryAxisSizingMode).toBe('AUTO');
-    expect(first.width).toBe(240);
     expect(first.fills[0]).toMatchObject({ type: 'SOLID' });
     expect(first.fills[0].boundVariables).toBeUndefined();
     expect(first.strokes[0].boundVariables).toBeUndefined();
     expect(loadedFonts).toContainEqual({ family: 'Inter', style: 'Regular' });
     expect(loadedFonts).toContainEqual({ family: 'Inter', style: 'Semi Bold' });
+  });
+
+  it('sizes the text rather than the frame, so no auto-layout rule is broken', async () => {
+    const { api, components } = createFakeApi();
+
+    // The fake throws on layoutSizingHorizontal outside an auto-layout parent
+    // and records any resize of the frame, so this passing means neither
+    // happened.
+    await buildPromptComponent(api);
+
+    components.forEach((component) => {
+      expect(component.resized).toBe(false);
+      expect(component.counterAxisSizingMode).toBe('AUTO');
+      component.children.forEach((child) => {
+        expect(child.parent).toBe(component);
+        expect(child.width).toBe(216);
+        expect(child.textAutoResize).toBe('HEIGHT');
+        // An empty text layer is invisible and hard to select in Figma.
+        expect(child.characters.length).toBeGreaterThan(0);
+      });
+    });
   });
 });

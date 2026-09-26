@@ -36,7 +36,15 @@ const HEADER_FILL: SolidPaint = { type: 'SOLID', color: { r: 0.42, g: 0.32, b: 0
 const RULE_FILL: SolidPaint = { type: 'SOLID', color: { r: 0.15, g: 0.13, b: 0.08 } };
 
 const DEFAULT_RULE = 'Describe the rule for this part of the design.';
-const WIDTH = 240;
+const PADDING = 12;
+/**
+ * Text nodes get an explicit width and the frame hugs them, rather than the
+ * frame being fixed-width and the children filling it. `layoutSizingHorizontal`
+ * only works once a node is already inside an auto-layout frame, and `resize`
+ * on an auto-layout frame flips that axis to fixed — sizing the text instead
+ * avoids both traps.
+ */
+const TEXT_WIDTH = 216;
 
 export interface PromptApi {
   createComponent(): ComponentNode;
@@ -44,6 +52,27 @@ export interface PromptApi {
   loadFontAsync(font: FontName): Promise<void>;
   combineAsVariants(nodes: ComponentNode[], parent: BaseNode & ChildrenMixin): ComponentSetNode;
   readonly currentPage: BaseNode & ChildrenMixin;
+}
+
+interface TextSpec {
+  name: string;
+  font: FontName;
+  size: number;
+  characters: string;
+  fill: SolidPaint;
+}
+
+function createSizedText(api: PromptApi, spec: TextSpec): TextNode {
+  const text = api.createText();
+  text.name = spec.name;
+  // Font first: `characters` and every later text edit require it loaded.
+  text.fontName = spec.font;
+  text.characters = spec.characters;
+  text.fontSize = spec.size;
+  text.fills = [spec.fill];
+  text.textAutoResize = 'HEIGHT';
+  text.resize(TEXT_WIDTH, text.height);
+  return text;
 }
 
 export interface PromptBuildResult {
@@ -76,15 +105,15 @@ export async function buildPromptComponent(api: PromptApi): Promise<{
     PROMPT_KINDS.forEach((kind) => {
       const component = api.createComponent();
       component.name = variantName(scope, kind);
-      component.resize(WIDTH, 1);
+      // Both axes hug: the children carry the width (see TEXT_WIDTH).
       component.layoutMode = 'VERTICAL';
       component.primaryAxisSizingMode = 'AUTO';
-      component.counterAxisSizingMode = 'FIXED';
+      component.counterAxisSizingMode = 'AUTO';
       component.counterAxisAlignItems = 'MIN';
-      component.paddingTop = 12;
-      component.paddingBottom = 12;
-      component.paddingLeft = 12;
-      component.paddingRight = 12;
+      component.paddingTop = PADDING;
+      component.paddingBottom = PADDING;
+      component.paddingLeft = PADDING;
+      component.paddingRight = PADDING;
       component.itemSpacing = 6;
       component.cornerRadius = 6;
       component.fills = [NOTE_FILL];
@@ -93,33 +122,33 @@ export async function buildPromptComponent(api: PromptApi): Promise<{
 
       // A fixed caption, not a property: it states which variant this is, so a
       // Prompt is readable on the canvas without opening the right sidebar.
-      const header = api.createText();
-      header.name = 'scope';
-      header.fontName = HEADER_FONT;
-      header.fontSize = 10;
-      header.characters = `PROMPT · ${scope.toUpperCase()} · ${kind.toUpperCase()}`;
-      header.fills = [HEADER_FILL];
-      header.layoutSizingHorizontal = 'FILL';
+      const header = createSizedText(api, {
+        name: 'scope',
+        font: HEADER_FONT,
+        size: 10,
+        characters: `PROMPT · ${scope.toUpperCase()} · ${kind.toUpperCase()}`,
+        fill: HEADER_FILL,
+      });
       component.appendChild(header);
 
-      const rule = api.createText();
-      rule.name = 'rule';
-      rule.fontName = FONT;
-      rule.fontSize = 12;
-      rule.characters = DEFAULT_RULE;
-      rule.fills = [RULE_FILL];
-      rule.textAutoResize = 'HEIGHT';
-      rule.layoutSizingHorizontal = 'FILL';
+      const rule = createSizedText(api, {
+        name: 'rule',
+        font: FONT,
+        size: 12,
+        characters: DEFAULT_RULE,
+        fill: RULE_FILL,
+      });
       component.appendChild(rule);
 
-      const target = api.createText();
-      target.name = 'target';
-      target.fontName = FONT;
-      target.fontSize = 10;
-      target.characters = '';
-      target.fills = [HEADER_FILL];
-      target.textAutoResize = 'HEIGHT';
-      target.layoutSizingHorizontal = 'FILL';
+      const target = createSizedText(api, {
+        name: 'target',
+        font: FONT,
+        size: 10,
+        // Not empty: a zero-height text layer is invisible and awkward to
+        // select, and this doubles as the hint for what the field is for.
+        characters: 'target: (layer name, optional)',
+        fill: HEADER_FILL,
+      });
       component.appendChild(target);
 
       components.push(component);
@@ -134,7 +163,7 @@ export async function buildPromptComponent(api: PromptApi): Promise<{
   const ruleId = node.addComponentProperty('rule', 'TEXT', DEFAULT_RULE);
   // A layer name, for a rule about one instance: Figma does not allow placing
   // a node inside an instance, so the Prompt sits beside it and names it.
-  const targetId = node.addComponentProperty('target', 'TEXT', '');
+  const targetId = node.addComponentProperty('target', 'TEXT', 'target: (layer name, optional)');
 
   ruleTexts.forEach((text) => {
     text.componentPropertyReferences = { ...(text.componentPropertyReferences ?? {}), characters: ruleId };
