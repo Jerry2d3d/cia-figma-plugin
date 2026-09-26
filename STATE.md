@@ -8,7 +8,8 @@ A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `site/` is a Next.js app documenting both halves of the pipeline, built with
 the design system it documents: css-is-awesome for tokens and the SCSS API,
 and BoilerPlate v2's own React components. Run it with `npm install` then
-`npm run dev` from `site/`.
+`npm run dev` from `site/`, which serves on **port 3210** (not 3000, which
+boiler-project-ai and most other Next apps here already use).
 
 Five routes, all prerendering static: `/` (landing), `/how-it-works`,
 `/plugins` (public), plus `/docs` (the test runbook, with a copy button on

@@ -11,9 +11,14 @@ here re-implements a button.
 
 ```
 npm install
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:3210
 npm run build    # production build, all routes prerender static
+npm run start    # serve the production build, also on 3210
 ```
+
+Port **3210**, deliberately not 3000: boiler-project-ai and most other Next
+apps here take that one, and having two of them fight over it is a bad way to
+spend a morning. Override per run with `npm run dev -- -p 4000`.
 
 ## Routes
 
