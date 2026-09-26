@@ -1,4 +1,4 @@
-import { CiaCall, ComponentProp, ComponentSpec, StyleBlock } from '@/shared/componentSpec';
+import { BorderSpec, CiaCall, ComponentProp, ComponentSpec, StyleBlock } from '@/shared/componentSpec';
 
 export interface BuildGap {
   /** The style block selector the gap came from, or `contract` for a spec-level gap. */
@@ -51,8 +51,27 @@ export interface BuildOptions {
  */
 export const DEFAULT_FONT_FAMILY = 'Inter';
 
-/** specVersion 2 carries `border-color` but no border width, so strokes get this until the contract does. */
+/** Only used when a block sets a border colour but declares no width at all. */
 export const DEFAULT_STROKE_WEIGHT = 1;
+
+/**
+ * Above this, a component set stops being usable in Figma and starts being a
+ * performance problem. Layout primitives are the ones that blow past it: `Flex`
+ * has four independent axes, which multiply out to 600 combinations. Rather
+ * than truncate silently or pick "sensible" defaults, the builder declines and
+ * says so.
+ */
+export const MAX_VARIANT_COMBINATIONS = 64;
+
+/** `border-width: 2px` -> 2. Returns undefined for anything not in px. */
+function pixelWidth(value: string): number | undefined {
+  const match = /^(-?[\d.]+)px$/.exec(value.trim());
+  if (!match) {
+    return undefined;
+  }
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 /**
  * cia's `$_font-types` presets, which is what `font()`'s first argument is —
@@ -135,7 +154,8 @@ type Op =
     }
   | { kind: 'fontStyle'; style: string }
   | { kind: 'fontSize'; variable: Variable }
-  | { kind: 'fontWeight'; variable: Variable };
+  | { kind: 'fontWeight'; variable: Variable }
+  | { kind: 'strokeWeight'; weight: number };
 
 /**
  * Turns a style block's default-state cia calls into Figma operations,
@@ -174,7 +194,7 @@ class Resolver {
   }
 
   resolveBlock(block: StyleBlock): Op[] {
-    const ops: Op[] = [];
+    const ops: Op[] = this.resolveBorders(block);
     const skippedStates = new Map<string, number>();
     // `padding: a b` arrives as several same-property calls in source order;
     // they are collapsed per CSS shorthand rules after the loop.
@@ -206,6 +226,45 @@ class Resolver {
     return ops;
   }
 
+  /**
+   * Border widths come from the spec's `borders` array, not from a guess.
+   * Only `border-width` in the default state maps to a Figma stroke: `outline`
+   * is a focus ring Figma has no equivalent for, and non-default states are out
+   * of v1 scope like every other non-default style.
+   */
+  private resolveBorders(block: StyleBlock): Op[] {
+    const borders = block.borders ?? [];
+    const ops: Op[] = [];
+
+    borders.forEach((border: BorderSpec) => {
+      if (border.property !== 'border-width') {
+        this.skipped.push({
+          where: block.selector,
+          reason: `${border.property} ${border.width} skipped: Figma has no equivalent`,
+        });
+        return;
+      }
+      if (border.state !== 'default') {
+        this.skipped.push({
+          where: block.selector,
+          reason: `border-width ${border.width} in the ${border.state} state skipped: v1 builds the default state only`,
+        });
+        return;
+      }
+      const weight = pixelWidth(border.width);
+      if (weight === undefined) {
+        this.gaps.push({
+          where: block.selector,
+          reason: `border-width "${border.width}" is not a px value, so it cannot become a Figma stroke weight`,
+        });
+        return;
+      }
+      ops.push({ kind: 'strokeWeight', weight });
+    });
+
+    return ops;
+  }
+
   /** CSS shorthand: 1 value = all sides, 2 = vertical/horizontal, 3+ = top/horizontal/bottom. */
   private resolvePadding(args: string[], where: string, signature: string): Op {
     const verticalKey = args[0];
@@ -219,6 +278,17 @@ class Resolver {
 
   private resolveCall(call: CiaCall, where: string): Op[] {
     const signature = `${call.fn}(${call.args.join(', ')})`;
+
+    // A CSS custom property is a value the component reads back through its own
+    // stylesheet, not something Figma can hold. Not a gap: nothing is missing.
+    if (call.property && call.property.startsWith('--')) {
+      this.skipped.push({
+        where,
+        reason: `${signature} sets the custom property ${call.property}, which Figma has no equivalent for`,
+      });
+      return [];
+    }
+
     switch (call.fn) {
       case 'color':
         return this.resolvePaint(call.args[0], call, where, signature);
@@ -279,6 +349,20 @@ class Resolver {
       case 'animate':
       case 'z':
         this.skipped.push({ where, reason: `${signature} skipped: ${call.property} has no Figma equivalent` });
+        return [];
+      // Compound mixins that emit several declarations at once. The parts this
+      // builder can use arrive separately: `border` widths come through the
+      // block's `borders` array, and `elevation` is a shadow, which has no
+      // Figma Variable type.
+      case 'border':
+      case 'elevation':
+      case 'stack':
+      case 'contain':
+      case 'container':
+        this.skipped.push({
+          where,
+          reason: `${signature} skipped: a compound mixin with no single Figma equivalent`,
+        });
         return [];
       case 'type':
         // A Sass type preset expanding to size + weight + line height at
@@ -419,12 +503,25 @@ function cartesian(axes: VariantAxis[]): { prop: string; value: string }[][] {
   );
 }
 
-function planVariants(spec: ComponentSpec): VariantPlan[] {
+function planVariants(spec: ComponentSpec, gaps: BuildGap[]): VariantPlan[] {
   const baseBlocks = spec.styleBlocks.filter((block) => block.kind === 'base');
   const axes = variantAxes(spec);
   if (axes.length === 0) {
     return [{ name: spec.component, blocks: baseBlocks }];
   }
+
+  const total = axes.reduce((count, axis) => count * axis.values.length, 1);
+  if (total > MAX_VARIANT_COMBINATIONS) {
+    gaps.push({
+      where: 'contract',
+      reason:
+        `${axes.map((axis) => `${axis.prop} (${axis.values.length})`).join(' x ')} = ${total} variant ` +
+        `combinations, over the ${MAX_VARIANT_COMBINATIONS} a usable Figma component set can hold; ` +
+        'built the base only. Split the axes into separate components, or narrow them upstream.',
+    });
+    return [{ name: spec.component, blocks: baseBlocks }];
+  }
+
   return cartesian(axes).map((combination) => ({
     name: combination.map(({ prop, value }) => `${prop}=${value}`).join(', '),
     blocks: [
@@ -475,6 +572,10 @@ async function applyOps(
   bindText('fontSize', lastOp(ops, 'fontSize')?.variable);
   bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
 
+  // A variant's own border width wins over the base block's, so this is settled
+  // once from the whole op list rather than inside the loop.
+  const strokeWeight = lastOp(ops, 'strokeWeight')?.weight ?? DEFAULT_STROKE_WEIGHT;
+
   ops.forEach((op) => {
     switch (op.kind) {
       case 'fill':
@@ -487,7 +588,7 @@ async function applyOps(
         break;
       case 'stroke':
         component.strokes = [api.setBoundVariableForPaint(solidPaint(), 'color', op.variable)];
-        component.strokeWeight = DEFAULT_STROKE_WEIGHT;
+        component.strokeWeight = strokeWeight;
         component.strokeAlign = 'INSIDE';
         bindings += 1;
         break;
@@ -615,10 +716,12 @@ export async function buildComponent(
     opsByBlock.set(block, resolver.resolveBlock(block));
   });
 
-  if (resolver.usesStroke) {
+  // Specs produced before 2026-09-24 carry border colours with no widths at
+  // all. Newer ones always declare a width, so this only fires on a stale spec.
+  if (resolver.usesStroke && !spec.styleBlocks.some((block) => block.borders?.length)) {
     resolver.gaps.push({
       where: 'contract',
-      reason: `spec carries border-color but no border width; stroke weight defaulted to ${DEFAULT_STROKE_WEIGHT}px`,
+      reason: `spec carries border-color but no border widths; stroke weight defaulted to ${DEFAULT_STROKE_WEIGHT}px`,
     });
   }
 
@@ -644,7 +747,7 @@ export async function buildComponent(
     });
   }
 
-  const plans = planVariants(spec);
+  const plans = planVariants(spec, resolver.gaps);
   const components: ComponentNode[] = [];
   const texts: TextNode[] = [];
   let bindings = 0;

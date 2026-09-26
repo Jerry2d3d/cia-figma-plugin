@@ -216,6 +216,26 @@
           "property": "box-shadow",
           "state": "focus"
         }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "focus"
+        }
       ]
     },
     {
@@ -246,7 +266,8 @@
           "property": "transition",
           "state": "default"
         }
-      ]
+      ],
+      "borders": []
     },
     {
       "selector": ".primary",
@@ -334,6 +355,20 @@
           "property": "box-shadow",
           "state": "focus"
         }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "focus"
+        }
       ]
     },
     {
@@ -404,6 +439,20 @@
             "action-secondary-default"
           ],
           "property": "box-shadow",
+          "state": "focus"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "2px",
+          "style": "solid",
           "state": "focus"
         }
       ]
@@ -478,6 +527,20 @@
           "property": "box-shadow",
           "state": "focus"
         }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "focus"
+        }
       ]
     },
     {
@@ -534,6 +597,20 @@
           "property": "box-shadow",
           "state": "focus"
         }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "focus"
+        }
       ]
     },
     {
@@ -569,7 +646,8 @@
           "property": "gap",
           "state": "default"
         }
-      ]
+      ],
+      "borders": []
     },
     {
       "selector": ".medium",
@@ -604,7 +682,8 @@
           "property": "gap",
           "state": "default"
         }
-      ]
+      ],
+      "borders": []
     },
     {
       "selector": ".large",
@@ -639,7 +718,8 @@
           "property": "gap",
           "state": "default"
         }
-      ]
+      ],
+      "borders": []
     },
     {
       "selector": "@include cia.mobile-only",
@@ -740,7 +820,9 @@
           "property": "gap",
           "state": "default"
         }
-      ]
+      ],
+      "borders": []
     }
-  ]
+  ],
+  "gaps": []
 }

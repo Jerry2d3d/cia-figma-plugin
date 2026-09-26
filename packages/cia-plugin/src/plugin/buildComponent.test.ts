@@ -187,7 +187,9 @@ describe('buildComponent', () => {
     const primaryMedium = components.find((c) => c.name === 'variant=primary, size=medium') as FakeComponent;
     expect(boundColor(primaryMedium.fills[0])).toBe('action-primary-default');
     expect(boundColor(primaryMedium.strokes[0])).toBe('action-primary-default');
-    expect(primaryMedium.strokeWeight).toBe(DEFAULT_STROKE_WEIGHT);
+    // 2px, read from the spec's own borders array, not the fallback.
+    expect(primaryMedium.strokeWeight).toBe(2);
+    expect(primaryMedium.strokeWeight).not.toBe(DEFAULT_STROKE_WEIGHT);
     expect(primaryMedium.layoutMode).toBe('HORIZONTAL');
     expect(primaryMedium.primaryAxisAlignItems).toBe('CENTER');
     expect(primaryMedium.counterAxisAlignItems).toBe('CENTER');
@@ -244,9 +246,9 @@ describe('buildComponent', () => {
     expect(reasons).toContain(
       '.large: no variable named "font-size-lg" in the collection (needed for font(semibold, lg, normal) as font size)',
     );
-    expect(reasons).toContain(
-      `contract: spec carries border-color but no border width; stroke weight defaulted to ${DEFAULT_STROKE_WEIGHT}px`,
-    );
+    // The spec has carried real border widths since 2026-09-24, so the old
+    // "no border width" contract gap must no longer be reported.
+    expect(reasons.some((reason) => reason.includes('no border width'))).toBe(false);
     // Resolved once per block, not once per variant: the .small gap must not be repeated 4x.
     expect(reasons.filter((reason) => reason.includes('"space-2xs"'))).toHaveLength(2);
   });
@@ -486,5 +488,104 @@ describe('buildComponent', () => {
     await expect(buildComponent(buttonSpec, { collectionName: 'nope' }, api)).rejects.toThrow(
       'no local Variable collection named "nope"',
     );
+  });
+});
+
+describe('border widths', () => {
+  it('takes the stroke weight from the spec and lets a variant override the base', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Bordered',
+      props: [{ name: 'variant', optional: true, type: 'enum', values: ['thin', 'thick'] }],
+      styleBlocks: [
+        {
+          selector: '.bordered',
+          kind: 'base',
+          ciaCalls: [{ fn: 'color', args: ['border-emphasis'], property: 'border-color', state: 'default' }],
+          borders: [
+            { property: 'border-width', width: '2px', style: 'solid', state: 'default' },
+            // A focus ring has no Figma equivalent, and non-default states are
+            // out of v1 scope. Neither should reach the stroke.
+            { property: 'outline-width', width: '2px', style: 'solid', state: 'focus' },
+            { property: 'border-width', width: '4px', style: 'solid', state: 'hover' },
+          ],
+        },
+        {
+          selector: '.thin',
+          kind: 'variant',
+          prop: 'variant',
+          value: 'thin',
+          ciaCalls: [],
+          borders: [{ property: 'border-width', width: '1px', style: 'solid', state: 'default' }],
+        },
+        {
+          selector: '.thick',
+          kind: 'variant',
+          prop: 'variant',
+          value: 'thick',
+          ciaCalls: [],
+          borders: [{ property: 'border-width', width: '6px', style: 'solid', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components.find((c) => c.name === 'variant=thin')?.strokeWeight).toBe(1);
+    expect(components.find((c) => c.name === 'variant=thick')?.strokeWeight).toBe(6);
+    expect(result.gaps).toEqual([]);
+    const skipped = result.skipped.map((skip) => skip.reason);
+    expect(skipped).toContain('outline-width 2px skipped: Figma has no equivalent');
+    expect(skipped).toContain(
+      'border-width 4px in the hover state skipped: v1 builds the default state only',
+    );
+  });
+
+  it('keeps a zero width, because `border: none` means draw nothing', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Borderless',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.borderless',
+          kind: 'base',
+          ciaCalls: [{ fn: 'color', args: ['border-subtle'], property: 'border-color', state: 'default' }],
+          borders: [{ property: 'border-width', width: '0px', style: 'none', state: 'default' }],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].strokeWeight).toBe(0);
+  });
+
+  it('reports a non-px width as a gap rather than guessing a pixel value', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Odd',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.odd',
+          kind: 'base',
+          ciaCalls: [],
+          borders: [{ property: 'border-width', width: '0.125rem', style: 'solid', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps).toEqual([
+      {
+        where: '.odd',
+        reason: 'border-width "0.125rem" is not a px value, so it cannot become a Figma stroke weight',
+      },
+    ]);
   });
 });

@@ -15,6 +15,19 @@ export interface CiaCall {
   state: CiaCallState;
 }
 
+/**
+ * A border or outline width declared on a block. `border: none` arrives as
+ * width `0px` with style `none`, which is an instruction to draw nothing rather
+ * than an absent value, so it is kept rather than filtered out.
+ */
+export interface BorderSpec {
+  property: string;
+  width: string;
+  /** Null when the width was declared longhand, with no style alongside it. */
+  style: string | null;
+  state: CiaCallState;
+}
+
 export interface StyleBlock {
   selector: string;
   kind: StyleBlockKind;
@@ -23,6 +36,8 @@ export interface StyleBlock {
   /** For `variant` blocks: the prop value that activates this selector (e.g. `primary`). */
   value?: string;
   ciaCalls: CiaCall[];
+  /** Added upstream 2026-09-24; absent on specs produced before that. */
+  borders?: BorderSpec[];
 }
 
 export interface ComponentProp {
@@ -92,6 +107,34 @@ function validateBlock(block: unknown, where: string, errors: string[]): void {
     errors.push(`${where}.ciaCalls must be an array`);
   } else {
     b.ciaCalls.forEach((call, index) => validateCall(call, `${where}.ciaCalls[${index}]`, errors));
+  }
+  if (b.borders !== undefined) {
+    if (!Array.isArray(b.borders)) {
+      errors.push(`${where}.borders must be an array`);
+    } else {
+      b.borders.forEach((border, index) => validateBorder(border, `${where}.borders[${index}]`, errors));
+    }
+  }
+}
+
+function validateBorder(border: unknown, where: string, errors: string[]): void {
+  if (typeof border !== 'object' || border === null) {
+    errors.push(`${where} is not an object`);
+    return;
+  }
+  const b = border as Record<string, unknown>;
+  if (typeof b.property !== 'string' || b.property.length === 0) {
+    errors.push(`${where}.property must be a non-empty string`);
+  }
+  if (typeof b.width !== 'string' || b.width.length === 0) {
+    errors.push(`${where}.width must be a non-empty string`);
+  }
+  // `border-width: 2px` on its own carries no style, which arrives as null.
+  if (b.style !== null && typeof b.style !== 'string') {
+    errors.push(`${where}.style must be a string or null`);
+  }
+  if (typeof b.state !== 'string' || !CALL_STATES.includes(b.state as CiaCallState)) {
+    errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
 }
 
