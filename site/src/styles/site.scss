@@ -1,0 +1,101 @@
+@use 'css-is-awesome/api' as cia;
+
+// The prebuilt theme supplies every token as a `light-dark()` custom property,
+// so Light and Dark come from the viewer's colour-scheme with no extra work.
+:root {
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: cia.color(surface-default);
+  color: cia.color(text-primary);
+  font-family: cia.font-family(primary);
+  font-size: cia.font-size(base);
+  line-height: cia.line-height(normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: cia.color(action-primary-default);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+// One shared page rhythm, so every route lines up on the same grid.
+.page {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: cia.space(md);
+  padding-block: cia.space(2xl) cia.space(4xl);
+}
+
+.page--narrow {
+  max-width: 820px;
+}
+
+.eyebrow {
+  @include cia.font(semibold, xs);
+
+  color: cia.color(action-primary-default);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 cia.space(xs);
+}
+
+.lede {
+  color: cia.color(text-secondary);
+  max-width: 62ch;
+  font-size: cia.font-size(lg);
+}
+
+.prose p {
+  max-width: 68ch;
+  color: cia.color(text-secondary);
+}
+
+.prose h2 {
+  margin-top: cia.space(2xl);
+}
+
+// Utility: a line of small, monospaced metadata.
+.meta {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(xs);
+  color: cia.color(text-muted);
+}
+
+.stack-md {
+  display: flex;
+  flex-direction: column;
+  gap: cia.space(md);
+}
+
+.stack-lg {
+  display: flex;
+  flex-direction: column;
+  gap: cia.space(lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

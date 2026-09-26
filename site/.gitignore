@@ -1,0 +1,7 @@
+.next
+node_modules
+out
+
+# Windows reserved name; a stray "nul" file can appear from shell redirection
+nul
+nul.map

@@ -1,0 +1,76 @@
+@use 'css-is-awesome/api' as cia;
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: cia.color(background-navbar);
+  border-bottom: 1px solid cia.color(border-subtle);
+}
+
+.inner {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: cia.space(md);
+  padding-block: cia.space(sm);
+  display: flex;
+  align-items: center;
+  gap: cia.space(lg);
+  flex-wrap: wrap;
+}
+
+.brand {
+  @include cia.font(bold, base);
+
+  color: cia.color(text-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: cia.space(2xs);
+}
+
+.brandMark {
+  color: cia.color(action-primary-default);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: cia.space(md);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.link {
+  @include cia.font(medium, sm);
+
+  color: cia.color(text-secondary);
+  text-decoration: none;
+  padding-block: cia.space(2xs);
+  border-bottom: 2px solid transparent;
+
+  &:hover {
+    color: cia.color(action-primary-default);
+  }
+}
+
+.linkActive {
+  color: cia.color(text-primary);
+  border-bottom-color: cia.color(action-primary-default);
+}
+
+// Internal routes are separated so they can be dropped before a public launch.
+.internal {
+  @include cia.font(medium, xs);
+
+  color: cia.color(text-muted);
+  text-decoration: none;
+  padding: cia.space(2xs) cia.space(xs);
+  border: 1px dashed cia.color(border-default);
+  border-radius: cia.radius(sm);
+
+  &:hover {
+    color: cia.color(action-primary-default);
+    border-color: cia.color(action-primary-default);
+  }
+}

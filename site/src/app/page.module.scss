@@ -1,0 +1,122 @@
+@use 'css-is-awesome/api' as cia;
+
+.hero {
+  background: cia.color(surface-muted);
+  border-bottom: 1px solid cia.color(border-subtle);
+}
+
+.heroInner {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: cia.space(md);
+  padding-block: cia.space(4xl);
+}
+
+.title {
+  @include cia.font(bold, 4xl);
+
+  margin: 0 0 cia.space(sm);
+  max-width: 20ch;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.accent {
+  color: cia.color(action-primary-default);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: cia.space(sm);
+  margin-top: cia.space(lg);
+}
+
+.plainLink {
+  text-decoration: none;
+}
+
+.sectionTitle {
+  @include cia.font(semibold, 2xl);
+
+  margin: 0 0 cia.space(sm);
+  letter-spacing: -0.01em;
+}
+
+// A real sequence, so the numbering carries information rather than decoration.
+.loop {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.loopItem {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: cia.space(md);
+  padding-block: cia.space(md);
+  border-bottom: 1px solid cia.color(border-subtle);
+
+  &:first-child {
+    border-top: 1px solid cia.color(border-subtle);
+  }
+}
+
+.loopIndex {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(sm);
+  color: cia.color(text-muted);
+  padding-top: 0.2rem;
+}
+
+.loopStep {
+  @include cia.font(semibold, xs);
+
+  display: block;
+  color: cia.color(action-primary-default);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: cia.space(2xs);
+}
+
+.loopTitle {
+  @include cia.font(semibold, lg);
+
+  margin: 0 0 cia.space(2xs);
+}
+
+.loopDetail {
+  margin: 0;
+  color: cia.color(text-secondary);
+  max-width: 62ch;
+}
+
+.statusSection,
+.ruleSection {
+  margin-top: cia.space(4xl);
+}
+
+.ruleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: cia.space(lg);
+  margin-top: cia.space(md);
+}
+
+.rule {
+  border-left: 3px solid cia.color(action-primary-default);
+  padding-left: cia.space(md);
+}
+
+.ruleTitle {
+  @include cia.font(semibold, lg);
+
+  margin: 0 0 cia.space(2xs);
+}
+
+.ruleBody {
+  margin: 0;
+  color: cia.color(text-secondary);
+}

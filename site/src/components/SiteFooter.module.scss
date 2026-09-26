@@ -1,0 +1,32 @@
+@use 'css-is-awesome/api' as cia;
+
+.foot {
+  border-top: 1px solid cia.color(border-subtle);
+  background: cia.color(surface-muted);
+  margin-top: cia.space(4xl);
+}
+
+.inner {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: cia.space(md);
+  padding-block: cia.space(xl);
+  display: flex;
+  flex-direction: column;
+  gap: cia.space(xs);
+}
+
+.line {
+  @include cia.font(medium, sm);
+
+  color: cia.color(text-secondary);
+  margin: 0;
+}
+
+.note {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(xs);
+  color: cia.color(text-muted);
+  margin: 0;
+  max-width: 70ch;
+}

@@ -1,0 +1,238 @@
+@use 'css-is-awesome/api' as cia;
+
+.header {
+  border-bottom: 1px solid cia.color(border-subtle);
+  background: cia.color(surface-muted);
+}
+
+.headerInner {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: cia.space(md);
+  padding-block: cia.space(2xl);
+}
+
+.title {
+  @include cia.font(bold, 3xl);
+
+  margin: 0 0 cia.space(xs);
+  letter-spacing: -0.02em;
+  max-width: 24ch;
+}
+
+.section {
+  margin-top: cia.space(2xl);
+}
+
+.h2 {
+  @include cia.font(semibold, 2xl);
+
+  margin: 0 0 cia.space(sm);
+  letter-spacing: -0.01em;
+}
+
+.h3 {
+  @include cia.font(semibold, lg);
+
+  margin: 0 0 cia.space(2xs);
+}
+
+.body {
+  color: cia.color(text-secondary);
+  max-width: 68ch;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: cia.space(md);
+  margin-top: cia.space(md);
+}
+
+.panel {
+  border: 1px solid cia.color(border-subtle);
+  border-radius: cia.radius(md);
+  background: cia.color(surface-default);
+  padding: cia.space(md);
+}
+
+.panelAccent {
+  border-left: 3px solid cia.color(action-primary-default);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin-top: cia.space(md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: cia.font-size(sm);
+}
+
+.table th {
+  @include cia.font(semibold, xs);
+
+  text-align: left;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: cia.color(text-muted);
+  padding: 0 cia.space(md) cia.space(2xs) 0;
+  border-bottom: 1px solid cia.color(border-default);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: cia.space(xs) cia.space(md) cia.space(xs) 0;
+  border-bottom: 1px solid cia.color(border-subtle);
+  vertical-align: top;
+  color: cia.color(text-secondary);
+}
+
+.table td:first-child {
+  font-family: cia.font-family(mono);
+  color: cia.color(action-primary-default);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(sm);
+}
+
+.steps {
+  margin: cia.space(sm) 0;
+  padding-left: cia.space(md);
+  color: cia.color(text-secondary);
+}
+
+.steps li {
+  margin-bottom: cia.space(xs);
+}
+
+.stepGroup {
+  border: 1px solid cia.color(border-subtle);
+  border-radius: cia.radius(md);
+  background: cia.color(surface-default);
+  margin-bottom: cia.space(sm);
+  overflow: hidden;
+}
+
+.stepHead {
+  display: flex;
+  align-items: baseline;
+  gap: cia.space(sm);
+  flex-wrap: wrap;
+  padding: cia.space(sm) cia.space(md);
+  border-bottom: 1px solid cia.color(border-subtle);
+  background: cia.color(surface-muted);
+}
+
+.stepTag {
+  @include cia.font(semibold, xs);
+
+  color: cia.color(action-primary-default);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stepTitle {
+  @include cia.font(semibold, base);
+
+  margin: 0;
+}
+
+.stepTime {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(xs);
+  color: cia.color(text-muted);
+  margin-left: auto;
+}
+
+.stepBody {
+  padding: cia.space(sm) cia.space(md) cia.space(md);
+}
+
+// A build-log entry. Newest first, so the rule sits on top of each one.
+.entry {
+  border-top: 2px solid cia.color(border-emphasis);
+  padding-top: cia.space(md);
+  margin-top: cia.space(xl);
+}
+
+.entryHead {
+  display: flex;
+  align-items: baseline;
+  gap: cia.space(sm);
+  flex-wrap: wrap;
+  margin-bottom: cia.space(2xs);
+}
+
+.entryDate {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(xs);
+  color: cia.color(text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.entryTitle {
+  @include cia.font(semibold, xl);
+
+  margin: 0;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: cia.space(2xs) cia.space(md);
+  margin: cia.space(sm) 0 0;
+  font-size: cia.font-size(sm);
+}
+
+.facts dt {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(xs);
+  color: cia.color(text-muted);
+  white-space: nowrap;
+}
+
+.facts dd {
+  margin: 0;
+  color: cia.color(text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ownerTag {
+  @include cia.font(semibold, xs);
+
+  display: block;
+  color: cia.color(action-primary-default);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: cia.space(2xs);
+}
+
+.numbered {
+  list-style: none;
+  margin: cia.space(md) 0 0;
+  padding: 0;
+}
+
+.numberedItem {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  gap: cia.space(md);
+  padding-block: cia.space(md);
+  border-bottom: 1px solid cia.color(border-subtle);
+}
+
+.numberedIndex {
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(sm);
+  color: cia.color(text-muted);
+}
+
+.internalNote {
+  margin-top: cia.space(md);
+}

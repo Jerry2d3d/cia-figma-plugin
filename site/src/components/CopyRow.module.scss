@@ -1,0 +1,56 @@
+@use 'css-is-awesome/api' as cia;
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: cia.space(2xs);
+  margin-block: cia.space(sm);
+}
+
+.label {
+  @include cia.font(semibold, xs);
+
+  color: cia.color(text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid cia.color(border-subtle);
+  border-radius: cia.radius(md);
+  background: cia.color(surface-default);
+  overflow: hidden;
+}
+
+.code {
+  flex: 1;
+  font-family: cia.font-family(mono);
+  font-size: cia.font-size(sm);
+  color: cia.color(text-secondary);
+  padding: cia.space(xs) cia.space(sm);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.button {
+  @include cia.button-reset;
+  @include cia.font(semibold, xs);
+
+  flex: none;
+  min-width: 5.5rem;
+  color: cia.color(text-muted);
+  background: cia.color(surface-muted);
+  border-left: 1px solid cia.color(border-subtle);
+  padding-inline: cia.space(sm);
+  cursor: pointer;
+
+  &:hover {
+    color: cia.color(action-primary-default);
+  }
+
+  &[data-copied='yes'] {
+    color: cia.color(success-text);
+  }
+}
