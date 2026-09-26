@@ -47,7 +47,9 @@ export default function PluginsPage() {
                     <td>Tokens</td>
                     <td>
                       Creates or updates a Variable collection, its Light and Dark modes, and every
-                      variable in it. Re-running it updates in place rather than duplicating.
+                      variable in it. Re-running it updates in place rather than duplicating. It also
+                      saves a name map into the file, which is what lets a screen read back report
+                      spacing as a token name instead of an internal id.
                     </td>
                   </tr>
                   <tr>
@@ -95,23 +97,36 @@ export default function PluginsPage() {
                     <td>export_tokens</td>
                     <td>
                       Turns a theme into the Variables-shaped token contract, splitting light and dark
-                      values into two modes. Values Figma cannot hold come back as named gaps.
+                      values into two modes. Values Figma cannot hold come back as named gaps, and
+                      tokens a base theme is missing compared to its own light and dark variants are
+                      reported separately rather than quietly filled in.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>import_tokens</td>
+                    <td>
+                      Reads either shape back, merges the tokens Figma cannot carry from the existing
+                      theme, says which ones it preserved that way, and refuses a version it does not
+                      understand.
                     </td>
                   </tr>
                   <tr>
                     <td>export_component_spec</td>
                     <td>
                       Turns a component&apos;s TypeScript and stylesheet into a versioned build spec:
-                      props with their enums, and every token call tagged with the property and state
-                      it sets.
+                      props with their enums, every token call tagged with the property and state it
+                      sets, and border and outline widths per state. Anything it cannot tie to a prop
+                      is listed as a gap.
                     </td>
                   </tr>
                   <tr>
                     <td>map_screen</td>
                     <td>
-                      Reads a composed screen: which components, which props and flags, what text,
-                      what layout in token names, and the Prompts a PM left. Components are matched by
-                      id, so renaming a layer does not break the match.
+                      Reads a composed screen: every instance with its variant props, flags, visible
+                      text and enclosing frame; each frame&apos;s auto-layout in token names; and the
+                      Prompts a PM left. Components are matched by id, so renaming a layer does not
+                      break the match, and a binding it cannot name comes back as an id rather than a
+                      pixel value pretending to be a token.
                     </td>
                   </tr>
                   <tr>
