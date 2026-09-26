@@ -191,9 +191,12 @@ designer restyling a component in Figma is drift to flag, never an import.
 | `c8f5f20c` | ROADMAP.md moved into this repo |
 | `56ec0720`, `27089487` | Prompt component decision, Starter-plan note |
 
-24 unit tests pass, lint clean, production build clean. Run them with the
-vendored yarn (`yarn` is not on PATH):
-`node ..\..\.yarn\releases\yarn-1.18.0.cjs test` from `packages/cia-plugin/`.
+Unit tests pass, lint clean, production build clean. Run `yarn test` from
+`packages/cia-plugin/`. If `yarn` is missing from PATH, run `corepack enable`
+once: it installs a shim for the pinned yarn 1.18.0, which is what turbo
+shells out to, so without it any root-level `yarn start` fails with
+`exec: "yarn": executable file not found`. The vendored copy still works
+directly as `node ..\..\.yarn\releases\yarn-1.18.0.cjs test`.
 
 Sibling repo `figma-import-export` is committed through `93eea50`, which
 includes its Phase 3 (the token contract this plugin consumes) and all of

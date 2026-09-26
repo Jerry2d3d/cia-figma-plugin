@@ -177,14 +177,23 @@ blank", "put this behind feature flag X").
 
 ## Development
 
-Run from `packages/cia-plugin/`. `yarn` is not on PATH on the dev machine;
-use the vendored copy:
+Run from `packages/cia-plugin/`:
 
 ```
-node ..\..\.yarn\releases\yarn-1.18.0.cjs test
-node ..\..\.yarn\releases\yarn-1.18.0.cjs lint:nofix
-node ..\..\.yarn\releases\yarn-1.18.0.cjs build
+yarn test
+yarn lint:nofix
+yarn build
 ```
+
+If `yarn` is not on PATH, run `corepack enable` once. It installs a shim for
+the pinned yarn 1.18.0, which is also what turbo shells out to — without it,
+any root-level `yarn start` / `yarn build` fails with
+`exec: "yarn": executable file not found`. The vendored copy still works
+directly as `node ..\..\.yarn\releases\yarn-1.18.0.cjs test`.
+
+From the repo root: `yarn start` watches the plugin only (the old Tokens
+Studio package is read-only, so its watch is filtered out; `yarn start:all`
+restores it), and `yarn site` runs the website on port 3210.
 
 Load in Figma via Plugins → Development → Import plugin from manifest,
 pointing at `packages/cia-plugin/manifest.json` after a build.
