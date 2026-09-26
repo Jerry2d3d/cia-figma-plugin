@@ -2,7 +2,8 @@ import { UiToPluginMessage, postToUi } from '@/shared/messages';
 import { validateTokenContract } from '@/shared/tokenContract';
 import { validateComponentSpec } from '@/shared/componentSpec';
 import { syncTokenContract } from '@/plugin/syncTokens';
-import { BuildApi, buildComponent } from '@/plugin/buildComponent';
+import { BuildApi, BuildResult, buildComponent } from '@/plugin/buildComponent';
+import { layoutInGrid, originBelow } from '@/plugin/layoutNodes';
 import { PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
 import { VariableMapApi, writeVariableMap } from '@/plugin/variableMap';
 
@@ -56,19 +57,45 @@ async function handleSyncTokens(contract: unknown): Promise<void> {
   }
 }
 
-async function handleBuildComponent(spec: unknown, collection: string): Promise<void> {
-  const validation = validateComponentSpec(spec);
-  if (!validation.valid) {
-    postToUi({ type: 'build-error', message: validation.errors.join('; ') });
-    return;
+async function handleBuildComponents(
+  specs: { name: string; json: unknown }[],
+  collection: string,
+): Promise<void> {
+  const results: BuildResult[] = [];
+  const failures: { name: string; message: string }[] = [];
+  const built: SceneNode[] = [];
+
+  // Everything already on the page, so a second batch lands below the first
+  // rather than on top of it.
+  const existing = figma.currentPage.children.filter(
+    (node): node is SceneNode & { width: number; height: number } =>
+      'width' in node && 'height' in node,
+  );
+  const origin = originBelow(existing);
+
+  for (const spec of specs) {
+    const validation = validateComponentSpec(spec.json);
+    if (!validation.valid) {
+      failures.push({ name: spec.name, message: validation.errors.join('; ') });
+      continue;
+    }
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const { result, node } = await buildComponent(validation.spec, { collectionName: collection }, buildApi);
+      results.push(result);
+      built.push(node);
+    } catch (error) {
+      failures.push({ name: spec.name, message: (error as Error).message });
+    }
   }
-  try {
-    const { result, node } = await buildComponent(validation.spec, { collectionName: collection }, buildApi);
-    reveal(node);
-    postToUi({ type: 'build-result', result });
-  } catch (error) {
-    postToUi({ type: 'build-error', message: (error as Error).message });
+
+  if (built.length > 0) {
+    layoutInGrid(built, origin);
+    figma.currentPage.selection = built;
+    figma.viewport.scrollAndZoomIntoView(built);
   }
+
+  postToUi({ type: 'build-result', results, failures });
 }
 
 async function handleBuildPrompt(): Promise<void> {
@@ -91,8 +118,8 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
       // A sync may have created the collection the component panel wants next.
       await sendCollections();
       break;
-    case 'build-component':
-      await handleBuildComponent(message.spec, message.collection);
+    case 'build-components':
+      await handleBuildComponents(message.specs, message.collection);
       break;
     case 'build-prompt':
       await handleBuildPrompt();

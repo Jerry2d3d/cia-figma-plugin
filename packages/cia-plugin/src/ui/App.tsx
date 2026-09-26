@@ -34,7 +34,11 @@ export function App() {
           setCollections(message.names);
           break;
         case 'build-result':
-          setBuildStatus({ kind: 'result', result: message.result as BuildResult });
+          setBuildStatus({
+            kind: 'result',
+            results: message.results as BuildResult[],
+            failures: message.failures,
+          });
           break;
         case 'build-error':
           setBuildStatus({ kind: 'error', message: message.message });

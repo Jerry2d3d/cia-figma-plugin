@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { postToPlugin } from '@/shared/messages';
 import { BuildResult } from '@/plugin/buildComponent';
-import { readJsonFile } from '@/ui/readJsonFile';
+import { readJsonFiles } from '@/ui/readJsonFile';
 
 export type ComponentBuildStatus =
   | { kind: 'idle' }
   | { kind: 'building' }
-  | { kind: 'result'; result: BuildResult }
+  | { kind: 'result'; results: BuildResult[]; failures: { name: string; message: string }[] }
   | { kind: 'error'; message: string };
 
 interface Props {
@@ -15,9 +15,14 @@ interface Props {
   onStatusChange: (status: ComponentBuildStatus) => void;
 }
 
+interface LoadedSpec {
+  name: string;
+  json: unknown;
+}
+
 export function ComponentBuildPanel({ collections, status, onStatusChange }: Props) {
   const [collection, setCollection] = useState('');
-  const [spec, setSpec] = useState<{ name: string; json: unknown } | null>(null);
+  const [specs, setSpecs] = useState<LoadedSpec[]>([]);
 
   // Keep a valid selection as the list arrives or changes (e.g. after a token sync).
   useEffect(() => {
@@ -27,35 +32,54 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
   }, [collections, collection]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = await readJsonFile(event);
+    const parsed = await readJsonFiles(event);
     if (!parsed) {
       return;
     }
-    if (!parsed.ok) {
-      setSpec(null);
-      onStatusChange({ kind: 'error', message: parsed.error });
-      return;
+    if (parsed.invalid.length > 0) {
+      onStatusChange({
+        kind: 'error',
+        message: parsed.invalid.map((file) => `${file.fileName}: ${file.error}`).join('; '),
+      });
+    } else {
+      onStatusChange({ kind: 'idle' });
     }
-    setSpec({ name: parsed.fileName, json: parsed.json });
-    onStatusChange({ kind: 'idle' });
+    setSpecs(parsed.valid.map((file) => ({ name: file.fileName, json: file.json })));
   };
 
   const handleBuild = () => {
-    if (!spec || !collection) {
+    if (specs.length === 0 || !collection) {
       return;
     }
     onStatusChange({ kind: 'building' });
-    postToPlugin({ type: 'build-component', spec: spec.json, collection });
+    postToPlugin({ type: 'build-components', specs, collection });
+  };
+
+  const buildLabel = () => {
+    if (status.kind === 'building') {
+      return specs.length > 1 ? `Building ${specs.length} components…` : 'Building…';
+    }
+    if (specs.length === 0) {
+      return 'Build';
+    }
+    return specs.length === 1 ? `Build ${specs[0].name}` : `Build ${specs.length} components`;
   };
 
   return (
     <section className="panel">
       <h2>Components</h2>
-      <p>Load a component spec produced by figma-import-export, pick the Variable collection to bind to, then build.</p>
+      <p>
+        Load one component spec or the whole folder, pick the Variable collection to bind to, then
+        build. Everything built in one go is laid out in a grid rather than stacked.
+      </p>
 
       <label className="field">
         Collection
-        <select value={collection} onChange={(event) => setCollection(event.target.value)} disabled={collections.length === 0}>
+        <select
+          value={collection}
+          onChange={(event) => setCollection(event.target.value)}
+          disabled={collections.length === 0}
+        >
           {collections.length === 0 && <option value="">No local collections yet: sync tokens first</option>}
           {collections.map((name) => (
             <option key={name} value={name}>
@@ -66,50 +90,99 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
       </label>
 
       <label className="field">
-        Spec
-        <input type="file" accept="application/json" onChange={handleFileChange} />
+        Spec files
+        <input type="file" accept="application/json" multiple onChange={handleFileChange} />
       </label>
 
-      <button type="button" onClick={handleBuild} disabled={!spec || !collection || status.kind === 'building'}>
-        {status.kind === 'building' ? 'Building…' : `Build${spec ? ` ${spec.name}` : ''}`}
+      <button
+        type="button"
+        onClick={handleBuild}
+        disabled={specs.length === 0 || !collection || status.kind === 'building'}
+      >
+        {buildLabel()}
       </button>
 
-      {status.kind === 'result' && (
-        <div className="result">
-          <p>
-            Built <strong>{status.result.component}</strong> ({status.result.variantNames.length} variant
-            {status.result.variantNames.length === 1 ? '' : 's'}) with {status.result.bindings} binding
-            {status.result.bindings === 1 ? '' : 's'} to <strong>{status.result.collection}</strong>.
-          </p>
-          {status.result.properties.length > 0 && <p>Properties: {status.result.properties.join(', ')}.</p>}
-          {status.result.gaps.length > 0 && (
-            <>
-              <p>{status.result.gaps.length} gap(s) to route upstream:</p>
-              <ul>
-                {status.result.gaps.map((gap) => (
-                  <li key={`${gap.where}:${gap.reason}`}>
-                    <strong>{gap.where}</strong>: {gap.reason}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          {status.result.skipped.length > 0 && (
-            <details className="skipped">
-              <summary>{status.result.skipped.length} thing(s) not built in v1</summary>
-              <ul>
-                {status.result.skipped.map((skip) => (
-                  <li key={`${skip.where}:${skip.reason}`}>
-                    <strong>{skip.where}</strong>: {skip.reason}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-        </div>
-      )}
+      {status.kind === 'result' && <BuildSummary results={status.results} failures={status.failures} />}
 
       {status.kind === 'error' && <p className="error">{status.message}</p>}
     </section>
+  );
+}
+
+function BuildSummary({
+  results,
+  failures,
+}: {
+  results: BuildResult[];
+  failures: { name: string; message: string }[];
+}) {
+  const variants = results.reduce((total, result) => total + result.variantNames.length, 0);
+  const bindings = results.reduce((total, result) => total + result.bindings, 0);
+  const gaps = results.flatMap((result) => result.gaps.map((gap) => ({ ...result, gap })));
+  const skipped = results.reduce((total, result) => total + result.skipped.length, 0);
+  const single = results.length === 1 ? results[0] : undefined;
+
+  return (
+    <div className="result">
+      {single ? (
+        <p>
+          Built <strong>{single.component}</strong> ({single.variantNames.length} variant
+          {single.variantNames.length === 1 ? '' : 's'}) with {single.bindings} binding
+          {single.bindings === 1 ? '' : 's'} to <strong>{single.collection}</strong>.
+        </p>
+      ) : (
+        <p>
+          Built <strong>{results.length} components</strong>: {variants} variants and {bindings}{' '}
+          bindings in total.
+        </p>
+      )}
+
+      {single && single.properties.length > 0 && <p>Properties: {single.properties.join(', ')}.</p>}
+
+      {failures.length > 0 && (
+        <>
+          <p className="error">{failures.length} could not be built:</p>
+          <ul>
+            {failures.map((failure) => (
+              <li key={failure.name}>
+                <strong>{failure.name}</strong>: {failure.message}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {gaps.length > 0 && (
+        <>
+          <p>{gaps.length} gap(s) to route upstream:</p>
+          <ul>
+            {gaps.map((entry) => (
+              <li key={`${entry.component}:${entry.gap.where}:${entry.gap.reason}`}>
+                <strong>
+                  {single ? entry.gap.where : `${entry.component} · ${entry.gap.where}`}
+                </strong>
+                : {entry.gap.reason}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {skipped > 0 && (
+        <details className="skipped">
+          <summary>{skipped} thing(s) not built in v1</summary>
+          <ul>
+            {results.flatMap((result) =>
+              result.skipped.map((skip) => (
+                <li key={`${result.component}:${skip.where}:${skip.reason}`}>
+                  <strong>{single ? skip.where : `${result.component} · ${skip.where}`}</strong>:{' '}
+                  {skip.reason}
+                </li>
+              )),
+            )}
+          </ul>
+        </details>
+      )}
+    </div>
   );
 }
