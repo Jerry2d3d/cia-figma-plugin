@@ -3,6 +3,27 @@
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
 
+## THE SITE (added 2026-09-26)
+
+`site/` is a Next.js app documenting both halves of the pipeline, built with
+the design system it documents: css-is-awesome for tokens and the SCSS API,
+and BoilerPlate v2's own React components. Run it with `npm install` then
+`npm run dev` from `site/`.
+
+Five routes, all prerendering static: `/` (landing), `/how-it-works`,
+`/plugins` (public), plus `/docs` (the test runbook, with a copy button on
+every path and command) and `/log` (this build log, newest first). The two
+internal routes are linked separately in the nav so they can be dropped in
+one edit before a public launch.
+
+**Editing it:** status, log entries, next steps and every copyable path live
+in `site/src/content/pipeline.ts`. One edit, not five pages. `site/README.md`
+records the three integration details that were not obvious (aliasing
+`@boilerai/react` source as `@bp/*`, `sassOptions.loadPaths` needing cia's
+own `scss` dir, and why `src/styles` must stay off that list).
+
+The site is the human-facing source; this file stays the agent-facing one.
+
 ## ROUND 2 PASSED TOO (2026-09-26)
 
 Jerry re-ran everything in Figma after the day's work and reported it all
