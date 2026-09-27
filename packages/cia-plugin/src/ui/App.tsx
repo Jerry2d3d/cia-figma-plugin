@@ -15,6 +15,7 @@ export function App() {
   const [buildStatus, setBuildStatus] = useState<ComponentBuildStatus>({ kind: 'idle' });
   const [promptStatus, setPromptStatus] = useState<PromptStatus>({ kind: 'idle' });
   const [frameStatus, setFrameStatus] = useState<FrameStatus>({ kind: 'idle' });
+  const [fatal, setFatal] = useState<{ action: string; message: string } | null>(null);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
@@ -57,6 +58,12 @@ export function App() {
         case 'prompt-error':
           setPromptStatus({ kind: 'error', message: message.message });
           break;
+        case 'plugin-error':
+          setFatal({ action: message.action, message: message.message });
+          // Clear any panel left mid-flight, so nothing sits on "Building…".
+          setBuildStatus({ kind: 'idle' });
+          setPromptStatus({ kind: 'idle' });
+          break;
         case 'frame-result':
           setFrameStatus({ kind: 'result', marked: message.marked, errors: message.errors });
           break;
@@ -70,6 +77,11 @@ export function App() {
   return (
     <div className="app">
       <h1>cia</h1>
+      {fatal && (
+        <p className="error">
+          <strong>{fatal.action}</strong> failed: {fatal.message}
+        </p>
+      )}
       <TokenSyncPanel status={syncStatus} onStatusChange={setSyncStatus} />
       <ComponentBuildPanel collections={collections} status={buildStatus} onStatusChange={setBuildStatus} />
       <PromptPanel status={promptStatus} onStatusChange={setPromptStatus} />

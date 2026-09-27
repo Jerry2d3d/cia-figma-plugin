@@ -164,23 +164,36 @@ function handleMarkFrame(frameType: string): void {
 }
 
 figma.ui.onmessage = async (message: UiToPluginMessage) => {
-  switch (message.type) {
-    case 'list-collections':
-      await sendCollections();
-      break;
-    case 'sync-tokens':
-      await handleSyncTokens(message.contract);
-      // A sync may have created the collection the component panel wants next.
-      await sendCollections();
-      break;
-    case 'build-components':
-      await handleBuildComponents(message.specs, message.collection);
-      break;
-    case 'build-prompt':
-      await handleBuildPrompt();
-      break;
-    case 'mark-frame':
-      handleMarkFrame(message.frameType);
-      break;
+  // Every handler runs inside this. Without it an unexpected throw becomes an
+  // unhandled rejection: the plugin thread stops, the UI never hears back, and
+  // the panel sits on "Building…" forever with nothing to report. A dead panel
+  // is the worst possible failure, because it looks like the plugin is broken
+  // rather than like something specific went wrong.
+  try {
+    switch (message.type) {
+      case 'list-collections':
+        await sendCollections();
+        break;
+      case 'sync-tokens':
+        await handleSyncTokens(message.contract);
+        // A sync may have created the collection the component panel wants next.
+        await sendCollections();
+        break;
+      case 'build-components':
+        await handleBuildComponents(message.specs, message.collection);
+        break;
+      case 'build-prompt':
+        await handleBuildPrompt();
+        break;
+      case 'mark-frame':
+        handleMarkFrame(message.frameType);
+        break;
+    }
+  } catch (error) {
+    postToUi({
+      type: 'plugin-error',
+      action: message.type,
+      message: (error as Error)?.message ?? String(error),
+    });
   }
 };

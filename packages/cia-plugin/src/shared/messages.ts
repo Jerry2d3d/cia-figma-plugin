@@ -27,6 +27,8 @@ export type PluginToUiMessage =
     }
   | { type: 'build-error'; message: string }
   | { type: 'prompt-result'; result: PromptBuildResult; duplicate: boolean }
+  /** Anything that threw where nothing else caught it. Always surfaced. */
+  | { type: 'plugin-error'; action: string; message: string }
   | { type: 'frame-result'; marked: { name: string; previousName: string; type: string }[]; errors: string[] }
   | { type: 'prompt-error'; message: string };
 

@@ -60,12 +60,18 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
     postToPlugin({ type: 'build-components', specs, collection });
   };
 
+  // The label says what is missing, rather than leaving a greyed button with
+  // no reason: an empty collection list disables Build no matter how many
+  // specs are chosen, which looks like the plugin is broken.
   const buildLabel = () => {
     if (status.kind === 'building') {
       return specs.length > 1 ? `Building ${specs.length} components…` : 'Building…';
     }
+    if (!collection) {
+      return 'Sync tokens first';
+    }
     if (specs.length === 0) {
-      return 'Build';
+      return 'Choose a spec file above';
     }
     return specs.length === 1 ? `Build ${specs[0].name}` : `Build ${specs.length} components`;
   };
@@ -98,6 +104,13 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
         Spec files
         <input type="file" accept="application/json" multiple onChange={handleFileChange} />
       </label>
+
+      {collections.length === 0 && (
+        <p className="warn">
+          There are no Variables in this file yet, so there is nothing to bind a component to. Load
+          a token file in the Tokens section above first. This is why Build stays greyed out.
+        </p>
+      )}
 
       <button
         type="button"
