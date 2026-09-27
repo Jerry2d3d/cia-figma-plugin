@@ -178,8 +178,11 @@ describe('buildComponent', () => {
     expect(result.component).toBe('Button');
     expect(result.collection).toBe('boilerplate');
     expect(result.variantNames).toHaveLength(12);
-    expect(result.variantNames[0]).toBe('variant=primary, size=small');
-    expect(result.variantNames[11]).toBe('variant=ghost, size=large');
+    // Figma hands out the FIRST variant when someone drags from Assets, and
+    // Button's spec declares variant=primary size=medium as its defaults. A
+    // designer placing a Button should get the one the code would render.
+    expect(result.variantNames[0]).toBe('variant=primary, size=medium');
+    expect(result.variantNames).toHaveLength(12);
   });
 
   it('binds fills, strokes, padding, radius, gap and typography of variant=primary, size=medium to real variables', async () => {
@@ -652,5 +655,85 @@ describe("Figma's default white fill", () => {
 
     // An empty component should look empty. A white box looks deliberate.
     expect(components[0].fills).toEqual([]);
+  });
+});
+
+describe('declared defaults', () => {
+  it('puts the default value first on every axis, so the default instance matches the code', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Sized',
+      props: [
+        { name: 'size', optional: true, type: 'enum', values: ['sm', 'md', 'lg'], default: 'lg' },
+        { name: 'tone', optional: true, type: 'enum', values: ['quiet', 'loud'], default: 'loud' },
+      ],
+      styleBlocks: [
+        { selector: '.sized', kind: 'base', ciaCalls: [] },
+        ...['sm', 'md', 'lg'].map((value) => ({
+          selector: `.${value}`,
+          kind: 'variant' as const,
+          prop: 'size',
+          value,
+          ciaCalls: [],
+        })),
+        ...['quiet', 'loud'].map((value) => ({
+          selector: `.${value}`,
+          kind: 'variant' as const,
+          prop: 'tone',
+          value,
+          ciaCalls: [],
+        })),
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.variantNames[0]).toBe('size=lg, tone=loud');
+    // Every value is still built, only the order changed.
+    expect(result.variantNames).toHaveLength(6);
+    expect(result.variantNames).toContain('size=sm, tone=quiet');
+  });
+
+  it('leaves the order alone when no default is declared', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Plain',
+      props: [{ name: 'tone', optional: true, type: 'enum', values: ['a', 'b'] }],
+      styleBlocks: [
+        { selector: '.plain', kind: 'base', ciaCalls: [] },
+        { selector: '.a', kind: 'variant', prop: 'tone', value: 'a', ciaCalls: [] },
+        { selector: '.b', kind: 'variant', prop: 'tone', value: 'b', ciaCalls: [] },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.variantNames[0]).toBe('tone=a');
+  });
+
+  it("uses a text prop's own default as the placeholder, on the canvas and the property", async () => {
+    const { api, components, sets } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'CodeBlock',
+      props: [{ name: 'label', optional: true, type: 'string', values: null, default: 'Code' }],
+      styleBlocks: [{ selector: '.codeBlock', kind: 'base', ciaCalls: [] }],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children[0].characters).toBe('Code');
+    expect(components[0].properties.label).toEqual({ type: 'TEXT', defaultValue: 'Code' });
+    expect(sets).toHaveLength(0);
+  });
+
+  it('falls back to the component name when a text prop declares no default', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children[0].characters).toBe('Button');
   });
 });

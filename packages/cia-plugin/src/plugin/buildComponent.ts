@@ -484,10 +484,25 @@ function variantAxes(spec: ComponentSpec): VariantAxis[] {
     }
     const blockByValue = new Map<string, StyleBlock>();
     blocks.forEach((block) => blockByValue.set(block.value as string, block));
-    axes.push({ prop: prop.name, values: prop.values ?? Array.from(blockByValue.keys()), blockByValue });
+    const values = prop.values ?? Array.from(blockByValue.keys());
+    axes.push({ prop: prop.name, values: defaultFirst(values, prop.default), blockByValue });
   });
 
   return axes;
+}
+
+/**
+ * Figma hands out the *first* variant in a set when someone drags the component
+ * from the Assets panel, so that variant is effectively the component's
+ * default. The spec says what the code defaults to, so put it first on every
+ * axis: `size` defaults to `medium`, and a designer placing a Button should get
+ * a medium one rather than whichever value happened to be declared first.
+ */
+function defaultFirst(values: string[], declaredDefault?: string): string[] {
+  if (!declaredDefault || !values.includes(declaredDefault)) {
+    return values;
+  }
+  return [declaredDefault, ...values.filter((value) => value !== declaredDefault)];
 }
 
 interface VariantPlan {
@@ -663,7 +678,10 @@ function addComponentProperties(
 
   const label = textProp(spec);
   if (label) {
-    const id = owner.addComponentProperty(label.name, 'TEXT', spec.component);
+    // The prop's own default is better placeholder content than the component
+    // name: CodeBlock's label really is "Code". Falling back to the component
+    // name keeps every instance readable rather than blank.
+    const id = owner.addComponentProperty(label.name, 'TEXT', label.default ?? spec.component);
     texts.forEach((text) => {
       text.componentPropertyReferences = { ...(text.componentPropertyReferences ?? {}), characters: id };
     });
@@ -755,6 +773,9 @@ export async function buildComponent(
   }
 
   const plans = planVariants(spec, resolver.gaps);
+  // Same placeholder the TEXT property defaults to, so the canvas and the
+  // property panel agree before anyone types anything.
+  const placeholder = textProp(spec)?.default ?? spec.component;
   const components: ComponentNode[] = [];
   const texts: TextNode[] = [];
   let bindings = 0;
@@ -768,7 +789,7 @@ export async function buildComponent(
 
     const ops = plan.blocks.flatMap((block) => opsByBlock.get(block) ?? []);
     // eslint-disable-next-line no-await-in-loop
-    bindings += await applyOps(api, component, text, spec.component, ops);
+    bindings += await applyOps(api, component, text, placeholder, ops);
     components.push(component);
     texts.push(text);
   }
