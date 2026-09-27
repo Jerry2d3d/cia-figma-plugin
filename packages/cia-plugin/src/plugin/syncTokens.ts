@@ -5,11 +5,31 @@ export interface SyncGap {
   reason: string;
 }
 
+/**
+ * What Figma actually holds for a mode the contract never gave a value for.
+ *
+ * The contract can omit a theme-mode for a token that theme does not declare,
+ * intending it to read as absent. But Figma has no empty state: a variable
+ * holds a value for every mode in its collection, so an omitted mode gets
+ * whatever Figma defaulted it to when the variable was created. That default
+ * is indistinguishable, in the UI and to a reader, from a deliberate value.
+ *
+ * This is reported rather than worked around, because the honest fix belongs
+ * upstream in how the contract expresses "this theme does not have this token".
+ */
+export interface ModeCoverage {
+  variablesWithEveryMode: number;
+  variablesMissingSomeMode: number;
+  /** A few real examples of what Figma stored where the contract said nothing. */
+  samples: { variable: string; mode: string; figmaStored: string }[];
+}
+
 export interface SyncResult {
   collection: string;
   variablesCreated: number;
   variablesUpdated: number;
   modesCreated: number;
+  coverage: ModeCoverage;
   gaps: SyncGap[];
 }
 
@@ -70,6 +90,57 @@ function ensureModes(
   return { modeNameToId, modesCreated };
 }
 
+function describeValue(value: unknown): string {
+  if (value === undefined) {
+    return 'nothing';
+  }
+  if (value && typeof value === 'object' && 'r' in (value as Record<string, unknown>)) {
+    const c = value as { r: number; g: number; b: number; a: number };
+    const hex = [c.r, c.g, c.b].map((n) => Math.round(n * 255).toString(16).padStart(2, '0')).join('');
+    return `#${hex} at ${Math.round(c.a * 100)}% alpha`;
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * Reads back what Figma stored for every mode the contract did not set, so the
+ * difference between "absent" and "defaulted" is visible rather than assumed.
+ */
+function measureCoverage(
+  contract: TokenContract,
+  modeNameToId: Map<string, string>,
+  written: { name: string; variable: Variable }[],
+): ModeCoverage {
+  const coverage: ModeCoverage = {
+    variablesWithEveryMode: 0,
+    variablesMissingSomeMode: 0,
+    samples: [],
+  };
+
+  written.forEach(({ name, variable }) => {
+    const declared = contract.variables.find((candidate) => candidate.name === name);
+    const missing = contract.modes.filter((mode) => !declared || !(mode in declared.valuesByMode));
+
+    if (missing.length === 0) {
+      coverage.variablesWithEveryMode += 1;
+      return;
+    }
+    coverage.variablesMissingSomeMode += 1;
+
+    if (coverage.samples.length < 5) {
+      const mode = missing[0];
+      const modeId = modeNameToId.get(mode);
+      coverage.samples.push({
+        variable: name,
+        mode,
+        figmaStored: describeValue(modeId ? variable.valuesByMode?.[modeId] : undefined),
+      });
+    }
+  });
+
+  return coverage;
+}
+
 export function syncTokenContract(contract: TokenContract, api: VariablesApi): SyncResult {
   const gaps: SyncGap[] = [];
   const { collection, created } = ensureCollection(api, contract.collection);
@@ -84,6 +155,7 @@ export function syncTokenContract(contract: TokenContract, api: VariablesApi): S
 
   let variablesCreated = 0;
   let variablesUpdated = 0;
+  const written: { name: string; variable: Variable }[] = [];
 
   contract.variables.forEach((tokenVariable) => {
     const existing = existingByName.get(tokenVariable.name);
@@ -97,6 +169,7 @@ export function syncTokenContract(contract: TokenContract, api: VariablesApi): S
     }
 
     const target = existing ?? api.createVariable(tokenVariable.name, collection, tokenVariable.type);
+    written.push({ name: tokenVariable.name, variable: target });
     if (existing) {
       variablesUpdated += 1;
     } else {
@@ -128,6 +201,7 @@ export function syncTokenContract(contract: TokenContract, api: VariablesApi): S
     variablesCreated,
     variablesUpdated,
     modesCreated,
+    coverage: measureCoverage(contract, modeNameToId, written),
     gaps,
   };
 }

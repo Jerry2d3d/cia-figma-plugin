@@ -42,6 +42,25 @@ export function TokenSyncPanel({ status, onStatusChange }: Props) {
             Collection <strong>{status.result.collection}</strong>: {status.result.variablesCreated} created,{' '}
             {status.result.variablesUpdated} updated, {status.result.modesCreated} mode(s) added.
           </p>
+          {status.result.coverage.variablesMissingSomeMode > 0 && (
+            <>
+              <p className="warn">
+                {status.result.coverage.variablesMissingSomeMode} variable(s) have no value for at
+                least one theme, because that theme does not declare the token. Figma has no empty
+                state, so it stored a default there, which looks like a real value in the Variables
+                panel. For example:
+              </p>
+              <ul>
+                {status.result.coverage.samples.map((sample) => (
+                  <li key={`${sample.variable}:${sample.mode}`}>
+                    <strong>{sample.variable}</strong> in <strong>{sample.mode}</strong>:{' '}
+                    {sample.figmaStored}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           {status.variableMap && (
             <p>
               Variable map saved to the file: {status.variableMap.variables} name(s) across{' '}

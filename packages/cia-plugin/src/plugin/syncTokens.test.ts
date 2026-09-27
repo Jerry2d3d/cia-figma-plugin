@@ -1,15 +1,37 @@
 import { syncTokenContract, VariablesApi } from '@/plugin/syncTokens';
 import { TokenContract } from '@/shared/tokenContract';
 
+const FIGMA_DEFAULTS: Record<string, unknown> = {
+  COLOR: { r: 0, g: 0, b: 0, a: 1 },
+  FLOAT: 0,
+  STRING: '',
+  BOOLEAN: false,
+};
+
 class FakeVariable {
   values: Record<string, unknown> = {};
 
+  /**
+   * Figma has no empty state for a variable value: one exists for every mode in
+   * the collection from the moment the variable is created. The fake seeds them
+   * the same way, so a mode the contract never sets shows Figma's default here
+   * too rather than being conveniently absent.
+   */
   constructor(
     public id: string,
     public name: string,
     public variableCollectionId: string,
     public resolvedType: VariableResolvedDataType,
-  ) {}
+    modeIds: string[] = [],
+  ) {
+    modeIds.forEach((modeId) => {
+      this.values[modeId] = FIGMA_DEFAULTS[resolvedType];
+    });
+  }
+
+  get valuesByMode() {
+    return this.values;
+  }
 
   setValueForMode(modeId: string, value: unknown) {
     this.values[modeId] = value;
@@ -60,11 +82,13 @@ function createFakeApi() {
     getLocalVariables: () => variables as unknown as Variable[],
     createVariable: (name, collection, type) => {
       variableCounter += 1;
+      const target = collection as unknown as FakeVariableCollection;
       const variable = new FakeVariable(
         `v${variableCounter}`,
         name,
-        (collection as unknown as FakeVariableCollection).id,
+        target.id,
         type,
+        target.modes.map((mode) => mode.modeId),
       );
       variables.push(variable);
       return variable as unknown as Variable;
@@ -99,13 +123,15 @@ describe('syncTokenContract', () => {
     expect(collections).toHaveLength(1);
     expect(collections[0].modes.map((mode) => mode.name)).toEqual(['Light', 'Dark']);
     expect(variables).toHaveLength(1);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       collection: 'cia',
       variablesCreated: 1,
       variablesUpdated: 0,
       modesCreated: 1,
       gaps: [],
     });
+    expect(result.coverage.variablesWithEveryMode).toBe(1);
+    expect(result.coverage.variablesMissingSomeMode).toBe(0);
   });
 
   it('reuses an existing collection and updates an existing variable of the same type', () => {
@@ -250,5 +276,47 @@ describe('multi-theme collection', () => {
         reason: 'mode "press Nonexistent" is not declared in contract.modes — value skipped',
       },
     ]);
+  });
+});
+
+describe('modes the contract does not set', () => {
+  it('reports what Figma stored, because a variable is never truly unset', () => {
+    const { api } = createFakeApi();
+    const contract: TokenContract = {
+      specVersion: '1.0.0',
+      collection: 'cia',
+      modes: ['boilerplate Light', 'press Light'],
+      variables: [
+        {
+          name: 'page-band-bg',
+          type: 'COLOR',
+          // press does not declare this token, so the contract omits that mode
+          // entirely, meaning it to read as absent.
+          valuesByMode: { 'boilerplate Light': { r: 1, g: 1, b: 1, a: 1 } },
+        },
+      ],
+    };
+
+    const result = syncTokenContract(contract, api);
+
+    expect(result.gaps).toEqual([]);
+    expect(result.coverage.variablesMissingSomeMode).toBe(1);
+    // The finding that matters: Figma holds a value there regardless, and it
+    // looks like any other colour to a designer reading the panel.
+    expect(result.coverage.samples).toEqual([
+      { variable: 'page-band-bg', mode: 'press Light', figmaStored: '#000000 at 100% alpha' },
+    ]);
+  });
+
+  it('counts a fully covered variable as covered', () => {
+    const { api } = createFakeApi();
+
+    const result = syncTokenContract(baseContract, api);
+
+    expect(result.coverage).toEqual({
+      variablesWithEveryMode: 1,
+      variablesMissingSomeMode: 0,
+      samples: [],
+    });
   });
 });
