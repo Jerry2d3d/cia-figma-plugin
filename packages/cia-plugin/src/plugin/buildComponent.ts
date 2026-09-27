@@ -1,4 +1,4 @@
-import { BorderSpec, CiaCall, ComponentProp, ComponentSpec, ConsumedToken, StyleBlock } from '@/shared/componentSpec';
+import { BorderSpec, CiaCall, ComponentProp, ComponentSpec, ConsumedFrom, ConsumedToken, StyleBlock } from '@/shared/componentSpec';
 
 export interface BuildGap {
   /** The style block selector the gap came from, or `contract` for a spec-level gap. */
@@ -143,11 +143,45 @@ const COUNTER_AXIS_ALIGN: Record<string, 'MIN' | 'CENTER' | 'MAX' | 'BASELINE'> 
 };
 
 /**
- * Properties whose repetition inside one block is a shorthand rather than a
- * conflict: `padding: 12px 16px` arrives as two entries and both are wanted,
- * and `border` carries a width and a colour separately.
+ * Which Figma field a consumed CSS property actually lands on.
+ *
+ * Conflicts have to be judged per field rather than per property name: a
+ * `border` carrying a colour and a `border-color` are two different CSS
+ * properties writing the same stroke, and treating them as unrelated let
+ * Textarea's error red overwrite its real grey. `border` is ambiguous by
+ * itself, so its value decides: a colour paints the stroke, a px literal sets
+ * the weight.
  */
-const MULTI_VALUE_PROPERTIES = ['padding', 'margin', 'border', 'border-radius', 'border-width'];
+function figmaField(property: string, from: ConsumedFrom | null): string | null {
+  switch (property) {
+    case 'background':
+    case 'background-color':
+      return 'fill';
+    case 'color':
+      return 'textFill';
+    case 'border-color':
+      return 'stroke';
+    case 'border-width':
+      return 'strokeWeight';
+    case 'border':
+      if (!from) {
+        return null;
+      }
+      return from.fn ? 'stroke' : 'strokeWeight';
+    case 'border-radius':
+      return 'radius';
+    case 'font-size':
+      return 'fontSize';
+    case 'font-weight':
+      return 'fontWeight';
+    case 'gap':
+      return 'gap';
+    // `padding` is deliberately absent: repetition there is CSS shorthand,
+    // a vertical and a horizontal value, and both are wanted.
+    default:
+      return null;
+  }
+}
 
 /** CSS properties that mean "the node's fill". cia emits both spellings. */
 const FILL_PROPERTIES = ['background-color', 'background'];
@@ -272,14 +306,20 @@ class Resolver {
     const takenBy = new Map<string, ConsumedToken>();
 
     consumes.forEach((entry) => {
-      if (MULTI_VALUE_PROPERTIES.includes(entry.property)) {
+      const field = figmaField(entry.property, entry.from);
+      if (!field) {
         chosen.push(entry);
         return;
       }
-      const winner = takenBy.get(entry.property);
+      const winner = takenBy.get(field);
       if (!winner) {
-        takenBy.set(entry.property, entry);
+        takenBy.set(field, entry);
         chosen.push(entry);
+        return;
+      }
+      if (winner.localToken === entry.localToken) {
+        // The same declaration seen twice, e.g. `border-radius: X X`. Not a
+        // conflict and not worth a line in the report.
         return;
       }
       this.skipped.push({
@@ -516,7 +556,9 @@ class Resolver {
       const variable = this.lookup(name, 'COLOR', where, `${signature} as text fill`);
       return variable ? [{ kind: 'textFill', variable }] : [];
     }
-    if (call.property === 'border-color') {
+    // `border: 1px solid color(x)` reaches here as property `border`, which
+    // paints the same stroke as `border-color`.
+    if (call.property === 'border-color' || call.property === 'border') {
       const variable = this.lookup(name, 'COLOR', where, `${signature} as stroke`);
       if (!variable) {
         return [];

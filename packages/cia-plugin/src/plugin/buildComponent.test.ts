@@ -1022,3 +1022,79 @@ describe('a state rule folded into the base block', () => {
     expect(reasons.some((reason) => reason.includes('--textarea-border-color-error'))).toBe(true);
   });
 });
+
+describe('border and border-color write the same stroke', () => {
+  it('does not let an error colour overwrite the real border', async () => {
+    const { api, components } = createFakeApi();
+    // Textarea's exact shape: a `border` shorthand giving width and colour,
+    // then a `border-color` from the [data-error] rule folded in.
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Textareaish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.textarea',
+          kind: 'base',
+          ciaCalls: [],
+          consumes: [
+            {
+              property: 'border',
+              localToken: '--textarea-border-width',
+              state: 'default',
+              from: { fn: null, args: [], literal: '1px' },
+            },
+            {
+              property: 'border',
+              localToken: '--textarea-border-color',
+              state: 'default',
+              from: { fn: 'color', args: ['border-emphasis'] },
+            },
+            {
+              property: 'border-color',
+              localToken: '--textarea-border-color-error',
+              state: 'default',
+              from: { fn: 'color', args: ['action-secondary-default'] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const built = components[0];
+    expect(boundColor(built.strokes[0])).toBe('border-emphasis');
+    expect(built.strokeWeight).toBe(1);
+    expect(result.skipped.map((skip) => skip.reason)).toContain(
+      'border-color is set by both --textarea-border-color and --textarea-border-color-error; ' +
+        'used --textarea-border-color, because a state or modifier rule folded into this block',
+    );
+  });
+
+  it('says nothing about the same declaration seen twice', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Roundish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.thing',
+          kind: 'base',
+          ciaCalls: [],
+          // `border-radius: X X` arrives as the same local twice.
+          consumes: [
+            { property: 'border-radius', localToken: '--r', state: 'default', from: { fn: 'radius', args: ['lg'] } },
+            { property: 'border-radius', localToken: '--r', state: 'default', from: { fn: 'radius', args: ['lg'] } },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.skipped).toEqual([]);
+    expect(result.gaps).toEqual([]);
+  });
+});
