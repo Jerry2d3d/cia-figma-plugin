@@ -957,3 +957,68 @@ describe('the other two shapes a local value arrives in', () => {
     expect(components[0].fills).toEqual([]);
   });
 });
+
+describe('a state rule folded into the base block', () => {
+  it('uses the plain value, not the read-only or error one that follows it', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Textareaish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.textarea',
+          kind: 'base',
+          ciaCalls: [],
+          // Exactly Textarea's real shape: the plain rule first, then
+          // :read-only and [data-error] folded in as more "default" entries.
+          consumes: [
+            {
+              property: 'background-color',
+              localToken: '--textarea-bg-color',
+              state: 'default',
+              from: { fn: 'color', args: ['surface-default'] },
+            },
+            {
+              property: 'background-color',
+              localToken: '--textarea-readonly-bg-color',
+              state: 'default',
+              from: { fn: 'color', args: ['surface-subtle'] },
+            },
+            {
+              property: 'border-color',
+              localToken: '--textarea-border-color',
+              state: 'default',
+              from: { fn: 'color', args: ['border-emphasis'] },
+            },
+            {
+              property: 'border-color',
+              localToken: '--textarea-border-color-error',
+              state: 'default',
+              from: { fn: 'color', args: ['action-secondary-default'] },
+            },
+            // A genuine shorthand pair, which must both survive.
+            { property: 'padding', localToken: '--p-y', state: 'default', from: { fn: 'space', args: ['xs'] } },
+            { property: 'padding', localToken: '--p-x', state: 'default', from: { fn: 'space', args: ['md'] } },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const built = components[0];
+    expect(boundColor(built.fills[0])).toBe('surface-default');
+    expect(boundColor(built.strokes[0])).toBe('border-emphasis');
+    // Both padding values kept: vertical and horizontal, not a conflict.
+    expect(built.bound.paddingTop).toBe('space-xs');
+    expect(built.bound.paddingLeft).toBe('space-md');
+
+    const reasons = result.skipped.map((skip) => skip.reason);
+    expect(reasons).toContain(
+      'background-color is set by both --textarea-bg-color and --textarea-readonly-bg-color; ' +
+        'used --textarea-bg-color, because a state or modifier rule folded into this block',
+    );
+    expect(reasons.some((reason) => reason.includes('--textarea-border-color-error'))).toBe(true);
+  });
+});

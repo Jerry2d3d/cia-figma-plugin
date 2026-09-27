@@ -142,6 +142,13 @@ const COUNTER_AXIS_ALIGN: Record<string, 'MIN' | 'CENTER' | 'MAX' | 'BASELINE'> 
   baseline: 'BASELINE',
 };
 
+/**
+ * Properties whose repetition inside one block is a shorthand rather than a
+ * conflict: `padding: 12px 16px` arrives as two entries and both are wanted,
+ * and `border` carries a width and a colour separately.
+ */
+const MULTI_VALUE_PROPERTIES = ['padding', 'margin', 'border', 'border-radius', 'border-width'];
+
 /** CSS properties that mean "the node's fill". cia emits both spellings. */
 const FILL_PROPERTIES = ['background-color', 'background'];
 
@@ -202,12 +209,10 @@ class Resolver {
 
   resolveBlock(block: StyleBlock): Op[] {
     const ops: Op[] = this.resolveBorders(block);
-    (block.consumes ?? []).forEach((consumed) => {
-      ops.push(...this.resolveConsumed(consumed, block.selector));
-    });
     const skippedStates = new Map<string, number>();
-    // `padding: a b` arrives as several same-property calls in source order;
-    // they are collapsed per CSS shorthand rules after the loop.
+    // `padding: a b` arrives as several same-property entries in source order,
+    // whether written as direct calls or reached through local properties.
+    // Both feed this, and it collapses per CSS shorthand rules afterwards.
     const paddingArgs: string[] = [];
 
     block.ciaCalls.forEach((call) => {
@@ -222,6 +227,15 @@ class Resolver {
       ops.push(...this.resolveCall(call, block.selector));
     });
 
+    this.pickConsumed(block).forEach((consumed) => {
+      const from = consumed.from;
+      if (consumed.property === 'padding' && from?.fn && isSpacingFn(from.fn)) {
+        paddingArgs.push(from.args[0]);
+        return;
+      }
+      ops.push(...this.resolveConsumed(consumed, block.selector));
+    });
+
     if (paddingArgs.length > 0) {
       ops.push(this.resolvePadding(paddingArgs, block.selector, `padding: ${paddingArgs.join(' ')}`));
     }
@@ -234,6 +248,49 @@ class Resolver {
     });
 
     return ops;
+  }
+
+  /**
+   * Chooses one value per single-valued property among a block's consumptions.
+   *
+   * A selector like `.textarea:read-only` or `.textarea[data-error]` is not one
+   * of the five states the contract knows, so it folds into the base block
+   * marked `default`. Textarea ends up setting `background-color` three times:
+   * its real one, its read-only one, and `border-color` from its error rule.
+   * Taking the last would render every text area as a disabled one with an
+   * error border, which looks like a broken component rather than a missing
+   * feature.
+   *
+   * The first is taken, because the plain selector precedes its own modifiers
+   * in a stylesheet, and the losers are reported so the flattening is visible
+   * rather than silently resolved. Shorthand properties are left alone: two
+   * `padding` entries are a vertical and a horizontal value, not a conflict.
+   */
+  private pickConsumed(block: StyleBlock): ConsumedToken[] {
+    const consumes = (block.consumes ?? []).filter((entry) => entry.state === 'default');
+    const chosen: ConsumedToken[] = [];
+    const takenBy = new Map<string, ConsumedToken>();
+
+    consumes.forEach((entry) => {
+      if (MULTI_VALUE_PROPERTIES.includes(entry.property)) {
+        chosen.push(entry);
+        return;
+      }
+      const winner = takenBy.get(entry.property);
+      if (!winner) {
+        takenBy.set(entry.property, entry);
+        chosen.push(entry);
+        return;
+      }
+      this.skipped.push({
+        where: block.selector,
+        reason:
+          `${entry.property} is set by both ${winner.localToken} and ${entry.localToken}; ` +
+          `used ${winner.localToken}, because a state or modifier rule folded into this block`,
+      });
+    });
+
+    return chosen;
   }
 
   /**
@@ -528,8 +585,12 @@ class Resolver {
   }
 }
 
+function isSpacingFn(fn: string): boolean {
+  return fn === 'space' || fn === 'space-raw';
+}
+
 function isSpacingCall(call: CiaCall): boolean {
-  return call.fn === 'space' || call.fn === 'space-raw';
+  return isSpacingFn(call.fn);
 }
 
 interface VariantAxis {
