@@ -551,6 +551,13 @@ async function applyOps(
 ): Promise<number> {
   let bindings = 0;
 
+  // Figma gives a new component an opaque white fill. Nothing in the spec asked
+  // for it, and most components are genuinely transparent: they set text,
+  // border or layout only. Leaving it would paint white behind two thirds of
+  // the library and look like a decision somebody made. Cleared first, then a
+  // `fill` op puts a real background back if the spec declares one.
+  component.fills = [];
+
   // The font has to be loaded before `characters` or any text binding can be
   // set, so the (last-wins) font style is settled before anything else.
   const fontName: FontName = { family: DEFAULT_FONT_FAMILY, style: lastOp(ops, 'fontStyle')?.style ?? 'Regular' };

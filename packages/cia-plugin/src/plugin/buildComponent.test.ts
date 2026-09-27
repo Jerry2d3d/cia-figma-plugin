@@ -47,10 +47,13 @@ class FakeProperties {
   }
 }
 
+/** Figma hands back a new component already carrying an opaque white fill. */
+const FIGMA_DEFAULT_FILL: SolidPaint = { type: 'SOLID', color: { r: 1, g: 1, b: 1 } };
+
 class FakeComponent extends FakeProperties {
   name = '';
 
-  fills: SolidPaint[] = [];
+  fills: SolidPaint[] = [FIGMA_DEFAULT_FILL];
 
   strokes: SolidPaint[] = [];
 
@@ -587,5 +590,67 @@ describe('border widths', () => {
         reason: 'border-width "0.125rem" is not a px value, so it cannot become a Figma stroke weight',
       },
     ]);
+  });
+});
+
+describe("Figma's default white fill", () => {
+  it('is cleared, so a component with no background in its spec is transparent', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Textish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.text',
+          kind: 'base',
+          // Text colour only: this component is transparent by design, like
+          // Text, Heading, Link, Flex, Grid and Stack.
+          ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].fills).toEqual([]);
+  });
+
+  it('is replaced, not merged, when the spec does declare a background', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Carded',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.card',
+          kind: 'base',
+          ciaCalls: [
+            { fn: 'color', args: ['surface-default'], property: 'background-color', state: 'default' },
+          ],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].fills).toHaveLength(1);
+    expect(boundColor(components[0].fills[0])).toBe('surface-default');
+  });
+
+  it('leaves no white behind on a component whose spec has nothing at all', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Empty',
+      props: [],
+      styleBlocks: [{ selector: '.empty', kind: 'base', ciaCalls: [] }],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // An empty component should look empty. A white box looks deliberate.
+    expect(components[0].fills).toEqual([]);
   });
 });
