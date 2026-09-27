@@ -152,6 +152,33 @@ function BuildSummary({
 
       {single && single.properties.length > 0 && <p>Properties: {single.properties.join(', ')}.</p>}
 
+      {(() => {
+        const empty = results.filter((result) => result.bindings === 0 && result.unbuiltPartCalls > 0);
+        if (empty.length === 0) {
+          return null;
+        }
+        return (
+          <>
+            <p className="warn">
+              {empty.length} component{empty.length === 1 ? '' : 's'} arrived as an empty frame. Their
+              styling lives in parts, which this version does not build yet, so there was nothing to
+              put on the root frame:
+            </p>
+            <ul>
+              {empty
+                .slice()
+                .sort((a, b) => b.unbuiltPartCalls - a.unbuiltPartCalls)
+                .map((result) => (
+                  <li key={result.component}>
+                    <strong>{result.component}</strong>: {result.unbuiltPartCalls} style call
+                    {result.unbuiltPartCalls === 1 ? '' : 's'} in parts
+                  </li>
+                ))}
+            </ul>
+          </>
+        );
+      })()}
+
       {duplicates.length > 0 && (
         <p className="warn">
           A set named {duplicates.join(', ')} was already on this page, so this build made a second

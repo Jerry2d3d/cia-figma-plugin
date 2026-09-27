@@ -737,3 +737,48 @@ describe('declared defaults', () => {
     expect(components[0].children[0].characters).toBe('Button');
   });
 });
+
+describe('components whose styling is all in parts', () => {
+  it('counts the style calls it could not build, so "arrived empty" is a number', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Tableish',
+      props: [],
+      styleBlocks: [
+        // No base, no variants: every declaration is in a part. This is the
+        // real shape of DataTable, DashboardNav and 17 others.
+        {
+          selector: '.tableHeader',
+          kind: 'part',
+          ciaCalls: [
+            { fn: 'color', args: ['surface-muted'], property: 'background-color', state: 'default' },
+            { fn: 'space', args: ['md'], property: 'padding', state: 'default' },
+            { fn: 'color', args: ['text-primary'], property: 'color', state: 'hover' },
+          ],
+        },
+        {
+          selector: '.tableCell',
+          kind: 'part',
+          ciaCalls: [{ fn: 'color', args: ['border-subtle'], property: 'border-color', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // Three default-state calls across the two parts; the hover one is not
+    // counted, because it would not have been built even in a base block.
+    expect(result.unbuiltPartCalls).toBe(3);
+    expect(result.bindings).toBe(0);
+  });
+
+  it('is zero for a component this version can actually build', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.bindings).toBeGreaterThan(0);
+    expect(result.unbuiltPartCalls).toBe(3);
+  });
+});

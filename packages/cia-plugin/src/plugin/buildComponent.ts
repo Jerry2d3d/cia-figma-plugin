@@ -18,6 +18,13 @@ export interface BuildResult {
   bindings: number;
   /** Figma component properties added (boolean flags, text overrides), as `name: TYPE`. */
   properties: string[];
+  /**
+   * Style calls sitting in `part` blocks, which this version does not build.
+   * For components like DataTable this is all of their styling, so the
+   * component arrives as an empty frame. Counted rather than buried in the
+   * skipped list, because "arrived empty" is the single fact a person needs.
+   */
+  unbuiltPartCalls: number;
   /** Things that should have resolved but did not. Route these upstream. */
   gaps: BuildGap[];
   /** Things v1 deliberately does not build (non-default states, parts, media queries, transitions). */
@@ -729,8 +736,10 @@ export async function buildComponent(
 
   const resolver = new Resolver(variablesByName);
   const opsByBlock = new Map<StyleBlock, Op[]>();
+  let unbuiltPartCalls = 0;
   spec.styleBlocks.forEach((block) => {
     if (block.kind === 'part') {
+      unbuiltPartCalls += block.ciaCalls.filter((call) => call.state === 'default').length;
       resolver.skipped.push({ where: block.selector, reason: 'part skipped: v1 builds the root frame and its label only' });
       return;
     }
@@ -810,6 +819,7 @@ export async function buildComponent(
       variantNames: plans.map((plan) => plan.name),
       bindings,
       properties,
+      unbuiltPartCalls,
       gaps: resolver.gaps,
       skipped: resolver.skipped,
     },
