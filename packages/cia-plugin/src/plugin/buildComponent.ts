@@ -202,6 +202,17 @@ class Resolver {
 
   resolveBlock(block: StyleBlock): Op[] {
     const ops: Op[] = this.resolveBorders(block);
+    // Styling reached through a local custom property. The entry already
+    // carries the cia call that gave the local its value, so it resolves
+    // through exactly the same path as a direct call.
+    (block.consumes ?? []).forEach((consumed) => {
+      ops.push(
+        ...this.resolveCall(
+          { fn: consumed.from.fn, args: consumed.from.args, property: consumed.property, state: 'default' },
+          block.selector,
+        ),
+      );
+    });
     const skippedStates = new Map<string, number>();
     // `padding: a b` arrives as several same-property calls in source order;
     // they are collapsed per CSS shorthand rules after the loop.

@@ -28,6 +28,30 @@ export interface BorderSpec {
   state: CiaCallState;
 }
 
+/**
+ * A CSS property this block sets through a *local* custom property rather than
+ * a direct cia call.
+ *
+ * Components expose a themeable surface by setting their own variables from
+ * cia tokens (`--dropdown-bg-color: color(surface-default)`) and then consuming
+ * them in ordinary CSS. The consumption site contains no cia call, so a reader
+ * looking only at `ciaCalls` sees a part with a gap and a font size and no
+ * background. 37 of 99 components style themselves this way, every form control
+ * among them.
+ *
+ * `from` carries the resolved call, so no join against the defining block is
+ * needed, while `localToken` keeps the shared concept visible: one variable
+ * consumed by two parts is still one variable.
+ */
+export interface ConsumedToken {
+  /** The CSS property being set, e.g. `background-color`. */
+  property: string;
+  /** The local custom property, e.g. `--dropdown-bg-color`. */
+  localToken: string;
+  /** The cia call that gave the local property its value. */
+  from: { fn: string; args: string[] };
+}
+
 export interface StyleBlock {
   selector: string;
   kind: StyleBlockKind;
@@ -38,6 +62,8 @@ export interface StyleBlock {
   ciaCalls: CiaCall[];
   /** Added upstream 2026-09-24; absent on specs produced before that. */
   borders?: BorderSpec[];
+  /** Styling reached through a local custom property; absent on older specs. */
+  consumes?: ConsumedToken[];
 }
 
 export interface ComponentProp {
@@ -108,12 +134,44 @@ function validateBlock(block: unknown, where: string, errors: string[]): void {
   } else {
     b.ciaCalls.forEach((call, index) => validateCall(call, `${where}.ciaCalls[${index}]`, errors));
   }
+  if (b.consumes !== undefined) {
+    if (!Array.isArray(b.consumes)) {
+      errors.push(`${where}.consumes must be an array`);
+    } else {
+      b.consumes.forEach((entry, index) => validateConsumed(entry, `${where}.consumes[${index}]`, errors));
+    }
+  }
   if (b.borders !== undefined) {
     if (!Array.isArray(b.borders)) {
       errors.push(`${where}.borders must be an array`);
     } else {
       b.borders.forEach((border, index) => validateBorder(border, `${where}.borders[${index}]`, errors));
     }
+  }
+}
+
+function validateConsumed(entry: unknown, where: string, errors: string[]): void {
+  if (typeof entry !== 'object' || entry === null) {
+    errors.push(`${where} is not an object`);
+    return;
+  }
+  const c = entry as Record<string, unknown>;
+  if (typeof c.property !== 'string' || c.property.length === 0) {
+    errors.push(`${where}.property must be a non-empty string`);
+  }
+  if (typeof c.localToken !== 'string' || c.localToken.length === 0) {
+    errors.push(`${where}.localToken must be a non-empty string`);
+  }
+  const from = c.from as Record<string, unknown> | undefined;
+  if (typeof from !== 'object' || from === null) {
+    errors.push(`${where}.from must be an object`);
+    return;
+  }
+  if (typeof from.fn !== 'string' || from.fn.length === 0) {
+    errors.push(`${where}.from.fn must be a non-empty string`);
+  }
+  if (!isStringArray(from.args)) {
+    errors.push(`${where}.from.args must be an array of strings`);
   }
 }
 

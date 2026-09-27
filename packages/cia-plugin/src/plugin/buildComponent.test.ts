@@ -782,3 +782,86 @@ describe('components whose styling is all in parts', () => {
     expect(result.unbuiltPartCalls).toBe(3);
   });
 });
+
+describe('styling reached through a local custom property', () => {
+  it('binds a part-style consumption the same as a direct call', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Dropdownish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.trigger',
+          kind: 'base',
+          // What the stylesheet literally contains: a gap, and nothing else.
+          ciaCalls: [{ fn: 'space', args: ['xs'], property: 'gap', state: 'default' }],
+          borders: [{ property: 'border-width', width: '1px', style: 'solid', state: 'default' }],
+          // What it actually renders, via --dropdown-* set in a mixin block.
+          consumes: [
+            {
+              property: 'background-color',
+              localToken: '--dropdown-bg-color',
+              from: { fn: 'color', args: ['surface-default'] },
+            },
+            {
+              property: 'border-color',
+              localToken: '--dropdown-border-color',
+              from: { fn: 'color', args: ['border-subtle'] },
+            },
+            {
+              property: 'border-radius',
+              localToken: '--dropdown-border-radius',
+              from: { fn: 'radius', args: ['lg'] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const built = components[0];
+    expect(boundColor(built.fills[0])).toBe('surface-default');
+    expect(boundColor(built.strokes[0])).toBe('border-subtle');
+    expect(built.bound.topLeftRadius).toBe('radius-lg');
+    expect(built.bound.itemSpacing).toBe('space-xs');
+    expect(built.strokeWeight).toBe(1);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('reports a missing token from a consumption exactly as it would a direct call', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Oddish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.thing',
+          kind: 'base',
+          ciaCalls: [],
+          consumes: [
+            {
+              property: 'background-color',
+              localToken: '--thing-bg',
+              from: { fn: 'color', args: ['not-a-token'] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps[0].reason).toContain('no variable named "not-a-token"');
+  });
+
+  it('builds a spec with no consumes exactly as before', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.bindings).toBeGreaterThan(200);
+  });
+});
