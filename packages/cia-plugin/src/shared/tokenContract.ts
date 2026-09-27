@@ -1,4 +1,17 @@
+/**
+ * Versions this reader understands. A payload declares the MINIMUM version
+ * needed to read it, not the version that produced it: `1.1.0` means it
+ * contains at least one alias value, which a `1.0.0`-only reader would write
+ * into Figma as garbage. Single-theme exports stay `1.0.0` and keep working
+ * with any build of this plugin.
+ */
+export const TOKEN_CONTRACT_SPEC_VERSIONS = ['1.0.0', '1.1.0'] as const;
+
+/** The version this plugin emits when it writes a contract of its own. */
 export const TOKEN_CONTRACT_SPEC_VERSION = '1.0.0';
+
+/** The version a payload must declare before it may contain alias values. */
+export const TOKEN_CONTRACT_ALIAS_VERSION = '1.1.0';
 
 export type TokenVariableType = 'COLOR' | 'FLOAT' | 'STRING' | 'BOOLEAN';
 
@@ -11,7 +24,22 @@ export interface TokenColorValue {
   a: number;
 }
 
-export type TokenVariableValue = TokenColorValue | number | string | boolean;
+/**
+ * A pointer to another variable in the same collection, by name and without
+ * the leading dashes. It exists because some tokens genuinely follow another
+ * one: cia emits `--btn-radius: var(--radius-md, …)`, so a theme that does not
+ * override it is not missing a value, it *is* `radius-md`. Copying the number
+ * would silently break that link the moment someone edits `radius-md`.
+ */
+export interface TokenAliasValue {
+  aliasOf: string;
+}
+
+export type TokenVariableValue = TokenColorValue | number | string | boolean | TokenAliasValue;
+
+export function isAliasValue(value: unknown): value is TokenAliasValue {
+  return typeof value === 'object' && value !== null && typeof (value as TokenAliasValue).aliasOf === 'string';
+}
 
 export interface TokenVariable {
   name: string;
@@ -44,9 +72,9 @@ export function validateTokenContract(input: unknown): TokenContractValidation {
   }
   const value = input as Record<string, unknown>;
 
-  if (value.specVersion !== TOKEN_CONTRACT_SPEC_VERSION) {
+  if (typeof value.specVersion !== 'string' || !TOKEN_CONTRACT_SPEC_VERSIONS.includes(value.specVersion as never)) {
     errors.push(
-      `unsupported specVersion "${String(value.specVersion)}" (expected "${TOKEN_CONTRACT_SPEC_VERSION}")`,
+      `unsupported specVersion "${String(value.specVersion)}" (this reader understands ${TOKEN_CONTRACT_SPEC_VERSIONS.join(', ')})`,
     );
   }
   if (typeof value.collection !== 'string' || value.collection.length === 0) {
@@ -76,6 +104,22 @@ export function validateTokenContract(input: unknown): TokenContractValidation {
       }
       if (typeof v.valuesByMode !== 'object' || v.valuesByMode === null) {
         errors.push(`variables[${index}].valuesByMode must be an object`);
+      } else {
+        Object.entries(v.valuesByMode as Record<string, unknown>).forEach(([mode, modeValue]) => {
+          if (!isAliasValue(modeValue)) {
+            return;
+          }
+          if (modeValue.aliasOf.length === 0) {
+            errors.push(`variables[${index}].valuesByMode["${mode}"].aliasOf must be a non-empty string`);
+          }
+          // An alias is only readable by 1.1.0 and up, so a payload carrying
+          // one while claiming 1.0.0 would be mis-written by an older reader.
+          if (value.specVersion !== TOKEN_CONTRACT_ALIAS_VERSION) {
+            errors.push(
+              `variables[${index}].valuesByMode["${mode}"] is an alias, which requires specVersion "${TOKEN_CONTRACT_ALIAS_VERSION}"`,
+            );
+          }
+        });
       }
     });
   }

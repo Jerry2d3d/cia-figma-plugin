@@ -320,3 +320,98 @@ describe('modes the contract does not set', () => {
     });
   });
 });
+
+describe('alias values', () => {
+  function aliasContract(overrides: Partial<TokenContract> = {}): TokenContract {
+    return {
+      specVersion: '1.1.0',
+      collection: 'cia',
+      modes: ['boilerplate Light', 'terminal Light'],
+      variables: [
+        {
+          name: 'btn-radius',
+          type: 'FLOAT',
+          // terminal overrides with square corners; boilerplate follows the
+          // library default, which is radius-md rather than a copied number.
+          valuesByMode: { 'terminal Light': 0, 'boilerplate Light': { aliasOf: 'radius-md' } },
+        },
+        {
+          name: 'radius-md',
+          type: 'FLOAT',
+          valuesByMode: { 'boilerplate Light': 6, 'terminal Light': 0 },
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  it('writes a real Figma alias, resolving a target declared later in the contract', () => {
+    const { api, variables } = createFakeApi();
+
+    const result = syncTokenContract(aliasContract(), api);
+
+    const btn = variables.find((v) => v.name === 'btn-radius');
+    const radiusMd = variables.find((v) => v.name === 'radius-md');
+    expect(btn?.values[Object.keys(btn.values)[0]]).toBeDefined();
+    const aliasValue = Object.values(btn!.values).find(
+      (v) => typeof v === 'object' && v !== null && 'type' in (v as object),
+    );
+    expect(aliasValue).toEqual({ type: 'VARIABLE_ALIAS', id: radiusMd!.id });
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('keeps a literal override alongside an alias in another mode', () => {
+    const { api, variables } = createFakeApi();
+
+    syncTokenContract(aliasContract(), api);
+
+    const btn = variables.find((v) => v.name === 'btn-radius');
+    expect(Object.values(btn!.values)).toContain(0);
+  });
+
+  it('reports a missing alias target rather than inventing a literal', () => {
+    const { api } = createFakeApi();
+    const contract = aliasContract();
+    contract.variables[0].valuesByMode['boilerplate Light'] = { aliasOf: 'radius-nope' };
+
+    const result = syncTokenContract(contract, api);
+
+    expect(result.gaps).toEqual([
+      {
+        variable: 'btn-radius',
+        reason: 'alias target "radius-nope" is not in this collection (mode "boilerplate Light") — value skipped',
+      },
+    ]);
+  });
+
+  it('refuses an alias whose target is a different type', () => {
+    const { api } = createFakeApi();
+    const contract = aliasContract();
+    contract.variables.push({
+      name: 'paper',
+      type: 'COLOR',
+      valuesByMode: { 'boilerplate Light': { r: 1, g: 1, b: 1, a: 1 } },
+    });
+    contract.variables[0].valuesByMode['boilerplate Light'] = { aliasOf: 'paper' };
+
+    const result = syncTokenContract(contract, api);
+
+    expect(result.gaps[0].reason).toBe(
+      'alias target "paper" is COLOR, "btn-radius" is FLOAT — value skipped',
+    );
+  });
+
+  it('refuses a loop rather than choosing which link to break', () => {
+    const { api } = createFakeApi();
+    const contract = aliasContract();
+    contract.variables[0].valuesByMode['boilerplate Light'] = { aliasOf: 'radius-md' };
+    contract.variables[1].valuesByMode['boilerplate Light'] = { aliasOf: 'btn-radius' };
+
+    const result = syncTokenContract(contract, api);
+
+    expect(result.gaps.map((gap) => gap.reason)).toEqual([
+      'alias to "radius-md" in mode "boilerplate Light" forms a loop — value skipped',
+      'alias to "btn-radius" in mode "boilerplate Light" forms a loop — value skipped',
+    ]);
+  });
+});
