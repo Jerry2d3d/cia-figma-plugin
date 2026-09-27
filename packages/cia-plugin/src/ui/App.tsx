@@ -7,6 +7,7 @@ import { TokenSyncPanel, TokenSyncStatus } from '@/ui/TokenSyncPanel';
 import { ComponentBuildPanel, ComponentBuildStatus } from '@/ui/ComponentBuildPanel';
 import { PromptPanel, PromptStatus } from '@/ui/PromptPanel';
 import { FramePanel, FrameStatus } from '@/ui/FramePanel';
+import { BuildStamp } from '@/ui/BuildStamp';
 
 export function App() {
   const [collections, setCollections] = useState<string[]>([]);
@@ -73,6 +74,7 @@ export function App() {
       <ComponentBuildPanel collections={collections} status={buildStatus} onStatusChange={setBuildStatus} />
       <PromptPanel status={promptStatus} onStatusChange={setPromptStatus} />
       <FramePanel status={frameStatus} onStatusChange={setFrameStatus} />
+      <BuildStamp />
     </div>
   );
 }

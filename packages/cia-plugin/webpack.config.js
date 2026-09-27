@@ -1,7 +1,25 @@
 const path = require('path');
+const { execSync } = require('child_process');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const HtmlInlineScriptPlugin = require('html-inline-script-webpack-plugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+
+/**
+ * A stamp the panel shows, so "is Figma running my latest build?" is a thing
+ * you can read rather than guess. Figma caches a development plugin's UI
+ * aggressively, and re-running it is not always enough.
+ */
+function buildStamp() {
+  let commit = 'nogit';
+  try {
+    commit = execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim();
+  } catch {
+    // A checkout without git history still builds; the time alone is enough.
+  }
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return `${commit} ${time}`;
+}
 
 module.exports = (env, argv) => ({
   mode: argv.mode === 'production' ? 'production' : 'development',
@@ -46,6 +64,9 @@ module.exports = (env, argv) => ({
   },
 
   plugins: [
+    new (require('webpack').DefinePlugin)({
+      __BUILD_STAMP__: JSON.stringify(buildStamp()),
+    }),
     new HtmlWebpackPlugin({
       template: './src/ui/index.html',
       filename: 'index.html',
