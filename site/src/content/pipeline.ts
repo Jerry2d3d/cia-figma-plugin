@@ -44,9 +44,9 @@ export const STATUS: StatusItem[] = [
   },
   {
     title: 'The screen read-back',
-    level: 'pending',
+    level: 'working',
     detail:
-      'Built and tested on both sides, waiting on one real composed screen in Figma to run against.',
+      'Proven on a real screen. Six bindings resolved to six token names with none left over, and both sides read the same document identically.',
   },
 ];
 
@@ -62,17 +62,35 @@ export interface LogEntry {
 
 export const LOG: LogEntry[] = [
   {
-    slug: 'round-3',
+    slug: 'loop-closed',
     round: 'Round 3',
-    title: 'The full loop',
+    title: 'The loop closed',
+    date: '2026-09-27',
+    level: 'working',
+    body: [
+      'A person wrapped a frame in auto-layout and bound its spacing to tokens. The screen read back with every binding resolved to a token name: the gap as space-md, all four padding sides as space-lg, the background as paper. Six bindings, six names, nothing unresolved.',
+      'That is the difference the whole project turns on. A screen that reports a gap of 16 pixels tells an AI almost nothing. A screen that reports a gap of space-md tells it exactly which token to write.',
+      'Both halves read the same file independently and described it identically, down to the variable ids. The read also found three bugs in the reader that only a real file could surface: paint bindings were being ignored, a note sitting on the canvas was described as being inside a frame that did not exist, and frames were tracked by name so two called Card would have merged.',
+    ],
+    facts: [
+      { label: 'Bindings resolved', value: '6 of 6' },
+      { label: 'Unresolved', value: 'none' },
+      { label: 'Instances read', value: '3, with distinct variants and real labels' },
+      { label: 'Bugs found', value: '3, all fixed' },
+    ],
+  },
+  {
+    slug: 'round-3',
+    round: 'Next',
+    title: 'A second screen',
     date: 'next',
     level: 'pending',
     body: [
-      'Compose a Login screen from Button and Prompt instances, then read it back. Both halves are built and idle; this is the first time the whole idea runs end to end, and the first chance to catch a disagreement about what is in the document rather than about what the contract says.',
+      'One screen with one frame is proven. The next genuinely new thing is a screen with several frames, so component references and Prompt attachment can be checked when there is more than one place for them to go.',
     ],
     facts: [
-      { label: 'Needs', value: 'one composed frame and its Copy link to selection' },
-      { label: 'Watching for', value: 'whether layout returns token names or raw ids' },
+      { label: 'Needs', value: 'a screen with two or more frames' },
+      { label: 'Watching for', value: 'whether each frame gets its own components and prompts' },
     ],
   },
   {

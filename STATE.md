@@ -3,6 +3,61 @@
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
 
+## THE LOOP IS CLOSED (2026-09-27)
+
+**The whole chain now has a real working example at every link**, proven on a
+real Figma file, and verified independently by both sides reading the same
+document and agreeing exactly.
+
+Jerry wrapped the `Login` frame in auto-layout and bound its spacing. Every
+binding resolves through the variable map this plugin writes:
+
+| Field | Resolves to |
+|---|---|
+| itemSpacing (`VariableID:7:330`) | `space-md` |
+| padding, all four (`VariableID:7:331`) | `space-lg` |
+| fill (`VariableID:7:227`) | `paper` |
+
+Six bindings, six names, zero unresolved, same ids on both sides. So a screen
+reads back as `gap: space-md`, not `gap: 16`. That is the difference between an
+AI rebuilding a page and guessing at it.
+
+Also confirmed on the same read: three Button instances with distinct variants
+and real label overrides (`Sumit`, `Cancel`, `Notes`), identity resolved
+through `componentId` so renaming a layer does not break it, and a Prompt
+carrying its rule, scope, kind and target.
+
+**I can now read Figma directly from this session**, using the token in
+`K:epoigma-import-export\.env.local`, so verifying a file no longer
+needs a round trip to the other session:
+
+```
+curl -s -H "X-Figma-Token: $TOKEN"   "https://api.figma.com/v1/files/<key>?depth=4"
+```
+
+Add `?depth=1&plugin_data=shared` to read the variable map off the document
+node. Note the map lives on the *document*, so a nodes request for a page or
+frame never returns it however deep it goes.
+
+**Three bugs this read found, all in the other side's reader, all fixed
+(their `e88ec35`):** paint bindings were ignored entirely, so a frame with a
+bound background reported no token; a Prompt on the canvas was described as
+being inside a frame called "Page 1" because the root node's name was used as
+a fallback; and the enclosing frame was tracked by name, so two frames called
+`Card` would have merged.
+
+**Open on this side:** a Prompt dropped into an auto-layout frame becomes a
+laid-out sibling of the content. The plugin panel now says to set
+`Position: Absolute`, which keeps it inside the frame (so the rule still
+attaches) while floating it over the screen. Whether a main component can
+carry `layoutPositioning` to its instances is unverified: that is exactly the
+kind of thing the test fake would allow and real Figma might refuse, so it has
+not been guessed at. Needs one check in Figma.
+
+**Next genuinely new thing to prove:** a second screen with more than one
+frame, so per-frame component references and Prompt attachment can be checked
+when there is more than one place for them to go.
+
 ## WHERE IT STANDS NOW (2026-09-26, latest)
 
 **The whole library builds.** The other side landed variant classification, so

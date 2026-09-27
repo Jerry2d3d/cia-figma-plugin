@@ -26,6 +26,12 @@ export function PromptPanel({ status, onStatusChange }: Props) {
         Add the Prompt component so rules for the AI can live next to the design they apply to. Place one inside a
         frame to scope it to that frame. Figma comments stay human-only.
       </p>
+      <p className="warn">
+        Dropping a Prompt into an auto-layout frame makes it part of the layout, sitting in the row
+        beside your content. Select it and set <strong>Position: Absolute</strong> in the right panel
+        so it floats over the screen instead. It stays inside the frame, so the rule is still read as
+        belonging to it.
+      </p>
       <button type="button" onClick={handleClick} disabled={status.kind === 'building'}>
         {status.kind === 'building' ? 'Adding…' : 'Add Prompt component'}
       </button>
