@@ -6,12 +6,14 @@ import { PromptBuildResult } from '@/plugin/buildPrompt';
 import { TokenSyncPanel, TokenSyncStatus } from '@/ui/TokenSyncPanel';
 import { ComponentBuildPanel, ComponentBuildStatus } from '@/ui/ComponentBuildPanel';
 import { PromptPanel, PromptStatus } from '@/ui/PromptPanel';
+import { FramePanel, FrameStatus } from '@/ui/FramePanel';
 
 export function App() {
   const [collections, setCollections] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<TokenSyncStatus>({ kind: 'idle' });
   const [buildStatus, setBuildStatus] = useState<ComponentBuildStatus>({ kind: 'idle' });
   const [promptStatus, setPromptStatus] = useState<PromptStatus>({ kind: 'idle' });
+  const [frameStatus, setFrameStatus] = useState<FrameStatus>({ kind: 'idle' });
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
@@ -54,6 +56,9 @@ export function App() {
         case 'prompt-error':
           setPromptStatus({ kind: 'error', message: message.message });
           break;
+        case 'frame-result':
+          setFrameStatus({ kind: 'result', marked: message.marked, errors: message.errors });
+          break;
       }
     };
     window.addEventListener('message', onMessage);
@@ -67,6 +72,7 @@ export function App() {
       <TokenSyncPanel status={syncStatus} onStatusChange={setSyncStatus} />
       <ComponentBuildPanel collections={collections} status={buildStatus} onStatusChange={setBuildStatus} />
       <PromptPanel status={promptStatus} onStatusChange={setPromptStatus} />
+      <FramePanel status={frameStatus} onStatusChange={setFrameStatus} />
     </div>
   );
 }

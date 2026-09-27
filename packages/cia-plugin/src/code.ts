@@ -6,6 +6,7 @@ import { BuildApi, BuildResult, buildComponent } from '@/plugin/buildComponent';
 import { layoutInGrid, originBelow } from '@/plugin/layoutNodes';
 import { PROMPT_COMPONENT_NAME, PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
 import { VariableMapApi, writeVariableMap } from '@/plugin/variableMap';
+import { MarkableNode, markFrame } from '@/plugin/frameType';
 
 figma.showUI(__html__, { width: 380, height: 600 });
 
@@ -131,6 +132,37 @@ async function handleBuildPrompt(): Promise<void> {
   }
 }
 
+/**
+ * Marks the selected frames. Several at once is the common case when a person
+ * has just drawn three modals, and a selection holding something unmarkable
+ * reports that node rather than refusing the whole batch.
+ */
+function handleMarkFrame(frameType: string): void {
+  const selection = figma.currentPage.selection;
+  if (selection.length === 0) {
+    postToUi({ type: 'frame-result', marked: [], errors: ['select a frame on the canvas first'] });
+    return;
+  }
+
+  const marked: { name: string; previousName: string; type: string }[] = [];
+  const errors: string[] = [];
+
+  selection.forEach((node) => {
+    const outcome = markFrame(node as unknown as MarkableNode, frameType);
+    if (outcome.ok) {
+      marked.push({
+        name: outcome.result.name,
+        previousName: outcome.result.previousName,
+        type: outcome.result.type,
+      });
+    } else {
+      errors.push(`${node.name}: ${outcome.error}`);
+    }
+  });
+
+  postToUi({ type: 'frame-result', marked, errors });
+}
+
 figma.ui.onmessage = async (message: UiToPluginMessage) => {
   switch (message.type) {
     case 'list-collections':
@@ -146,6 +178,9 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
       break;
     case 'build-prompt':
       await handleBuildPrompt();
+      break;
+    case 'mark-frame':
+      handleMarkFrame(message.frameType);
       break;
   }
 };

@@ -6,7 +6,8 @@ export type UiToPluginMessage =
   | { type: 'sync-tokens'; contract: unknown }
   | { type: 'list-collections' }
   | { type: 'build-components'; specs: { name: string; json: unknown }[]; collection: string }
-  | { type: 'build-prompt' };
+  | { type: 'build-prompt' }
+  | { type: 'mark-frame'; frameType: string };
 
 export interface VariableMapSummary {
   collections: number;
@@ -26,6 +27,7 @@ export type PluginToUiMessage =
     }
   | { type: 'build-error'; message: string }
   | { type: 'prompt-result'; result: PromptBuildResult; duplicate: boolean }
+  | { type: 'frame-result'; marked: { name: string; previousName: string; type: string }[]; errors: string[] }
   | { type: 'prompt-error'; message: string };
 
 export function postToPlugin(message: UiToPluginMessage): void {
