@@ -117,6 +117,34 @@ unverified and is checkable in minutes once one arrow exists between two
 frames. Confirmed with Jerry that this is not needed for a first release: it
 improves navigation rather than enabling it.
 
+## The biggest remaining gap: parts are 85% of the styling (measured 2026-09-27)
+
+v1 builds a component as one auto-layout frame plus a label, and skips `part`
+blocks. That was a deliberate scope choice. It turns out to be most of the
+design system:
+
+| Where the styling is | Default-state cia calls, all 99 components |
+|---|---|
+| base + variant blocks, which this builds | 586 |
+| part + other blocks, which this skips | 3335 |
+
+So **about 15% of the component styling reaches Figma**. For 19 components it
+is 0%, and they arrive as empty frames: DataTable's spec carries 486 calls
+across 140 blocks and none of them are in a base or variant; DesignSandbox
+carries 1229 across 400.
+
+This reframes specVersion 3 from a nice-to-have for complex components into
+the highest-value work left on either side, above anything token-related.
+Jerry found it by importing components and noticing they had no styling, which
+is the point: a token gap is invisible until something renders wrong, while an
+empty frame is visible immediately.
+
+**The design problem, not yet solved.** A named child frame per part selector
+is the obvious reading, but DataTable's 140 parts are not 140 children of one
+frame. They are a tree, and the spec currently flattens it. Co-design with
+figma-import-export before either side builds, per the rule that has held all
+along.
+
 ## Next, in order
 
 1. **Import the full library** (a person, in Figma). Sync `cia.variables.json`

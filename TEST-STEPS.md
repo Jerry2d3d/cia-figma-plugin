@@ -66,7 +66,7 @@ reports an unsupported version, which is the wrong door rather than a bug.
 1. Under **Tokens**, click **Button A** and choose:
 
    ```
-   K:\repo\figma-import-export\output\cia.variables.json
+   K:\repo\figma-import-export\output\variables\cia.variables.json
    ```
 
 2. Expect: **Collection cia: 133 created, 0 updated, 9 mode(s) added**, no
@@ -97,18 +97,12 @@ reports an unsupported version, which is the wrong door rather than a bug.
 2. Click **Button B**. In the file dialog, go to:
 
    ```
-   K:\repo\figma-import-export\output
+   K:\repo\figma-import-export\output\components
    ```
 
-3. **Select only the component specs.** That folder also holds token and CSS
-   files. The easy way: type this into the dialog's **File name** box and
-   press Enter, which filters the list, then press **Ctrl+A**:
-
-   ```
-   *.component-spec.json
-   ```
-
-   You should have **99 files** selected.
+3. **Press Ctrl+A.** That folder holds the 99 component specs and nothing
+   else, so selecting everything is the right move. You should have **99
+   files** selected.
 4. **Button C** should read **Build 99 components**. Click it.
 5. **Wait.** This builds 202 components with around 1146 variable bindings.
    Figma will be busy for a while. Do not click anything else in the plugin.

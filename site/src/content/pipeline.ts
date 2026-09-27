@@ -249,8 +249,8 @@ export const NEXT_STEPS: NextStep[] = [
 
 export const PATHS = {
   manifest: 'K:\\repo\\cia-figma-plugin\\packages\\cia-plugin\\manifest.json',
-  tokens: 'K:\\repo\\figma-import-export\\output\\boilerplate.variables.json',
-  spec: 'K:\\repo\\figma-import-export\\output\\Button.component-spec.json',
+  tokens: 'K:\\repo\\figma-import-export\\output\\variables\\cia.variables.json',
+  spec: 'K:\\repo\\figma-import-export\\output\\components',
   state: 'K:\\repo\\cia-figma-plugin\\STATE.md',
   env: 'K:\\repo\\figma-import-export\\.env.local',
   envLine: 'FIGMA_ACCESS_TOKEN=figd_paste_the_token_here',
