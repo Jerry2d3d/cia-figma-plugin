@@ -43,6 +43,12 @@ export const STATUS: StatusItem[] = [
       'The plugin saves a variable map into the file, so a bound gap reports as space-md rather than an opaque id. No Enterprise plan needed.',
   },
   {
+    title: 'Five themes, one library',
+    level: 'working',
+    detail:
+      'Every component binds once to a single collection. Switching a frame to another theme re-themes it instantly, with no rebuild, and two themes can sit side by side.',
+  },
+  {
     title: 'The screen read-back',
     level: 'working',
     detail:
@@ -61,6 +67,24 @@ export interface LogEntry {
 }
 
 export const LOG: LogEntry[] = [
+  {
+    slug: 'theming',
+    round: 'Round 4',
+    title: 'One library, five themes',
+    date: '2026-09-27',
+    level: 'working',
+    body: [
+      'A component binds to a variable inside a specific collection, so a library built against a collection named after one theme can never follow another. Every component would have to be rebuilt per theme. Figma allows ten modes per collection, which is exactly five themes with light and dark each, so the theme became a mode instead and the collection became theme-neutral.',
+      'That reframing turned a rebuild into a dropdown. It also had to land before importing the full library, because 202 components bound to the wrong collection name would have meant importing them twice.',
+      'Along the way a question about how to represent a missing token turned out to be the wrong question. Of eight tokens that looked absent, four were a real bug in the design system, where one theme emitted its page colours outside any selector so they applied to nothing in any browser, and four were never missing at all: they follow a documented default, and now do so through a real alias rather than a copied number.',
+    ],
+    facts: [
+      { label: 'Themes live at once', value: '5, with light and dark' },
+      { label: 'Variables', value: '133, sharing one collection' },
+      { label: 'Rebuilds to switch theme', value: 'none' },
+      { label: 'Bugs found upstream', value: '3, all fixed at source' },
+    ],
+  },
   {
     slug: 'loop-closed',
     round: 'Round 3',
@@ -190,6 +214,12 @@ export const NEXT_STEPS: NextStep[] = [
     title: 'Decide whether layout primitives belong in the library',
     detail:
       'Flex declares four independent axes, which multiply out to 600 combinations. Nobody picks "Flex that is row, space-between, stretch, gap-md" from a list of 600: those are props a developer sets, not variants a designer picks. Grid and Stack are the same shape of thing. Container is the genuine edge case, since its five widths are a deliberate design choice.',
+  },
+  {
+    owner: 'A person, in Figma',
+    title: 'Sync the five-theme collection and rebuild the library',
+    detail:
+      'The themed collection is ready. Syncing it, rebuilding against it, then switching a frame to another theme is the last step before the full library import, and it proves the theming work end to end.',
   },
   {
     owner: 'css-is-awesome',

@@ -3,6 +3,62 @@
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
 
+## THEMING: ONE LIBRARY, FIVE THEMES (2026-09-27)
+
+**Decided and built.** A component binds to a variable inside a specific
+collection, so a library built against a collection named `boilerplate` could
+never follow another theme: switching would mean rebuilding all 202
+components. Figma allows **10 modes per collection** on this plan, which is
+exactly five themes with light and dark each. So the theme is a *mode*, and
+the collection is theme-neutral.
+
+  collection: `cia`
+  modes: sketchbook / boilerplate / terminal / glass / press, each Light + Dark
+  133 variables, 26 alias values
+
+Switching theme is selecting a mode on a frame. No rebuild, and a page frame
+and a modal beside it can show different themes at once. **This had to land
+before the full library import**, or 202 components would have been bound to
+a collection named after one theme and need importing twice.
+
+**Alias values** (`{ "aliasOf": "radius-md" }`) landed in commit `53b4ceee`.
+cia emits `--btn-radius: var(--radius-md, …)`, so a theme that does not
+override it *is* `radius-md`; copying the number would silently stop following
+the moment someone edited `radius-md`. The sync runs two passes so an alias can
+name a variable declared later. Missing target, type mismatch and loops are
+gaps with the mode left unset, never a literal.
+
+**specVersion now accepts 1.0.0 or 1.1.0.** The rule, which came from the other
+side and is better than what I would have written: a payload declares the
+minimum version needed to **read** it, not the version that produced it. That
+makes it a property of the payload rather than of either tool, so it protects a
+reader written before the feature existed. Single-theme exports stay 1.0.0 and
+keep working with any build of this plugin.
+
+**The "how do we represent missing" question was the wrong question.** Eight
+variables looked absent. Four were a real css-is-awesome bug: press emitted its
+page-surface tokens inside `@media print` and outside any selector, so they
+applied to nothing in any browser. Their deriving script inserted before the
+last closing brace, and press is the only theme whose file ends with a media
+query. Four more were never missing: they follow a documented library default
+and now alias to it. One remains, `space-2xs`, honestly unset because the
+library states no default to follow.
+
+Two further upstream bugs fell out of the parity check css-is-awesome added in
+response: terminal-light had rounded buttons in a square-cornered family, and
+boilerplate base lacked a spacing alias both its variants set. Still open there:
+sketchbook declares `--space-2xs` in its `-light` variant only.
+
+**Lesson worth keeping:** we were an hour from building machinery to represent
+absence faithfully, for eight cases where almost nothing was absent. Jerry's
+"why do we need this" is what caught it. Ask it whenever either side proposes
+new structure: is this a real hole, or a symptom?
+
+**Caveat for a person, not a session:** the press fix is on css-is-awesome's
+`main` but not in production. Their chain is main → qa → production with a
+manual approval only Jerry can run. Our export reads the checkout so we are
+unaffected; the published package and live site are not.
+
 ## THE LOOP IS CLOSED (2026-09-27)
 
 **The whole chain now has a real working example at every link**, proven on a
@@ -28,7 +84,8 @@ through `componentId` so renaming a layer does not break it, and a Prompt
 carrying its rule, scope, kind and target.
 
 **I can now read Figma directly from this session**, using the token in
-`K:epoigma-import-export\.env.local`, so verifying a file no longer
+`K:
+epoigma-import-export\.env.local`, so verifying a file no longer
 needs a round trip to the other session:
 
 ```
