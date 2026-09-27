@@ -236,7 +236,9 @@
           "style": "solid",
           "state": "focus"
         }
-      ]
+      ],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".icon",
@@ -267,7 +269,9 @@
           "state": "default"
         }
       ],
-      "borders": []
+      "borders": [],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".primary",
@@ -369,7 +373,9 @@
           "style": "solid",
           "state": "focus"
         }
-      ]
+      ],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".secondary",
@@ -455,7 +461,9 @@
           "style": "solid",
           "state": "focus"
         }
-      ]
+      ],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".outline",
@@ -541,7 +549,9 @@
           "style": "solid",
           "state": "focus"
         }
-      ]
+      ],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".ghost",
@@ -611,7 +621,9 @@
           "style": "solid",
           "state": "focus"
         }
-      ]
+      ],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".small",
@@ -647,7 +659,9 @@
           "state": "default"
         }
       ],
-      "borders": []
+      "borders": [],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".medium",
@@ -683,7 +697,9 @@
           "state": "default"
         }
       ],
-      "borders": []
+      "borders": [],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": ".large",
@@ -719,7 +735,9 @@
           "state": "default"
         }
       ],
-      "borders": []
+      "borders": [],
+      "consumes": [],
+      "defines": []
     },
     {
       "selector": "@include cia.mobile-only",
@@ -821,7 +839,9 @@
           "state": "default"
         }
       ],
-      "borders": []
+      "borders": [],
+      "consumes": [],
+      "defines": []
     }
   ],
   "gaps": []

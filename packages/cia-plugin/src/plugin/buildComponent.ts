@@ -1,4 +1,4 @@
-import { BorderSpec, CiaCall, ComponentProp, ComponentSpec, StyleBlock } from '@/shared/componentSpec';
+import { BorderSpec, CiaCall, ComponentProp, ComponentSpec, ConsumedToken, StyleBlock } from '@/shared/componentSpec';
 
 export interface BuildGap {
   /** The style block selector the gap came from, or `contract` for a spec-level gap. */
@@ -202,16 +202,8 @@ class Resolver {
 
   resolveBlock(block: StyleBlock): Op[] {
     const ops: Op[] = this.resolveBorders(block);
-    // Styling reached through a local custom property. The entry already
-    // carries the cia call that gave the local its value, so it resolves
-    // through exactly the same path as a direct call.
     (block.consumes ?? []).forEach((consumed) => {
-      ops.push(
-        ...this.resolveCall(
-          { fn: consumed.from.fn, args: consumed.from.args, property: consumed.property, state: 'default' },
-          block.selector,
-        ),
-      );
+      ops.push(...this.resolveConsumed(consumed, block.selector));
     });
     const skippedStates = new Map<string, number>();
     // `padding: a b` arrives as several same-property calls in source order;
@@ -242,6 +234,66 @@ class Resolver {
     });
 
     return ops;
+  }
+
+  /**
+   * Styling reached through a local custom property rather than a direct call.
+   *
+   * Three shapes arrive. A cia call resolves through exactly the same path as a
+   * direct one, so a missing token is the same gap with the same wording. A
+   * literal is a real stated value, and a border width stated as `1px` is worth
+   * keeping rather than discarding for not being a token. A null `from` is the
+   * producer refusing to choose between two conflicting definitions, which it
+   * already reports in its own gaps, so it is skipped rather than reported
+   * twice.
+   */
+  private resolveConsumed(consumed: ConsumedToken, where: string): Op[] {
+    if (consumed.state !== 'default') {
+      // Counted with the block's other non-default calls by the caller.
+      return [];
+    }
+
+    const { from } = consumed;
+    if (!from) {
+      this.skipped.push({
+        where,
+        reason: `${consumed.property} comes from ${consumed.localToken}, which the spec could not resolve to one value`,
+      });
+      return [];
+    }
+
+    if (from.fn) {
+      return this.resolveCall(
+        { fn: from.fn, args: from.args, property: consumed.property, state: 'default' },
+        where,
+      );
+    }
+
+    return this.resolveConsumedLiteral(consumed, from.literal ?? null, where);
+  }
+
+  /**
+   * A local defined from a plain literal. Only a border width maps onto
+   * anything Figma holds as a number on the node; a transition or an outline
+   * has no equivalent, and a colour literal is deliberately not accepted
+   * because a hard-coded colour in a themed component is a fact worth seeing
+   * rather than quietly baking in.
+   */
+  private resolveConsumedLiteral(consumed: ConsumedToken, literal: string | null, where: string): Op[] {
+    if (!literal) {
+      return [];
+    }
+    if (consumed.property === 'border' || consumed.property === 'border-width') {
+      const weight = pixelWidth(literal);
+      if (weight !== undefined) {
+        return [{ kind: 'strokeWeight', weight }];
+      }
+    }
+    this.skipped.push({
+      where,
+      reason: `${consumed.property} is the literal "${literal}" from ${consumed.localToken}, which is not a token and has no Figma equivalent`,
+    });
+    return [];
   }
 
   /**
@@ -613,8 +665,14 @@ async function applyOps(
   bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
 
   // A variant's own border width wins over the base block's, so this is settled
-  // once from the whole op list rather than inside the loop.
-  const strokeWeight = lastOp(ops, 'strokeWeight')?.weight ?? DEFAULT_STROKE_WEIGHT;
+  // once from the whole op list rather than inside the loop. A declared width
+  // is applied even with no stroke colour: it paints nothing on its own, but it
+  // is a stated fact, and dropping it would lose the width a later colour needs.
+  const declaredWeight = lastOp(ops, 'strokeWeight')?.weight;
+  const strokeWeight = declaredWeight ?? DEFAULT_STROKE_WEIGHT;
+  if (declaredWeight !== undefined) {
+    component.strokeWeight = declaredWeight;
+  }
 
   ops.forEach((op) => {
     switch (op.kind) {

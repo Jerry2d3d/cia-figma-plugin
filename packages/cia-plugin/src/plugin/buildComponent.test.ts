@@ -802,16 +802,19 @@ describe('styling reached through a local custom property', () => {
             {
               property: 'background-color',
               localToken: '--dropdown-bg-color',
+              state: 'default',
               from: { fn: 'color', args: ['surface-default'] },
             },
             {
               property: 'border-color',
               localToken: '--dropdown-border-color',
+              state: 'default',
               from: { fn: 'color', args: ['border-subtle'] },
             },
             {
               property: 'border-radius',
               localToken: '--dropdown-border-radius',
+              state: 'default',
               from: { fn: 'radius', args: ['lg'] },
             },
           ],
@@ -845,6 +848,7 @@ describe('styling reached through a local custom property', () => {
             {
               property: 'background-color',
               localToken: '--thing-bg',
+              state: 'default',
               from: { fn: 'color', args: ['not-a-token'] },
             },
           ],
@@ -863,5 +867,93 @@ describe('styling reached through a local custom property', () => {
     const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
 
     expect(result.bindings).toBeGreaterThan(200);
+  });
+});
+
+describe('the other two shapes a local value arrives in', () => {
+  function withConsumes(consumes: ComponentSpec['styleBlocks'][number]['consumes']): ComponentSpec {
+    return {
+      specVersion: 2,
+      component: 'Localish',
+      props: [],
+      styleBlocks: [{ selector: '.thing', kind: 'base', ciaCalls: [], consumes }],
+    };
+  }
+
+  it('keeps a border width stated as a literal', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      withConsumes([
+        {
+          property: 'border',
+          localToken: '--dropdown-border-width',
+          state: 'default',
+          from: { fn: null, args: [], literal: '2px' },
+        },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].strokeWeight).toBe(2);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('skips a literal with no Figma equivalent, and says which one', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(
+      withConsumes([
+        {
+          property: 'transition',
+          localToken: '--dropdown-transition',
+          state: 'default',
+          from: { fn: null, args: [], literal: 'all 0.2s ease' },
+        },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(result.gaps).toEqual([]);
+    expect(result.skipped[0].reason).toBe(
+      'transition is the literal "all 0.2s ease" from --dropdown-transition, which is not a token and has no Figma equivalent',
+    );
+  });
+
+  it('skips an unresolved local without reporting it twice', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(
+      withConsumes([
+        { property: 'background-color', localToken: '--x-bg', state: 'default', from: null },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    // The producer already reports the ambiguity in the spec's own gaps.
+    expect(result.gaps).toEqual([]);
+    expect(result.skipped[0].reason).toContain('could not resolve to one value');
+  });
+
+  it('ignores a non-default state, like every other non-default styling', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      withConsumes([
+        {
+          property: 'background-color',
+          localToken: '--x-bg',
+          state: 'hover',
+          from: { fn: 'color', args: ['surface-default'] },
+        },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].fills).toEqual([]);
   });
 });

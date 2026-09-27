@@ -43,13 +43,27 @@ export interface BorderSpec {
  * needed, while `localToken` keeps the shared concept visible: one variable
  * consumed by two parts is still one variable.
  */
+export interface ConsumedFrom {
+  /** The cia function, or null when the local was defined from a plain literal. */
+  fn: string | null;
+  args: string[];
+  /** Set when the local came from a literal rather than a call, e.g. `"1px"`. */
+  literal?: string | null;
+}
+
 export interface ConsumedToken {
   /** The CSS property being set, e.g. `background-color`. */
   property: string;
   /** The local custom property, e.g. `--dropdown-bg-color`. */
   localToken: string;
-  /** The cia call that gave the local property its value. */
-  from: { fn: string; args: string[] };
+  state: CiaCallState;
+  /**
+   * Where the local's value came from, or null when the producer could not
+   * resolve it: usually a local defined twice with different values, which is
+   * an ambiguity it refuses to pick between. Those are reported in the spec's
+   * own gaps, so null here means "already accounted for upstream".
+   */
+  from: ConsumedFrom | null;
 }
 
 export interface StyleBlock {
@@ -162,13 +176,25 @@ function validateConsumed(entry: unknown, where: string, errors: string[]): void
   if (typeof c.localToken !== 'string' || c.localToken.length === 0) {
     errors.push(`${where}.localToken must be a non-empty string`);
   }
-  const from = c.from as Record<string, unknown> | undefined;
-  if (typeof from !== 'object' || from === null) {
-    errors.push(`${where}.from must be an object`);
+  if (typeof c.state !== 'string' || !CALL_STATES.includes(c.state as CiaCallState)) {
+    errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
+  }
+  // Null is a real value here: the producer could not resolve the local and
+  // says so in its own gaps rather than picking between two definitions.
+  if (c.from === null) {
     return;
   }
-  if (typeof from.fn !== 'string' || from.fn.length === 0) {
-    errors.push(`${where}.from.fn must be a non-empty string`);
+  if (typeof c.from !== 'object') {
+    errors.push(`${where}.from must be an object or null`);
+    return;
+  }
+  const from = c.from as Record<string, unknown>;
+  const hasLiteral = typeof from.literal === 'string';
+  if (from.fn !== null && typeof from.fn !== 'string') {
+    errors.push(`${where}.from.fn must be a string or null`);
+  }
+  if (from.fn === null && !hasLiteral) {
+    errors.push(`${where}.from needs a literal when fn is null`);
   }
   if (!isStringArray(from.args)) {
     errors.push(`${where}.from.args must be an array of strings`);
