@@ -161,3 +161,94 @@ describe('syncTokenContract', () => {
     ]);
   });
 });
+
+describe('multi-theme collection', () => {
+  // The agreed shape: one collection named `cia`, ten modes carrying five
+  // themes with light and dark each, so a component binds once and a frame
+  // picks its theme by mode. Components must never bind to a collection named
+  // after a theme, or changing theme would mean rebinding every one of them.
+  const THEMES = ['sketchbook', 'boilerplate', 'terminal', 'glass', 'press'];
+  const MODES = THEMES.flatMap((theme) => [`${theme} Light`, `${theme} Dark`]);
+
+  function multiThemeContract(): TokenContract {
+    return {
+      specVersion: '1.0.0',
+      collection: 'cia',
+      modes: MODES,
+      variables: [
+        {
+          name: 'paper',
+          type: 'COLOR',
+          valuesByMode: Object.fromEntries(
+            MODES.map((mode, index) => [
+              mode,
+              { r: index / 10, g: index / 10, b: index / 10, a: 1 },
+            ]),
+          ),
+        },
+        {
+          name: 'space-md',
+          type: 'FLOAT',
+          valuesByMode: Object.fromEntries(MODES.map((mode) => [mode, 16])),
+        },
+      ],
+    };
+  }
+
+  it('creates all ten modes, renaming the default rather than leaving Mode 1 behind', () => {
+    const { api, collections } = createFakeApi();
+
+    const result = syncTokenContract(multiThemeContract(), api);
+
+    expect(collections).toHaveLength(1);
+    expect(collections[0].name).toBe('cia');
+    expect(collections[0].modes.map((mode) => mode.name)).toEqual(MODES);
+    expect(collections[0].modes).toHaveLength(10);
+    // One is the renamed default, so only nine are added.
+    expect(result.modesCreated).toBe(9);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('gives every variable a value in all ten modes', () => {
+    const { api, variables } = createFakeApi();
+
+    syncTokenContract(multiThemeContract(), api);
+
+    variables.forEach((variable) => {
+      expect(Object.keys(variable.values)).toHaveLength(10);
+    });
+  });
+
+  it('is idempotent, so re-syncing swaps values without adding modes', () => {
+    const { api, collections } = createFakeApi();
+    syncTokenContract(multiThemeContract(), api);
+
+    const result = syncTokenContract(multiThemeContract(), api);
+
+    expect(collections[0].modes).toHaveLength(10);
+    expect(result.modesCreated).toBe(0);
+    expect(result.variablesCreated).toBe(0);
+    expect(result.variablesUpdated).toBe(2);
+  });
+
+  it('reports a theme missing a token as a gap rather than leaving that mode unset', () => {
+    const { api } = createFakeApi();
+    const contract = multiThemeContract();
+    // press has no value for this one, which is the real-world case: a base
+    // theme that never declared a token its siblings have.
+    contract.variables.push({
+      name: 'page-band-bg',
+      type: 'COLOR',
+      valuesByMode: { 'press Nonexistent': { r: 1, g: 1, b: 1, a: 1 } },
+    });
+
+    const result = syncTokenContract(contract, api);
+
+    expect(result.gaps).toEqual([
+      {
+        variable: 'page-band-bg',
+        reason: 'mode "press Nonexistent" is not declared in contract.modes — value skipped',
+      },
+    ]);
+  });
+});
