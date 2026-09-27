@@ -33,9 +33,16 @@ from becoming four sources of truth.
 
 | Payload | Direction | Version | Where validated |
 |---|---|---|---|
-| Token contract `{ specVersion, collection, modes, variables, gaps }` | figma-import-export → plugin | `"1.0.0"` | `src/shared/tokenContract.ts` |
-| Component spec `{ specVersion, component, props, styleBlocks }` | figma-import-export → plugin | `2` | `src/shared/componentSpec.ts` |
+| Token contract `{ specVersion, collection, modes, variables, gaps }` | figma-import-export → plugin | `1.0.0`, or `1.1.0` when it carries alias values | `src/shared/tokenContract.ts` |
+| Component spec `{ specVersion, component, props, styleBlocks, borders, gaps }` | figma-import-export → plugin | `2` | `src/shared/componentSpec.ts` |
+| Variable-name map, written into the file as shared plugin data | plugin → figma-import-export | `1.0.0` | `src/plugin/variableMap.ts` |
+| Frame type, written onto the frame as shared plugin data | plugin → figma-import-export | `1.0.0` | `src/plugin/frameType.ts` |
 | Component spec (read-back of a Figma component) | plugin → figma-import-export | not built (Phase 3) | — |
+
+A payload declares the **minimum version needed to read it**, not the version
+that produced it. That makes the version a property of the payload rather than
+of either tool, so a reader written before a feature existed refuses a file it
+would mis-write instead of guessing at it.
 
 Token names resolve by cia's own convention, so the plugin never needs to
 know cia internals: `color(x)` → variable `x`; `space(x)` / `pad-asym(y, x)`
@@ -45,64 +52,88 @@ converts rem).
 
 ## Status
 
-**Phase 0 — clean slate. Done 2026-09-11.** `packages/cia-plugin/` is a
-from-scratch package: own `manifest.json`, webpack + SWC, Jest, `code.ts`
-main thread, thin React panel (plain `useState`, no state library). The old
-`packages/tokens-studio-for-figma/` fork stays read-only until this package
-covers what is needed, then gets removed.
+**Phases 0, 1 and 2 are done and proven inside real Figma**, not only against
+a fake. Three rounds in a real file, 2026-09-25 to 09-27:
 
-**Phase 1 — own the Variables read/write. Coded 2026-09-11, committed
-2026-09-17 (`594e2502`).** `syncTokenContract` creates or reuses a
-collection, renames the default mode, adds modes, creates or updates
-variables, and reports type conflicts and undeclared modes as gaps. Unit
-tested against a fake `figma.variables`. **Not yet run against a real
-export inside Figma**: the matching exporter shape only landed on the other
-side on 2026-09-17.
+- **Tokens** sync into a Variable collection with all their modes.
+- **Components** build as component sets, one per variant combination, with
+  fills, strokes, radius, padding, spacing and type bound live to Variables.
+  Text props become editable fields and boolean props become flags on every
+  instance.
+- **A composed screen reads back** as structured facts: per-instance variant
+  props, flags and text; per-frame auto-layout **in token names**; and the
+  `Prompt` rules a PM left. Six bindings on a real frame resolved to six token
+  names with none left over, and both sides read the same document identically.
 
-**Phase 2 — component creation. Coded and committed 2026-09-17
-(`8b945a9e`).** `buildComponent` consumes a specVersion 2 spec and builds a
-component set: one component per variant-prop combination (Button → 12,
-named `variant=primary, size=medium` so Figma exposes them as component
-properties), each an auto-layout frame plus a label, with fills, strokes,
-corner radius, padding, item spacing, font size and font weight bound live
-to Variables in a user-chosen collection. Reported, never approximated:
+**The whole library builds.** All 99 component specs, 202 components, 1146
+bindings, nothing rejected. The remaining gaps are upstream typography tokens.
 
-- *gaps* (route upstream): missing or wrongly typed variables; the spec's
-  missing border width (Button's SCSS says 2px; stroke defaults to 1px).
-- *skipped* (v1 scope, with reasons): hover/focus/active/disabled states,
-  `part` blocks (`.icon`), media-query blocks, transitions, `font-family`
-  (cia's value is a CSS stack, not a loadable family; Inter is used), and
-  line height (cia's token is a unitless 1.5, Figma binds px).
+**Theming is one library, not one per theme** (2026-09-27). A component binds
+to a variable inside a specific collection, so a library built against a
+collection named after one theme could never follow another. Figma allows 10
+modes per collection, which is exactly five themes with light and dark each, so
+the theme is a *mode* and the collection is theme-neutral (`cia`). Switching
+theme is selecting a mode on a frame: no rebuild, and two themes can sit side
+by side.
 
-Unit tested end to end against a fake Plugin API using the real Button spec
-checked in at `src/__fixtures__/Button.component-spec.json`. **Not yet run
-inside real Figma** for the same reason as Phase 1.
+**Alias values** are resolved, so a token that follows another keeps following
+it. cia emits `--btn-radius: var(--radius-md, …)`, so a theme that does not
+override it *is* `radius-md`; a copied number would silently stop following.
+The sync runs two passes, since an alias can name a variable declared later.
 
-Known typography gap (cia side, confirmed 2026-09-13): only
-`font-size-base`, `font-weight-medium`, `line-height-normal` are live
-tokens. Button's `semibold`, `sm`, `lg` have no variable to bind to.
+**Frames can be marked** as page, modal, drawer, sheet, popup, toast, window,
+menu or anything typed in, written both as a name prefix and as plugin data.
 
-**Phase 3 — component read-back. Not started.** "Export selection" panel
-action serializing a Figma component back into the spec shape, for the
-other side's future diff tool.
+**Phase 3 — component read-back. Not started.** An "export selection" action
+serialising a Figma component back into the spec shape, for the other side's
+diff tool.
+
+**Prompt component** is built and working: 8 variants over scope and kind,
+`rule` and `target` as text properties, each variant stating what its scope
+governs.
+
+## Decided 2026-09-27: screens, navigation and rules each have one home
+
+Three separate things a Figma file has to say about a screen, and one
+mechanism each. The whole contract has stayed honest by never letting two
+mechanisms claim the same fact.
+
+| What | How | Why not the others |
+|---|---|---|
+| **What kind of screen this is** | Plugin action marks the frame: renames it `modal/Confirm` and writes the type into the frame's plugin data | A screen cannot be a *component*: Figma instances take no new children, so a frame a person composes into can never be an instance. A marker component placed inside would work but adds a node to every frame and can be duplicated or forgotten. Naming alone is typo-prone. |
+| **Where the app goes next** | Figma's own prototype connections | Native, drawn on the canvas, point at node ids rather than names a typo can break, and clickable in presentation mode before anyone builds. A text field saying "this opens the confirm modal" is free text needing matching. |
+| **Rules for the AI** | The `Prompt` component | Already proven on a real file. A frame-scoped rule is a Prompt with scope `page` placed in that frame. A second prompt field on a frame marker would give two homes for the same sentence. |
+
+**Frame types** name real surfaces in the BoilerPlate library wherever one
+exists, so the word a designer picks is the word the component is called:
+`modal` (Modal, CustomizeModal, ConfirmDialog), `popup` (Popup, ConfirmPopup),
+`drawer`, `toast`, `window`, `menu`. Plus `page`, the default screen, and
+`sheet`, a pattern the library has no component for yet. Any other type can be
+typed in.
+
+**Prototype connections are not yet proven over REST.** The Plugin API exposes
+`reactions` with trigger and destination; whether the REST API returns them is
+unverified and is checkable in minutes once one arrow exists between two
+frames. Confirmed with Jerry that this is not needed for a first release: it
+improves navigation rather than enabling it.
 
 ## Next, in order
 
-1. **Prove the loop in real Figma** (needs a person at Figma):
-   `figma_export_tokens` → sync in the Tokens panel → load
-   `Button.component-spec.json` in the Components panel → build → inspect
-   bindings in the Variables panel. Fix what real Figma disagrees with.
-2. **Wait for / consume richer screen read-back** on the other side (see
-   below). No plugin work needed for it, but it is the piece that makes
-   "design, then generate" real.
-3. **Scale the builder to all 35 components.** Simple ones first (Badge,
-   Link, Text, Heading, Avatar, Spinner, Tooltip fit the frame + label
-   model as is). Structural ones (DataTable, Modal, DashboardNav,
-   MultiStepForm, Card with children) need a spec that carries child
-   structure and slots: specVersion 3, designed with the other side.
-   Boolean props (`disabled`, `icon`) become Figma boolean component
-   properties.
-4. **Phase 3 read-back**, then the drift diff on the other side.
+1. **Import the full library** (a person, in Figma). Sync `cia.variables.json`
+   into the `cia` collection, then build all 99 specs in one pass against it.
+   Verified from this side: 99 of 99 build, 202 components, 1146 bindings, no
+   rejections. This comes before navigation because the library is what screens
+   are composed from.
+2. **Prove navigation on a multi-frame screen.** Mark each frame with its type,
+   draw prototype connections between them, and read the file back. Two things
+   to learn: whether REST returns the connections, and whether per-frame
+   components and Prompts attach to the right frame when there is more than one
+   place for them to go.
+3. **Child structure in the component spec** (both sides). A single frame with
+   a label cannot express DataTable, Modal, DashboardNav or MultiStepForm.
+   Needs a spec version carrying children and slots, co-designed before either
+   side builds.
+4. **Read a component back, and flag drift** (Phase 3 here, diff tool there).
 
 ## What this plugin needs from figma-import-export
 

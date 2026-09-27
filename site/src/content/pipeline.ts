@@ -217,9 +217,15 @@ export const NEXT_STEPS: NextStep[] = [
   },
   {
     owner: 'A person, in Figma',
-    title: 'Sync the five-theme collection and rebuild the library',
+    title: 'Import the whole library',
     detail:
-      'The themed collection is ready. Syncing it, rebuilding against it, then switching a frame to another theme is the last step before the full library import, and it proves the theming work end to end.',
+      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 202 components and 1146 live bindings, with nothing rejected.',
+  },
+  {
+    owner: 'Both',
+    title: 'Prove navigation across several frames',
+    detail:
+      'Mark each frame as a page, a modal or a drawer, draw prototype connections between them, and read the file back. Two things to learn: whether the connections come back over the API, and whether components and rules attach to the right frame when there is more than one place for them to go.',
   },
   {
     owner: 'css-is-awesome',
