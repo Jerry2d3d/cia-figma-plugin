@@ -1,163 +1,231 @@
-# Figma steps — round 3: the full loop (2026-09-26)
+# Figma runbook — from an empty file (2026-09-27)
 
-Rounds 1 and 2 passed. Tokens sync, Button builds with variants and
-properties, the Prompt component works.
+Start a brand new Figma file and build everything up from nothing: five
+themes, the whole component library, the Prompt component, a two-screen
+design, and a theme switch.
 
-Round 3 is the first time the **whole idea** runs: compose a screen in
-Figma, then have the other repo read it back as structured facts. Nothing
-here can damage anything.
-
-About 25 minutes, in four parts. Part A is the important one and takes a
-minute.
+About 40 minutes, most of it waiting on one build. Nothing here can damage
+anything outside the new Figma file.
 
 ---
 
-## The plugin panel, control by control
+## The plugin panel
+
+Four sections. Two buttons say **Choose File**, so every step below says which.
 
 ```
-cia                                  <- panel title
+cia
 
-Tokens                               <- SECTION 1
-  [ Choose File ]  No file chosen    <- BUTTON A  (token file)
+Tokens                             <- SECTION 1
+  [ Choose File ]                  <- BUTTON A   a .variables.json token file
 
-Components                           <- SECTION 2
-  Collection  [ boilerplate  v ]     <- DROPDOWN
-  Spec
-  [ Choose File ]  No file chosen    <- BUTTON B  (component spec file)
-  [ Build ]                          <- BUTTON C  (greyed until A/B done)
+Components                         <- SECTION 2
+  Collection  [ cia  v ]           <- DROPDOWN
+  Spec files
+  [ Choose File ]                  <- BUTTON B   one or many .component-spec.json
+  [ Build ]                        <- BUTTON C
 
-Prompt                               <- SECTION 3
-  [ Add Prompt component ]           <- BUTTON D
+Prompt                             <- SECTION 3
+  [ Add Prompt component ]         <- BUTTON D
+
+Frames                             <- SECTION 4
+  Type  [ page  v ]                <- DROPDOWN
+  [ Mark selected as page ]        <- BUTTON E
 ```
 
-Button A takes `*.variables.json`. Button B takes `*.component-spec.json`.
-Feeding a spec to Button A gives `unsupported specVersion 2 (expected
-"1.0.0")` — that is the wrong door, not a bug.
+Token files go in **A**. Component specs go in **B**. Putting a spec in A
+reports an unsupported version, which is the wrong door rather than a bug.
 
 ---
 
-## Part A — relay one message (1 min, do this first)
+## Part 0 — new file and plugin (3 min)
 
-Open the **figma-import-export** Claude session and paste the block from the
-bottom of `K:\repo\cia-figma-plugin\STATE.md`, under *"Message to paste into
-the figma-import-export session"*.
+1. Open the **Figma desktop app**. The browser version cannot run a local
+   plugin.
+2. **New design file.** Name it something like `cia library`. On the Starter
+   plan the library and the screens share one file, which is fine.
+3. **Plugins → Development → Import plugin from manifest**, and pick:
 
-It asks for the variant-classification fix. Without it, 34 of the 35
-components build flat with no variants, so this unblocks the most work of
-anything on the list. That session can work on it while you do the rest.
+   ```
+   K:\repo\cia-figma-plugin\packages\cia-plugin\manifest.json
+   ```
+
+   If it is already imported from an earlier session, skip this and just run
+   it: the build on disk is current.
+4. **Plugins → Development → cia (dev)**. Check you can see all four section
+   headings: Tokens, Components, Prompt, Frames. If Frames is missing, Figma
+   has cached an older build: remove the plugin under **Manage plugins in
+   development** and import it again.
 
 ---
 
-## Part B — refresh the Prompt component (3 min)
+## Part 1 — the five themes (3 min)
 
-The `target` field's default changed, so the Prompt set needs rebuilding.
+**Uses Button A.**
 
-1. In Figma, delete the existing **Prompt** component set and any Prompt
-   instances you made during round 2.
-2. Close the cia plugin, then reopen it: **Plugins → Development → cia
-   (dev)**. This picks up the rebuilt code.
-3. Click **Button D**, *Add Prompt component*.
-4. Expect: `Added Prompt with 8 variants and properties rule: TEXT,
-   target: TEXT.`
-5. Check one instance: Ctrl-drag a variant out. In the right sidebar,
-   **target** should now be **empty**, not pre-filled. That matters, because
-   the reader treats any text in `target` as a real layer name.
+1. Under **Tokens**, click **Button A** and choose:
+
+   ```
+   K:\repo\figma-import-export\output\cia.variables.json
+   ```
+
+2. Expect: **Collection cia: 133 created, 0 updated, 9 mode(s) added**, no
+   gaps, and a line saying the variable map was saved with 133 names.
+
+   > Nine modes added, not ten, is correct. A new collection arrives with one
+   > mode already, which gets renamed rather than left behind as "Mode 1".
+
+3. Open Figma's **Variables** panel (right sidebar, **Local variables**).
+   Confirm a collection named **cia** with **ten mode columns**:
+   `sketchbook Light`, `sketchbook Dark`, `boilerplate Light`,
+   `boilerplate Dark`, `terminal Light`, `terminal Dark`, `glass Light`,
+   `glass Dark`, `press Light`, `press Dark`.
+4. Find **btn-radius**. In most columns it should show the name
+   **radius-md** rather than a number, because it points at that variable
+   instead of copying it. Terminal shows 0 and press shows 2, which are real
+   overrides.
+
+**Send me:** a screenshot of the Variables panel showing the ten columns.
 
 ---
 
-## Part C — compose a small screen (8 min)
+## Part 2 — the whole component library (10 min, mostly waiting)
 
-This is the artefact the read side needs. Keep it small and realistic.
+**Uses the Collection dropdown, then Button B, then Button C.**
 
-1. Press **F** and draw a frame about **800 × 600**. Name it **`Login`** in
-   the layers panel.
-2. Put **three Button instances** inside it. Ctrl-drag them out of the
-   Button component set, then drag them into the `Login` frame.
-3. Give each one different settings in the right sidebar:
-   - Button 1: variant `primary`, size `large`, label `Sign in with Google`
-   - Button 2: variant `outline`, size `medium`, label `Use a passkey`
-   - Button 3: variant `ghost`, size `small`, label `Need help?`, and turn
-     the **disabled** toggle **on**
-4. Select the three buttons and press **Shift+A** to wrap them in an
-   auto-layout frame. Name that frame **`Actions`**. In the right sidebar
-   set its direction to vertical and give it some spacing.
-5. Add **two Prompt instances** and drag them into the `Login` frame:
-   - Prompt 1: scope `page`, kind `page`, rule
-     `Login uses Google SSO only. No email or password form.`
-     Leave **target** empty.
-   - Prompt 2: scope `component`, kind `tooling`, rule
-     `Put the passkey button behind the PASSKEYS feature flag.`
-     Set **target** to `Use a passkey`.
-6. In the layers panel, select both Prompt instances, right-click →
-   **Frame selection**, and rename that new frame exactly **`_prompts`**.
-   The reader skips that frame's own name, so Prompts do not pollute the
-   layout facts, and mockup exports can strip it later.
+1. In **Components**, check the **Collection** dropdown says `cia`.
+2. Click **Button B**. In the file dialog, go to:
+
+   ```
+   K:\repo\figma-import-export\output
+   ```
+
+3. **Select only the component specs.** That folder also holds token and CSS
+   files. The easy way: type this into the dialog's **File name** box and
+   press Enter, which filters the list, then press **Ctrl+A**:
+
+   ```
+   *.component-spec.json
+   ```
+
+   You should have **99 files** selected.
+4. **Button C** should read **Build 99 components**. Click it.
+5. **Wait.** This builds 202 components with around 1146 variable bindings.
+   Figma will be busy for a while. Do not click anything else in the plugin.
+6. Expect: **Built 99 components: 202 variants and about 1146 bindings in
+   total**, a gap list, and a collapsed list of things not built in v1.
+
+   > The gaps are expected and already known. They are mostly missing
+   > typography tokens in the design system, which is written up separately.
+   > Nothing there is a plugin fault.
+
+7. On the canvas the component sets are laid out in a grid, not stacked.
+
+**Send me:** a screenshot of the plugin result panel after the build.
 
 ---
 
-## Part D — read the screen back (10 min)
+## Part 3 — the Prompt component (2 min)
 
-This is the payoff: Figma in, structured facts out.
+**Uses Button D.**
 
-1. **One-time token setup**, if not already done. In Figma:
-   **Settings → Security → Personal access tokens → Generate new token.**
-   Name it `figma-import-export`, scope **File content → Read-only**. Copy
-   it immediately, Figma shows it once.
-2. Put it in `K:\repo\figma-import-export\.env.local` as:
+1. Click **Button D**, *Add Prompt component*. Once only.
+2. Expect: **Added Prompt with 8 variants and properties rule: TEXT,
+   target: TEXT**.
+3. On the canvas, a pale yellow note-like set of 8. Each says what its scope
+   governs, so you do not have to remember the convention.
+
+> If you click it twice you get two sets and the panel will say so. Delete
+> the spare; do not delete both.
+
+---
+
+## Part 4 — a two-screen design (12 min)
+
+This is the part that has never been tested. One page and one modal.
+
+1. Press **F**, draw a frame about **1200 × 800**, name it **`Login`**.
+2. Press **F** again, draw a smaller frame about **400 × 240** beside it,
+   name it **`Confirm`**.
+3. **Mark them.** Select the `Login` frame, set the **Frames** dropdown to
+   **page**, click **Button E**. The frame is renamed `page/Login`.
+4. Select the `Confirm` frame, set the dropdown to **modal**, click
+   **Button E**. It becomes `modal/Confirm`.
+5. **Fill the Login screen.** Ctrl-drag three **Button** instances out of the
+   Button set into `page/Login`. Set them to different variants and type real
+   labels, for example primary large "Sign in with Google", outline medium
+   "Use a passkey", ghost small "Need help?" with **disabled** on.
+6. Select the three buttons and press **Shift+A** to wrap them in auto-layout.
+   Name that frame **`Actions`**, set it vertical.
+7. **Bind its spacing.** With `Actions` selected, hover the **gap** field in
+   the right panel, click the small variable icon, and pick **space-md**.
+   Do the same for padding with **space-lg**.
+
+   > Typing 16 by hand looks the same and binds nothing. The binding is the
+   > whole point.
+
+8. **Fill the modal.** Ctrl-drag one Button into `modal/Confirm` and label it
+   "Delete".
+9. **Add a Prompt** to `page/Login`: Ctrl-drag one Prompt variant out, set
+   **scope** to `page`, **kind** to `page`, and type into **rule**:
 
    ```
-   FIGMA_ACCESS_TOKEN=figd_paste_the_token_here
+   Login uses Google SSO only. No email or password form.
    ```
 
-   Copy `.env.example` to `.env.local` first if that file does not exist.
-   Then restart the figma-import-export Claude session, since the file is
-   read once at startup.
-3. In Figma, select the **`Login` frame** in the layers panel, right-click →
-   **Copy link to selection**. The link must point at the frame, not the
-   page.
-4. In the figma-import-export session, paste this, with your link:
+10. **Make it float.** With the Prompt selected, set **Position: Absolute** in
+    the right panel, so it sits over the screen instead of joining the
+    auto-layout row.
+11. **Optional but valuable:** switch to **prototype mode** (the tab at the
+    top of the right sidebar) and drag a connection from the "Delete" button
+    in `modal/Confirm` back to `page/Login`. This is the navigation test and
+    nobody has proven it comes back over the API yet.
 
-   ```
-   Run figma_map_screen on this URL and show me the full result:
-   <paste the Copy link to selection URL here>
-   ```
+**Send me:** a screenshot of the layers panel showing both frames and what is
+inside them.
 
-5. **What a good result looks like:**
-   - `componentReferences` lists `Button`.
-   - `instances` has three entries, each with `variantProps` like
-     `{ variant: "primary", size: "large" }`, the `label` text, and
-     `booleanProps` showing `disabled: true` on the third.
-   - `frames` includes `Actions` with a vertical direction and its spacing
-     reported as a **token name** such as `space-md`, not a pixel number.
-   - `prompts` has both rules, with the right `scope` and `kind`, and
-     `target: "Use a passkey"` on the second and `null` on the first.
-   - `gaps` should be short or empty. Anything in it is information, not
-     failure.
+---
 
-6. **Send me the full result**, or a screenshot of it. Especially:
-   - anything in `gaps`
-   - whether `frames` reports token names or raw pixel numbers
-   - whether `target` on Prompt 1 is `null`
+## Part 5 — the theme switch (2 min)
+
+This is the payoff for the whole day's theming work.
+
+1. Select the **`page/Login`** frame.
+2. In the right panel, find the **variable modes** control. On a frame it
+   appears near the top of the Appearance section, listing the `cia`
+   collection with its current mode.
+3. Change it from `sketchbook Light` to **`terminal Dark`**.
+4. The whole screen should re-theme: colours, radii, spacing. Nothing is
+   rebuilt and nothing is relinked.
+5. Try **`glass Light`** and **`press Dark`** too.
+
+**Send me:** two screenshots of the same screen in two different themes.
+
+---
+
+## Part 6 — the read-back
+
+1. Select the **`page/Login`** frame, right-click → **Copy link to
+   selection**.
+2. Paste that link here and I will read the file directly.
 
 ---
 
 ## What to send back
 
-1. Part B: the Prompt instance sidebar showing an empty `target`.
-2. Part C: the layers panel showing `Login`, `Actions` and `_prompts`.
-3. Part D: the whole `figma_map_screen` result.
-4. Any error text, word for word, with the part and step number.
+1. Part 1: the Variables panel with ten mode columns.
+2. Part 2: the build result panel.
+3. Part 4: the layers panel with both frames.
+4. Part 5: the same screen in two themes.
+5. Part 6: the frame link.
+6. Any error text, word for word, and which part and step it happened on.
 
----
+## If something goes wrong
 
-## A file-sync warning
-
-`STATE.md` has twice been overwritten with an older copy, losing newer
-sections. Likely an editor holding a stale buffer, or OneDrive. The good
-copy is always in git:
-
-```
-git -C K:\repo\cia-figma-plugin checkout -- STATE.md
-```
-
-If you have it open in an editor, close it without saving.
+- **A step fails:** tell me the part and step number and the exact message.
+  I can read your Figma file directly now, so I can usually see the problem
+  without a screenshot.
+- **The build seems stuck:** 99 specs is a lot. Give it a few minutes before
+  deciding it has hung.
+- **The plugin looks stale:** close and reopen it. If a panel is missing,
+  re-import from the manifest.
