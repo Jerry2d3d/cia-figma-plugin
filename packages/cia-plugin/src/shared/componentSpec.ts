@@ -49,6 +49,14 @@ export interface CiaCall {
   state: CiaCallState;
   variant?: DeclarationVariant;
   parts?: DeclarationParts;
+  /**
+   * A compound mixin's arguments with its defaults filled in, keyed by parameter
+   * name. `cia.border` takes width, style, color and sides, and any of them can
+   * be omitted, passed positionally or passed by name, so the raw argument list
+   * cannot be read without the signature: `@include cia.border;` arrives empty
+   * and `cia.border($color: x)` must not have `x` read as the width.
+   */
+  resolvedArgs?: Record<string, string>;
 }
 
 /**
@@ -509,6 +517,13 @@ function validateCall(call: unknown, where: string, errors: string[]): void {
   }
   validateVariantTag(c.variant, where, errors);
   validatePartsPath(c.parts, where, errors);
+  if (c.resolvedArgs !== undefined) {
+    if (typeof c.resolvedArgs !== 'object' || c.resolvedArgs === null || Array.isArray(c.resolvedArgs)) {
+      errors.push(`${where}.resolvedArgs must be an object when present`);
+    } else if (Object.values(c.resolvedArgs).some((value) => typeof value !== 'string')) {
+      errors.push(`${where}.resolvedArgs values must all be strings`);
+    }
+  }
 }
 
 function validateBlock(block: unknown, where: string, errors: string[]): void {

@@ -84,6 +84,14 @@ class FakeComponent extends FakeProperties {
 
   strokeWeight = 0;
 
+  strokeTopWeight = 0;
+
+  strokeRightWeight = 0;
+
+  strokeBottomWeight = 0;
+
+  strokeLeftWeight = 0;
+
   strokeAlign = '';
 
   layoutMode = 'NONE';
@@ -184,6 +192,14 @@ class FakeFrame {
   strokes: SolidPaint[] = [];
 
   strokeWeight = 0;
+
+  strokeTopWeight = 0;
+
+  strokeRightWeight = 0;
+
+  strokeBottomWeight = 0;
+
+  strokeLeftWeight = 0;
 
   strokeAlign = '';
 
@@ -3032,5 +3048,92 @@ describe('a child that fills its parent', () => {
 
     // Reaching here means nothing tried to set a sizing mode on the root.
     expect(components[0].layoutMode).toBe('HORIZONTAL');
+  });
+});
+
+describe('a border on one edge', () => {
+  const edged = (property: string, width: string): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Edgedish',
+    props: [],
+    styleBlocks: [
+      {
+        selector: '.root',
+        kind: 'base',
+        ciaCalls: [{ fn: 'color', args: ['border-subtle'], property: 'border-color', state: 'default' }],
+        borders: [{ property, width, style: 'solid', state: 'default' }],
+      },
+    ],
+  });
+
+  it('sets that edge only, which Figma does hold a weight for', async () => {
+    const { api, components } = createFakeApi();
+
+    // Panel's header is `border-bottom-width: 1px`. This used to be reported as
+    // having no Figma equivalent, covering 128 of the library's border entries.
+    const { result } = await buildComponent(edged('border-bottom-width', '1px'), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].strokeBottomWeight).toBe(1);
+    // The other edges are explicitly zero, not left at whatever Figma defaults to.
+    expect(components[0].strokeTopWeight).toBe(0);
+    expect(components[0].strokeLeftWeight).toBe(0);
+    expect(result.skipped.some((skip) => skip.reason.includes('no Figma equivalent'))).toBe(false);
+  });
+
+  it('still refuses an outline, which is drawn outside the box', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(edged('outline-width', '2px'), { collectionName: 'boilerplate' }, api);
+
+    expect(result.skipped.some((skip) => skip.reason.includes('outline-width 2px skipped'))).toBe(true);
+  });
+
+  it('keeps a box border on all four edges as one weight', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(edged('border-width', '2px'), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].strokeWeight).toBe(2);
+    expect(components[0].strokeBottomWeight).toBe(0);
+  });
+});
+
+describe('the border mixin, whose arguments have defaults', () => {
+  const mixin = (resolvedArgs: Record<string, string>): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Borderish',
+    props: [],
+    styleBlocks: [
+      {
+        selector: '.root',
+        kind: 'base',
+        ciaCalls: [{ fn: 'border', args: [], property: 'border', state: 'default', resolvedArgs }],
+        borders: [{ property: 'border-width', width: resolvedArgs.width, style: 'solid', state: 'default' }],
+      },
+    ],
+  });
+
+  it('binds the colour it draws, which is unreadable without the filled-in defaults', async () => {
+    const { api, components } = createFakeApi();
+
+    // ToggleButton's real call: `cia.border(2px, solid, border-emphasis)`.
+    const { result } = await buildComponent(
+      mixin({ width: '2px', style: 'solid', color: 'border-emphasis', sides: 'all' }),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(boundColor(components[0].strokes[0])).toBe('border-emphasis');
+    expect(components[0].strokeWeight).toBe(2);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('says so when the spec does not carry the colour, rather than drawing a default', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(mixin({ width: '1px' }), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].strokes).toHaveLength(0);
+    expect(result.skipped.some((skip) => skip.reason.includes('does not say which colour it draws'))).toBe(true);
   });
 });

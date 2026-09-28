@@ -354,6 +354,23 @@ function figmaField(property: string, from: ConsumedFrom | null): string | null 
   }
 }
 
+/** The four edges Figma holds a stroke weight for, by their CSS property. */
+type BorderSide = 'top' | 'right' | 'bottom' | 'left';
+
+const BORDER_SIDES: Record<string, BorderSide> = {
+  'border-top-width': 'top',
+  'border-right-width': 'right',
+  'border-bottom-width': 'bottom',
+  'border-left-width': 'left',
+};
+
+const SIDE_WEIGHT_FIELDS: Record<BorderSide, string> = {
+  top: 'strokeTopWeight',
+  right: 'strokeRightWeight',
+  bottom: 'strokeBottomWeight',
+  left: 'strokeLeftWeight',
+};
+
 /** CSS properties that mean "the node's fill". cia emits both spellings. */
 const FILL_PROPERTIES = ['background-color', 'background'];
 
@@ -397,7 +414,8 @@ type Op =
   | { kind: 'fillContainer'; axis: 'width' | 'height' }
   /** A min or max bound. Null removes the bound, which is what `none` means. */
   | { kind: 'sizeLimit'; field: 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'; pixels: number | null }
-  | { kind: 'strokeWeight'; weight: number };
+  /** A side means one edge only: Figma holds a weight per edge, and one colour. */
+  | { kind: 'strokeWeight'; weight: number; side?: BorderSide };
 
 /**
  * Turns a style block's default-state cia calls into Figma operations,
@@ -670,7 +688,12 @@ class Resolver {
     const ops: Op[] = [];
 
     borders.forEach((border: BorderSpec) => {
-      if (border.property !== 'border-width') {
+      // A per-side width IS representable: Figma holds a stroke weight per edge.
+      // Saying otherwise was an expired impossibility of this builder's own, and
+      // it covered 128 of the library's 454 border entries. An outline is still
+      // genuinely absent, being a focus ring drawn outside the box.
+      const side = BORDER_SIDES[border.property];
+      if (border.property !== 'border-width' && !side) {
         this.skipped.push({
           where: block.selector,
           reason: `${border.property} ${border.width} skipped: Figma has no equivalent`,
@@ -692,7 +715,7 @@ class Resolver {
         });
         return;
       }
-      ops.push({ kind: 'strokeWeight', weight });
+      ops.push({ kind: 'strokeWeight', weight, side });
     });
 
     return ops;
@@ -903,11 +926,25 @@ class Resolver {
             'by a number, and this version places every element in source order without reordering',
         });
         return [];
-      // Compound mixins that emit several declarations at once. The parts this
-      // builder can use arrive separately: `border` widths come through the
-      // block's `borders` array, and `elevation` is a shadow, which has no
-      // Figma Variable type.
-      case 'border':
+      // `border()` sets a width, a style, a colour and which edges. The width
+      // arrives through the block's `borders` array, and the colour is here, in
+      // the arguments with their defaults filled in. Without those the colour was
+      // unreadable, because it can be positional, named or omitted entirely.
+      case 'border': {
+        const colour = call.resolvedArgs?.color;
+        if (!colour) {
+          this.skipped.push({
+            where,
+            reason: `${signature} skipped: the spec does not say which colour it draws, so only its width is built`,
+          });
+          return [];
+        }
+        const variable = this.lookup(colour, 'COLOR', where, `${signature} as border colour`);
+        return variable ? [{ kind: 'stroke', variable }] : [];
+      }
+      // Compound mixins that emit several declarations at once, whose usable
+      // parts arrive elsewhere. `elevation` is a shadow, which has no Figma
+      // Variable type at all.
       case 'elevation':
       case 'stack':
       case 'contain':
@@ -1929,9 +1966,19 @@ async function applyOps(
   // once from the whole op list rather than inside the loop. A declared width
   // is applied even with no stroke colour: it paints nothing on its own, but it
   // is a stated fact, and dropping it would lose the width a later colour needs.
-  const declaredWeight = lastOp(ops, 'strokeWeight')?.weight;
+  const declaredWeight = lastOp(ops, 'strokeWeight', (op) => !op.side)?.weight;
   const strokeWeight = declaredWeight ?? DEFAULT_STROKE_WEIGHT;
-  if (declaredWeight !== undefined) {
+  const sideWeights = (Object.keys(SIDE_WEIGHT_FIELDS) as BorderSide[]).map((side) => ({
+    side,
+    weight: lastOp(ops, 'strokeWeight', (op) => op.side === side)?.weight,
+  }));
+  if (sideWeights.some((entry) => entry.weight !== undefined)) {
+    // One edge declared means one edge drawn, so the rest are explicitly zero
+    // rather than left at whatever Figma defaults to.
+    sideWeights.forEach(({ side, weight }) => {
+      (component as unknown as Record<string, number>)[SIDE_WEIGHT_FIELDS[side]] = weight ?? declaredWeight ?? 0;
+    });
+  } else if (declaredWeight !== undefined) {
     component.strokeWeight = declaredWeight;
   }
 
