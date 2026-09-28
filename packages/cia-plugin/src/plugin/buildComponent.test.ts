@@ -2,9 +2,11 @@ import { BuildApi, buildComponent, DEFAULT_STROKE_WEIGHT } from '@/plugin/buildC
 import { ComponentSpec } from '@/shared/componentSpec';
 import buttonSpecJson from '@/__fixtures__/Button.component-spec.json';
 import headingSpecJson from '@/__fixtures__/Heading.component-spec.json';
+import containerSpecJson from '@/__fixtures__/Container.component-spec.json';
 
 const buttonSpec = buttonSpecJson as ComponentSpec;
 const headingSpec = headingSpecJson as ComponentSpec;
+const containerSpec = containerSpecJson as ComponentSpec;
 
 class FakeVariable {
   constructor(
@@ -88,9 +90,27 @@ class FakeComponent extends FakeProperties {
 
   counterAxisAlignItems = '';
 
+  /** Figma's default for a new component. */
+  width = 100;
+
+  height = 100;
+
+  minWidth: number | null = null;
+
+  maxWidth: number | null = null;
+
+  minHeight: number | null = null;
+
+  maxHeight: number | null = null;
+
   children: FakeText[] = [];
 
   bound: Record<string, string> = {};
+
+  resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
 
   appendChild(child: FakeText) {
     this.children.push(child);
@@ -1393,5 +1413,146 @@ describe('Heading, from the real spec', () => {
     // What remains is honest: the sizes are applied but cannot follow a theme.
     const unthemeable = result.skipped.filter((skip) => skip.reason.includes('cannot follow a theme'));
     expect(unthemeable.length).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('widths and heights stated as plain values', () => {
+  const dimSpec = (dimensions: { property: string; value: string; state: 'default' }[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Boxish',
+    props: [],
+    styleBlocks: [{ selector: '.box', kind: 'base', ciaCalls: [], dimensions }],
+  });
+
+  it('applies a px bound, which is what Container needs', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      dimSpec([{ property: 'max-width', value: '640px', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].maxWidth).toBe(640);
+    // A literal is not a binding, so it must not inflate the binding count.
+    expect(result.bindings).toBe(0);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('treats `none` on a bound as removing it, not as a value it cannot read', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      dimSpec([{ property: 'max-width', value: 'none', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].maxWidth).toBeNull();
+    expect(result.skipped).toEqual([]);
+  });
+
+  it('pins the axis before resizing, so a fixed width is not undone by hugging', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      dimSpec([
+        { property: 'width', value: '240px', state: 'default' },
+        { property: 'height', value: '48px', state: 'default' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].width).toBe(240);
+    expect(components[0].height).toBe(48);
+    // Horizontal layout, so width is the primary axis and height the counter.
+    expect(components[0].primaryAxisSizingMode).toBe('FIXED');
+    expect(components[0].counterAxisSizingMode).toBe('FIXED');
+  });
+
+  it('leaves the other axis hugging when only one is stated', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      dimSpec([{ property: 'height', value: '56px', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].height).toBe(56);
+    expect(components[0].counterAxisSizingMode).toBe('FIXED');
+    expect(components[0].primaryAxisSizingMode).toBe('AUTO');
+  });
+
+  it('refuses to invent a number for a percentage, and says why', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      dimSpec([{ property: 'width', value: '100%', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].width).toBe(100);
+    expect(result.skipped[0].reason).toContain('width: 100% not applied');
+    expect(result.skipped[0].reason).toContain('has no parent');
+  });
+
+  it('says an `auto` width needs no action rather than reporting it as a failure', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(
+      dimSpec([{ property: 'width', value: 'auto', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(result.gaps).toEqual([]);
+    expect(result.skipped[0].reason).toContain('already hugs its content');
+  });
+
+  it('will not set a bound Figma rejects', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      dimSpec([{ property: 'min-width', value: '0', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].minWidth).toBeNull();
+    expect(result.skipped[0].reason).toContain('requires a positive minWidth');
+  });
+
+  it('keeps a stated zero width, clamped to the smallest size Figma accepts', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      dimSpec([{ property: 'width', value: '0', state: 'default' }]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(components[0].width).toBe(0.01);
+  });
+});
+
+describe('Container, from the real spec', () => {
+  it('builds the five maxWidth variants it was blocked on', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(containerSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.variantNames).toHaveLength(5);
+    const bound = new Map(
+      components.map((component) => [/maxWidth=(\w+)/.exec(component.name)?.[1] ?? '?', component.maxWidth]),
+    );
+    expect(bound.get('sm')).toBe(640);
+    expect(bound.get('md')).toBe(768);
+    expect(bound.get('lg')).toBe(1024);
+    expect(bound.get('xl')).toBe(1280);
+    // `full` is `max-width: none`, which is the absence of a bound.
+    expect(bound.get('full')).toBeNull();
   });
 });

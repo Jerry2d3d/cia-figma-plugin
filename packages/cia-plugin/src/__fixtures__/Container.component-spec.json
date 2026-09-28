@@ -1,0 +1,187 @@
+{
+  "specVersion": 2,
+  "component": "Container",
+  "props": [
+    {
+      "name": "maxWidth",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "sm",
+        "md",
+        "lg",
+        "xl",
+        "full"
+      ]
+    },
+    {
+      "name": "padding",
+      "optional": true,
+      "type": "boolean",
+      "values": null
+    },
+    {
+      "name": "className",
+      "optional": true,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "children",
+      "optional": false,
+      "type": "React.ReactNode",
+      "values": null
+    },
+    {
+      "name": "as",
+      "optional": true,
+      "type": "React.ElementType",
+      "values": null
+    }
+  ],
+  "styleBlocks": [
+    {
+      "selector": "@mixin container-bp($overrides...)",
+      "kind": "other",
+      "ciaCalls": [],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        }
+      ],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "100%",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container",
+      "kind": "base",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container[data-max-width=\"sm\"]",
+      "kind": "variant",
+      "prop": "maxWidth",
+      "value": "sm",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "640px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container[data-max-width=\"md\"]",
+      "kind": "variant",
+      "prop": "maxWidth",
+      "value": "md",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "768px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container[data-max-width=\"lg\"]",
+      "kind": "variant",
+      "prop": "maxWidth",
+      "value": "lg",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "1024px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container[data-max-width=\"xl\"]",
+      "kind": "variant",
+      "prop": "maxWidth",
+      "value": "xl",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "1280px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container[data-max-width=\"full\"]",
+      "kind": "variant",
+      "prop": "maxWidth",
+      "value": "full",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "none",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".container[data-padded]",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding-inline",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding-inline",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    }
+  ],
+  "gaps": []
+}

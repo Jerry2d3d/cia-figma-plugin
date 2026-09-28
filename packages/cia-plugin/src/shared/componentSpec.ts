@@ -66,6 +66,22 @@ export interface ConsumedToken {
   from: ConsumedFrom | null;
 }
 
+/**
+ * A width or height declared as a plain value: `max-width: 640px`, `width: 100%`,
+ * `max-width: none`. Added upstream 2026-09-27; absent on older specs.
+ *
+ * Keywords arrive as written rather than filtered, because "hug your content" is
+ * real information. Anything computed is excluded, since a `var()` or `calc()`
+ * already belongs to `consumes` or `ciaCalls`.
+ */
+export interface DimensionSpec {
+  /** One of width, height, min-width, min-height, max-width, max-height. */
+  property: string;
+  /** As written: `640px`, `100%`, `auto`, `none`, `0`, `1.5em`. */
+  value: string;
+  state: CiaCallState;
+}
+
 export interface StyleBlock {
   selector: string;
   kind: StyleBlockKind;
@@ -76,6 +92,8 @@ export interface StyleBlock {
   ciaCalls: CiaCall[];
   /** Added upstream 2026-09-24; absent on specs produced before that. */
   borders?: BorderSpec[];
+  /** Widths and heights stated as plain values; absent on older specs. */
+  dimensions?: DimensionSpec[];
   /** Styling reached through a local custom property; absent on older specs. */
   consumes?: ConsumedToken[];
 }
@@ -161,6 +179,34 @@ function validateBlock(block: unknown, where: string, errors: string[]): void {
     } else {
       b.borders.forEach((border, index) => validateBorder(border, `${where}.borders[${index}]`, errors));
     }
+  }
+  if (b.dimensions !== undefined) {
+    if (!Array.isArray(b.dimensions)) {
+      errors.push(`${where}.dimensions must be an array`);
+    } else {
+      b.dimensions.forEach((entry, index) =>
+        validateDimension(entry, `${where}.dimensions[${index}]`, errors),
+      );
+    }
+  }
+}
+
+function validateDimension(entry: unknown, where: string, errors: string[]): void {
+  if (typeof entry !== 'object' || entry === null) {
+    errors.push(`${where} is not an object`);
+    return;
+  }
+  const d = entry as Record<string, unknown>;
+  if (typeof d.property !== 'string' || d.property.length === 0) {
+    errors.push(`${where}.property must be a non-empty string`);
+  }
+  // `0` is a real width and `none` is a real instruction, so only an absent or
+  // non-string value is wrong here.
+  if (typeof d.value !== 'string' || d.value.length === 0) {
+    errors.push(`${where}.value must be a non-empty string`);
+  }
+  if (typeof d.state !== 'string' || !CALL_STATES.includes(d.state as CiaCallState)) {
+    errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
 }
 

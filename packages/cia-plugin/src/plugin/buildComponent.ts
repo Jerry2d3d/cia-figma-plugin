@@ -325,6 +325,18 @@ function figmaField(property: string, from: ConsumedFrom | null): string | null 
 /** CSS properties that mean "the node's fill". cia emits both spellings. */
 const FILL_PROPERTIES = ['background-color', 'background'];
 
+/**
+ * The four CSS bounds Figma holds directly. Figma applies these only to
+ * auto-layout frames and their direct children, which every component built here
+ * now is, so they take effect rather than being silently dropped.
+ */
+const SIZE_LIMIT_FIELDS: Record<string, 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'> = {
+  'min-width': 'minWidth',
+  'max-width': 'maxWidth',
+  'min-height': 'minHeight',
+  'max-height': 'maxHeight',
+};
+
 type Op =
   | { kind: 'fill'; variable: Variable }
   | { kind: 'textFill'; variable: Variable }
@@ -347,6 +359,10 @@ type Op =
   /** A cia em value, applied to Figma as a percentage. */
   | { kind: 'letterSpacing'; em: number }
   | { kind: 'textCase'; value: 'UPPER' }
+  /** A fixed width or height in pixels, which also pins that axis. */
+  | { kind: 'size'; axis: 'width' | 'height'; pixels: number }
+  /** A min or max bound. Null removes the bound, which is what `none` means. */
+  | { kind: 'sizeLimit'; field: 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'; pixels: number | null }
   | { kind: 'strokeWeight'; weight: number };
 
 /**
@@ -386,7 +402,7 @@ class Resolver {
   }
 
   resolveBlock(block: StyleBlock): Op[] {
-    const ops: Op[] = this.resolveBorders(block);
+    const ops: Op[] = [...this.resolveBorders(block), ...this.resolveDimensions(block)];
     const skippedStates = new Map<string, number>();
     // `padding: a b` arrives as several same-property entries in source order,
     // whether written as direct calls or reached through local properties.
@@ -621,6 +637,84 @@ class Resolver {
         return;
       }
       ops.push({ kind: 'strokeWeight', weight });
+    });
+
+    return ops;
+  }
+
+  /**
+   * Widths and heights stated as plain values, which is how Container declares
+   * its five maxWidth variants (640px through 1280px). No token is involved, so
+   * nothing here binds: these are literals, reported as applied rather than
+   * counted as bindings.
+   *
+   * A relative value is deliberately not converted. `width: 100%` means fill the
+   * parent, and a component set on the canvas has no parent to fill, so a number
+   * invented for it would be a made-up size that looks deliberate. `em` is
+   * relative to a font size that may be declared in another block. Both are
+   * reported instead.
+   */
+  private resolveDimensions(block: StyleBlock): Op[] {
+    const ops: Op[] = [];
+
+    (block.dimensions ?? []).forEach((dimension) => {
+      const where = block.selector;
+      const stated = `${dimension.property}: ${dimension.value}`;
+      if (dimension.state !== 'default') {
+        this.skipped.push({
+          where,
+          reason: `${stated} in the ${dimension.state} state skipped: v1 builds the default state only`,
+        });
+        return;
+      }
+
+      const limit = SIZE_LIMIT_FIELDS[dimension.property];
+      const value = dimension.value.trim();
+
+      // `max-width: none` removes a bound. On a min or max that is a real
+      // instruction; on a width it just means "size yourself", like `auto`.
+      if (value === 'none' || value === 'auto' || value === 'fit-content' || value === 'max-content') {
+        if (limit && value === 'none') {
+          ops.push({ kind: 'sizeLimit', field: limit, pixels: null });
+          return;
+        }
+        this.skipped.push({
+          where,
+          reason: `${stated} needs no action: the component already hugs its content, which is what "${value}" asks for`,
+        });
+        return;
+      }
+
+      const pixels = /^-?[\d.]+(px)?$/.test(value) ? remOrPxToPixels(value) : undefined;
+      if (pixels === undefined) {
+        this.skipped.push({
+          where,
+          reason:
+            `${stated} not applied: "${value}" is relative to something Figma has no equivalent for here ` +
+            '(a percentage fills a parent, and a component set on the canvas has no parent)',
+        });
+        return;
+      }
+
+      if (limit) {
+        // Figma requires a positive bound, and rejects the rest.
+        if (pixels <= 0) {
+          this.skipped.push({
+            where,
+            reason: `${stated} not applied: Figma requires a positive ${limit}`,
+          });
+          return;
+        }
+        ops.push({ kind: 'sizeLimit', field: limit, pixels });
+        return;
+      }
+
+      if (dimension.property === 'width' || dimension.property === 'height') {
+        ops.push({ kind: 'size', axis: dimension.property, pixels });
+        return;
+      }
+
+      this.skipped.push({ where, reason: `${stated} skipped: no Figma equivalent for ${dimension.property}` });
     });
 
     return ops;
@@ -1046,8 +1140,20 @@ function solidPaint(): SolidPaint {
   return { type: 'SOLID', color: { r: 0, g: 0, b: 0 } };
 }
 
-function lastOp<K extends Op['kind']>(ops: Op[], kind: K): Extract<Op, { kind: K }> | undefined {
-  return ops.filter((op): op is Extract<Op, { kind: K }> => op.kind === kind).pop();
+/**
+ * The last operation of a kind, which is how a variant block overrides its base:
+ * blocks are concatenated in source order, so later wins. The optional predicate
+ * narrows within a kind, since width and height are the same kind on two axes.
+ */
+function lastOp<K extends Op['kind']>(
+  ops: Op[],
+  kind: K,
+  where?: (op: Extract<Op, { kind: K }>) => boolean,
+): Extract<Op, { kind: K }> | undefined {
+  return ops
+    .filter((op): op is Extract<Op, { kind: K }> => op.kind === kind)
+    .filter((op) => (where ? where(op) : true))
+    .pop();
 }
 
 async function applyOps(
@@ -1191,6 +1297,42 @@ async function applyOps(
     component.primaryAxisSizingMode = 'AUTO';
     component.counterAxisSizingMode = 'AUTO';
   }
+
+  // Sizes go last, because they depend on the layout being settled: which axis
+  // is primary decides which sizing mode has to stop hugging, and Figma applies
+  // a min or max bound only to an auto-layout frame, which is now guaranteed.
+  const width = lastOp(ops, 'size', (op) => op.axis === 'width')?.pixels;
+  const height = lastOp(ops, 'size', (op) => op.axis === 'height')?.pixels;
+  if (width !== undefined || height !== undefined) {
+    const horizontalIsPrimary = component.layoutMode === 'HORIZONTAL';
+    if (width !== undefined) {
+      if (horizontalIsPrimary) {
+        component.primaryAxisSizingMode = 'FIXED';
+      } else {
+        component.counterAxisSizingMode = 'FIXED';
+      }
+    }
+    if (height !== undefined) {
+      if (horizontalIsPrimary) {
+        component.counterAxisSizingMode = 'FIXED';
+      } else {
+        component.primaryAxisSizingMode = 'FIXED';
+      }
+    }
+    // Figma rejects a zero dimension, so a stated 0 becomes the smallest size it
+    // will accept rather than throwing and losing the whole component.
+    const clamp = (value: number) => Math.max(value, 0.01);
+    component.resize(clamp(width ?? component.width), clamp(height ?? component.height));
+  }
+
+  // Applied after any resize, so a max that contradicts a stated width still wins,
+  // the same way CSS resolves it.
+  (['minWidth', 'maxWidth', 'minHeight', 'maxHeight'] as const).forEach((field) => {
+    const op = lastOp(ops, 'sizeLimit', (candidate) => candidate.field === field);
+    if (op) {
+      component[field] = op.pixels;
+    }
+  });
 
   return bindings;
 }
