@@ -517,7 +517,28 @@ every mode since Figma has no empty state, and every gap carrying a reason.
 
 "No gaps" was wrong either way, at 57 and at 150.
 
-Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
+**space-2xs was never missing** (`696028cc`), and this is the largest wrong claim
+made here. Boilerplate declares it, worth 4, no gap, and it is the only one of the
+eight themes that does. These are BoilerPlate components, and they were being
+measured against a combined export that excluded boilerplate, so 53 of them
+reported a missing token sitting in the theme they come from.
+
+| | before | after |
+|--------------|------|------|
+| bindings     | 4639 | 4935 |
+| gaps         | 210  | 137  |
+| ready, clean | 5/9  | 7/9  |
+
+73 gaps and 296 bindings were theme selection rather than anything real. Published
+figures now use the boilerplate file and say so, and they are a **floor**: a
+collection holding several themes carries the union, so a real run does better.
+
+**There is no single answer to "does cia export X".** Five distinct variable-name
+sets across sixteen per-theme files. `modal-radius` and `tooltip-radius` are the
+same shape, declared by three themes and one. A consumer asking that question of
+one file is sampling.
+
+Final: **282 variants, 4935 bindings, 79 build gaps plus 58 relayed, 3 arriving
 empty, 204 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
