@@ -22,7 +22,7 @@ export const STATUS: StatusItem[] = [
     title: 'All 99 components build',
     level: 'working',
     detail:
-      '272 components and 4326 live bindings across the whole library, 39 of them with real variants. Up from one component with variants two days ago.',
+      '282 components and 4610 live bindings across the whole library, 42 of them with real variants. Up from one component with variants two days ago.',
   },
   {
     title: 'Components build their inner parts',
@@ -231,7 +231,7 @@ export const NEXT_STEPS: NextStep[] = [
     owner: 'A person, in Figma',
     title: 'Import the whole library',
     detail:
-      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 233 components and 3686 live bindings, with nothing rejected. 160 build gaps remain, none a builder fault, plus 156 the spec itself reports about the source. The panel shows them apart, because they are fixed in different repos.',
+      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 233 components and 3686 live bindings, with nothing rejected. 160 build gaps remain, none a builder fault, plus 58 the spec itself reports about the source. The panel shows them apart, because they are fixed in different repos.',
   },
   {
     owner: 'Both',

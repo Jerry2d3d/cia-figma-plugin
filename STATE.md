@@ -335,8 +335,26 @@ discovery only, since a part styles a child and must not become root operations.
   variants  233 -> 272
   bindings 3955 -> 4326
 
-Final: **272 variants, 4326 bindings, 149 build gaps plus 156 relayed, 3 arriving
-empty, 176 tests.**
+**A local that takes several values** (`047fe4cb`). 99 consumptions had been
+reported as an undecidable local when they never were: Checkbox defines
+`--checkbox-size` once per `[data-size]`, the same nesting already resolved for
+direct calls. They now carry every value with the qualifier that selects it.
+
+- Refreshing the data alone was worth 188 bindings and 98 gaps, because `from`
+  now carries the unqualified value where it used to be null. This builder had
+  been skipping those silently as "already accounted for upstream".
+- A value whose qualifier is a declared prop becomes an ordinary variant-tagged
+  consumption, so the variant-scoped part machinery handles it unchanged.
+- **Read `qualifier`, not `variant`.** A theme override and an internal data
+  attribute are real qualifiers no prop names, and they are identical in every
+  other field. Reported rather than built: a theme in Figma is a MODE on a
+  variable, so a per-theme literal is not one value on one node.
+- A width reached through a local is still a width. Consumed literals were going
+  through the spacing path, which said "no Figma equivalent" for `width`: true of
+  that path, false of the property. Size logic is now one function both use.
+
+Final: **282 variants, 4610 bindings, 152 build gaps plus 58 relayed, 3 arriving
+empty, 178 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
