@@ -450,8 +450,25 @@ checking, not the code. Verified non-vacuous by removing one corner's write.
 Both directions matter. The day before, the fake was missing a token reality has.
 A fake that differs from reality either way passes tests reality would fail.
 
+**The audit is permanent** (`fbebde62`, `fixtureAudit.test.ts`), because the hole
+it looks for reopens every time a field is added and nothing about adding one
+prompts a re-run of a forgotten script. It checks that every node field the
+builder writes is named by some test, and that the default collection claims no
+token cia does not export.
+
+**A check that cannot see reports a clean sweep**, which is indistinguishable
+from success. Upstream's equivalent broke on its first run three separate times,
+each broken version producing output that looked exactly like a finding. So every
+extraction here asserts it found a plausible number of things first, both halves
+were mutation-tested, and the field check reads all three ways a test can name a
+field, since missing one form is what produced three false findings upstream.
+
+A third check pins that cia's typography is still one step per axis: not a claim
+that it is right, but that it is still true, so the hypothetical tests written for
+the day it grows get revisited on that day.
+
 Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 196 tests.**
+empty, 201 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
