@@ -1,0 +1,1193 @@
+{
+  "specVersion": 2,
+  "component": "Input",
+  "props": [
+    {
+      "name": "type",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "text",
+        "email",
+        "password",
+        "number",
+        "search"
+      ]
+    },
+    {
+      "name": "error",
+      "optional": true,
+      "type": "boolean",
+      "values": null
+    },
+    {
+      "name": "errorMessage",
+      "optional": true,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "success",
+      "optional": true,
+      "type": "boolean",
+      "values": null
+    },
+    {
+      "name": "loading",
+      "optional": true,
+      "type": "boolean",
+      "values": null
+    },
+    {
+      "name": "size",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "standard",
+        "large"
+      ]
+    },
+    {
+      "name": "icon",
+      "optional": true,
+      "type": "React.ReactNode",
+      "values": null
+    },
+    {
+      "name": "infoIcon",
+      "optional": true,
+      "type": "React.ReactNode",
+      "values": null
+    },
+    {
+      "name": "infoTooltip",
+      "optional": true,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "helperText",
+      "optional": true,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "messagePosition",
+      "optional": true,
+      "type": "FieldMessagePosition",
+      "values": null
+    },
+    {
+      "name": "label",
+      "optional": true,
+      "type": "string",
+      "values": null
+    },
+    {
+      "name": "className",
+      "optional": true,
+      "type": "string",
+      "values": null
+    }
+  ],
+  "styleBlocks": [
+    {
+      "selector": ".inputWrapper",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "--input-bg-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-muted"
+          ],
+          "property": "--input-disabled-bg-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "--input-border-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-emphasis"
+          ],
+          "property": "--input-border-color-hover",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "--input-border-color-focus",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "property": "--input-border-color-error",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "success-default"
+          ],
+          "property": "--input-border-color-success",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "--input-text-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-muted"
+          ],
+          "property": "--input-placeholder-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "--input-disabled-text-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "--input-helper-text-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "property": "--input-error-text-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-muted"
+          ],
+          "property": "--input-icon-color",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "--input-padding-y",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "sm"
+          ],
+          "property": "--input-padding-x",
+          "state": "default"
+        },
+        {
+          "fn": "radius-raw",
+          "args": [
+            "sm"
+          ],
+          "property": "--input-border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "100%",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": [
+        {
+          "localToken": "--input-bg-color",
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-disabled-bg-color",
+          "fn": "color",
+          "args": [
+            "surface-muted"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-color",
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-color-hover",
+          "fn": "color",
+          "args": [
+            "border-emphasis"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-color-focus",
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-color-error",
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-color-success",
+          "fn": "color",
+          "args": [
+            "success-default"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-text-color",
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-placeholder-color",
+          "fn": "color",
+          "args": [
+            "text-muted"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-disabled-text-color",
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-helper-text-color",
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-error-text-color",
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-icon-color",
+          "fn": "color",
+          "args": [
+            "text-muted"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-padding-y",
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-padding-x",
+          "fn": "space-raw",
+          "args": [
+            "sm"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-width",
+          "fn": null,
+          "args": [],
+          "literal": "1px",
+          "state": "default"
+        },
+        {
+          "localToken": "--input-border-radius",
+          "fn": "radius-raw",
+          "args": [
+            "sm"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--input-transition",
+          "fn": null,
+          "args": [],
+          "literal": "all 150ms cubic-bezier(0.4, 0, 0.2, 1)",
+          "state": "default"
+        }
+      ]
+    },
+    {
+      "selector": ".label",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font",
+          "args": [
+            "medium",
+            "sm"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "margin-left",
+          "state": "default",
+          "parts": [
+            ".required"
+          ]
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-text-color",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-primary"
+            ]
+          }
+        },
+        {
+          "property": "color",
+          "localToken": "--input-border-color-error",
+          "state": "default",
+          "parts": [
+            ".required"
+          ],
+          "from": {
+            "fn": "color",
+            "args": [
+              "error-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".inputContainer",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".input",
+      "kind": "base",
+      "ciaCalls": [
+        {
+          "fn": "space-raw",
+          "args": [
+            "lg"
+          ],
+          "property": "padding-right",
+          "state": "default",
+          "parts": [
+            ".is-error"
+          ]
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "padding-right",
+          "state": "default",
+          "parts": [
+            ".is-error"
+          ]
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "lg"
+          ],
+          "property": "padding-right",
+          "state": "default",
+          "parts": [
+            ".is-success"
+          ]
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "padding-right",
+          "state": "default",
+          "parts": [
+            ".is-success"
+          ]
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "lg"
+          ],
+          "property": "padding-right",
+          "state": "default",
+          "parts": [
+            ".is-loading, &[data-with-icon], &[data-with-info-icon]"
+          ]
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "padding-right",
+          "state": "default",
+          "parts": [
+            ".is-loading, &[data-with-icon], &[data-with-info-icon]"
+          ]
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "3xl"
+          ],
+          "property": "height",
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "height",
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
+        },
+        {
+          "fn": "font-size",
+          "args": [
+            "base"
+          ],
+          "property": "font-size",
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding",
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".infoIcon",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "right",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "0px",
+          "style": "none",
+          "state": "hover"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-icon-color",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-muted"
+            ]
+          }
+        },
+        {
+          "property": "transition",
+          "localToken": "--input-transition",
+          "state": "default",
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "all 150ms cubic-bezier(0.4, 0, 0.2, 1)"
+          }
+        },
+        {
+          "property": "color",
+          "localToken": "--input-border-color-focus",
+          "state": "hover",
+          "from": {
+            "fn": "brand",
+            "args": [
+              "primary"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".infoIconOutside",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space-raw",
+          "args": [
+            "xl"
+          ],
+          "property": "right",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "0px",
+          "style": "none",
+          "state": "hover"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-icon-color",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-muted"
+            ]
+          }
+        },
+        {
+          "property": "transition",
+          "localToken": "--input-transition",
+          "state": "default",
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "all 150ms cubic-bezier(0.4, 0, 0.2, 1)"
+          }
+        },
+        {
+          "property": "color",
+          "localToken": "--input-border-color-focus",
+          "state": "hover",
+          "from": {
+            "fn": "brand",
+            "args": [
+              "primary"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".tooltip",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "bottom",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-inverse"
+          ],
+          "property": "background-color",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "font",
+          "args": [
+            "reg",
+            "xs"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "sm"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-inverse"
+          ],
+          "property": "border-top-color",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "4px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".icon",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "right",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-icon-color",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-muted"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".loadingIcon",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "right",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".spinner",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "base"
+          ],
+          "property": "width",
+          "state": "default"
+        },
+        {
+          "fn": "font-size",
+          "args": [
+            "base"
+          ],
+          "property": "height",
+          "state": "default"
+        },
+        {
+          "fn": "animate",
+          "args": [
+            "spin",
+            "$speed: 1s",
+            "$iteration: infinite",
+            "$timing: linear"
+          ],
+          "property": "animation",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".successIcon",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "right",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "bold"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-border-color-success",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "success-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".errorIcon",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "right",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "bold"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-border-color-error",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "error-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".helperText",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font",
+          "args": [
+            "reg",
+            "xs"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "space-raw",
+          "args": [
+            "xs"
+          ],
+          "property": "margin-top",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-helper-text-color",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-secondary"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".errorMessage",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font",
+          "args": [
+            "bold",
+            "xs"
+          ],
+          "property": "typography",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-error-text-color",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "error-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".inputWrapper[data-size=\"large\"]",
+      "kind": "variant",
+      "prop": "size",
+      "value": "large",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "base"
+          ],
+          "property": "font-size",
+          "state": "default",
+          "parts": [
+            ".label"
+          ]
+        },
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default",
+          "parts": [
+            ".helperText, .errorMessage"
+          ]
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".inputWrapper[data-error]",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding-left",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-left-width",
+          "width": "3px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "border-left",
+          "localToken": "--input-border-color-error",
+          "state": "default",
+          "from": {
+            "fn": "color",
+            "args": [
+              "error-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".inputWrapper[data-success]",
+      "kind": "part",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-border-color-success",
+          "state": "default",
+          "parts": [
+            ".label"
+          ],
+          "from": {
+            "fn": "color",
+            "args": [
+              "success-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".inputWrapper[data-disabled]",
+      "kind": "part",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "color",
+          "localToken": "--input-disabled-text-color",
+          "state": "default",
+          "parts": [
+            ".label"
+          ],
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-secondary"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    }
+  ],
+  "gaps": []
+}

@@ -4,11 +4,13 @@ import buttonSpecJson from '@/__fixtures__/Button.component-spec.json';
 import headingSpecJson from '@/__fixtures__/Heading.component-spec.json';
 import containerSpecJson from '@/__fixtures__/Container.component-spec.json';
 import checkboxSpecJson from '@/__fixtures__/Checkbox.component-spec.json';
+import inputSpecJson from '@/__fixtures__/Input.component-spec.json';
 
 const buttonSpec = buttonSpecJson as ComponentSpec;
 const headingSpec = headingSpecJson as ComponentSpec;
 const containerSpec = containerSpecJson as ComponentSpec;
 const checkboxSpec = checkboxSpecJson as ComponentSpec;
+const inputSpec = inputSpecJson as ComponentSpec;
 
 class FakeVariable {
   constructor(
@@ -1714,5 +1716,149 @@ describe('Checkbox, from the real spec', () => {
     expect(sizes).toContain('lg:18');
     expect(result.gaps.some((g) => g.reason.includes('times in one block'))).toBe(false);
     expect(result.skipped.some((s) => s.reason.includes('the color axis builds 4 variants'))).toBe(true);
+  });
+});
+
+describe('declarations that came from a descendant selector', () => {
+  it('keeps them off the root frame, because they style a child', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Cardish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.card',
+          kind: 'base',
+          ciaCalls: [
+            // The card's own background.
+            { fn: 'color', args: ['surface-default'], property: 'background-color', state: 'default' },
+            // StartCard's real shape: h3 at 20px and p at 14px, both nested.
+            { fn: 'font-size', args: ['xl'], property: 'font-size', state: 'default', parts: ['h3'] },
+            { fn: 'font-size', args: ['sm'], property: 'font-size', state: 'default', parts: ['p'] },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // The root keeps its own background and takes neither child's size.
+    expect(components[0].fills).toHaveLength(1);
+    expect(components[0].children[0].fontSize).toBe(12);
+    // Two sizes for one element was the old ambiguity, and it is gone.
+    expect(result.gaps).toEqual([]);
+    // They are reported as unbuilt child styling instead.
+    expect(result.unbuiltPartCalls).toBe(2);
+    expect(result.skipped.filter((s) => s.reason.includes('part skipped'))).toHaveLength(2);
+  });
+
+  it('groups a whole path, and keeps a selector list as the one fact it is', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Inputish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.inputWrapper',
+          kind: 'base',
+          ciaCalls: [
+            // Input's real shape, including the two-selector list.
+            { fn: 'font-size', args: ['base'], property: 'font-size', state: 'default', parts: ['.label'] },
+            { fn: 'font-size', args: ['sm'], property: 'font-size', state: 'default', parts: ['.helperText, .errorMessage'] },
+            { fn: 'color', args: ['text-primary'], property: 'color', state: 'default', parts: ['.label'] },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const parts = result.skipped.filter((s) => s.reason.includes('part skipped'));
+    // Two children, not three: the two declarations on `.label` share one.
+    expect(parts).toHaveLength(2);
+    expect(parts.map((s) => s.where)).toEqual([
+      '.inputWrapper .label',
+      '.inputWrapper .helperText, .errorMessage',
+    ]);
+    expect(result.bindings).toBe(0);
+  });
+
+  it('routes by descendant before variant, since a child is not styled by either', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Sizedish',
+      props: [{ name: 'size', optional: true, type: 'enum', values: ['sm', 'lg'] }],
+      styleBlocks: [
+        {
+          selector: '.wrapper',
+          kind: 'base',
+          ciaCalls: [
+            {
+              fn: 'font-size',
+              args: ['lg'],
+              property: 'font-size',
+              state: 'default',
+              variant: { prop: 'size', value: 'lg' },
+              parts: ['.label'],
+            },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // No size axis forms: nothing about the root differs between the two sizes.
+    expect(result.variantNames).toHaveLength(1);
+    expect(components[0].children[0].fontSize).toBe(12);
+    // The variant is kept in the name, so the fact is not lost.
+    expect(result.skipped.some((s) => s.where === '.wrapper .label [size=lg]')).toBe(true);
+  });
+
+  it('applies a declaration with no path, so an ordinary block is untouched', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Plainish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.plain',
+          kind: 'base',
+          ciaCalls: [{ fn: 'font-size', args: ['base'], property: 'font-size', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children[0].bound.fontSize).toBe('font-size-base');
+    expect(result.unbuiltPartCalls).toBe(0);
+  });
+});
+
+describe('Input, from the real spec', () => {
+  it('no longer takes its label and helper text sizes onto the wrapper', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(inputSpec, { collectionName: 'boilerplate' }, api);
+
+    // The fold this used to report is gone: the two sizes belong to .label and
+    // to the `.helperText, .errorMessage` pair, neither of which is the root.
+    expect(result.gaps.some((g) => g.reason.includes('one block'))).toBe(false);
+    components.forEach((component) => {
+      expect(component.children[0].fontSize).toBe(12);
+    });
+    expect(
+      result.skipped.some((s) => s.where === '.inputWrapper[data-size="large"] .label'),
+    ).toBe(true);
+    expect(
+      result.skipped.some(
+        (s) => s.where === '.inputWrapper[data-size="large"] .helperText, .errorMessage',
+      ),
+    ).toBe(true);
   });
 });

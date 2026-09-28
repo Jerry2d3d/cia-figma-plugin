@@ -5,6 +5,7 @@ import {
   ComponentSpec,
   ConsumedFrom,
   ConsumedToken,
+  DeclarationParts,
   DeclarationVariant,
   DimensionSpec,
   StyleBlock,
@@ -1119,17 +1120,49 @@ function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): Compon
       return target;
     };
 
+    /**
+     * A declaration that came from a descendant selector becomes a `part` block,
+     * so it stops reaching the root frame and flows into the existing "not built
+     * in v1" reporting. Keyed by the whole path, and the variant tag is kept in
+     * the selector so nothing is lost: a label inside the large size is still
+     * recognisably that, even though neither is built yet.
+     */
+    const partBucket = (parts: DeclarationParts, tag?: DeclarationVariant): StyleBlock => {
+      const path = parts.join(' ');
+      const key = tag ? `${path} [${tag.prop}=${tag.value}]` : path;
+      let target = split.get(key);
+      if (!target) {
+        target = {
+          selector: `${block.selector} ${key}`,
+          kind: 'part',
+          ciaCalls: [],
+          borders: [],
+          dimensions: [],
+          consumes: [],
+        };
+        split.set(key, target);
+      }
+      return target;
+    };
+
     // A declaration nested inside a block that is already a variant belongs to
     // two axes at once, which one synthetic block cannot express. There are no
     // such cases in the library today, so this reports rather than mis-builds.
     const crossAxis = (tag: DeclarationVariant) =>
       block.kind === 'variant' && block.prop !== undefined && block.prop !== tag.prop;
 
-    const route = <T extends { variant?: DeclarationVariant }>(
+    const route = <T extends { variant?: DeclarationVariant; parts?: DeclarationParts }>(
       items: T[] | undefined,
       pick: (target: StyleBlock) => T[],
     ) => {
       (items ?? []).forEach((item) => {
+        // Checked before the variant tag, because a declaration inside a
+        // descendant does not style this element at all, whichever variant of it
+        // is being built. There is nothing to put on the root either way.
+        if (item.parts && item.parts.length > 0) {
+          pick(partBucket(item.parts, item.variant)).push(item);
+          return;
+        }
         if (!item.variant) {
           pick(keep).push(item);
           return;

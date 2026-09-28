@@ -24,6 +24,22 @@ export interface DeclarationVariant {
   value: string;
 }
 
+/**
+ * The descendant selectors a declaration sat inside, outermost first.
+ *
+ * `.label { font-size: ... }` written inside `.inputWrapper` styles the label,
+ * not the wrapper. Before this existed those declarations looked like the parent
+ * setting the same property several times, and the builder painted one of them
+ * onto the root frame. 501 declarations carry a path, 169 of them on blocks this
+ * version builds, so this is the difference between a component styled correctly
+ * and one wearing its children's styling.
+ *
+ * An entry can be a selector list as written, `".helperText, .errorMessage"`,
+ * because the declaration genuinely applies to both. Splitting it upstream would
+ * state two facts where the source states one. Added upstream 2026-09-28.
+ */
+export type DeclarationParts = string[];
+
 /** One `cia.<fn>(...)` call found in a component's SCSS, tagged with what it sets. */
 export interface CiaCall {
   fn: string;
@@ -32,6 +48,7 @@ export interface CiaCall {
   property: string | null;
   state: CiaCallState;
   variant?: DeclarationVariant;
+  parts?: DeclarationParts;
 }
 
 /**
@@ -46,6 +63,7 @@ export interface BorderSpec {
   style: string | null;
   state: CiaCallState;
   variant?: DeclarationVariant;
+  parts?: DeclarationParts;
 }
 
 /**
@@ -78,6 +96,7 @@ export interface ConsumedToken {
   localToken: string;
   state: CiaCallState;
   variant?: DeclarationVariant;
+  parts?: DeclarationParts;
   /**
    * Where the local's value came from, or null when the producer could not
    * resolve it: usually a local defined twice with different values, which is
@@ -102,6 +121,7 @@ export interface DimensionSpec {
   value: string;
   state: CiaCallState;
   variant?: DeclarationVariant;
+  parts?: DeclarationParts;
 }
 
 export interface StyleBlock {
@@ -165,6 +185,27 @@ function validateVariantTag(value: unknown, where: string, errors: string[]): vo
   }
 }
 
+/**
+ * A path of descendant selectors, outermost first. An empty array would say "no
+ * descendants" in a field whose absence already says that, so it is rejected
+ * rather than quietly read as belonging to the block.
+ */
+function validatePartsPath(value: unknown, where: string, errors: string[]): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!isStringArray(value)) {
+    errors.push(`${where}.parts must be an array of strings`);
+    return;
+  }
+  if (value.length === 0) {
+    errors.push(`${where}.parts must not be empty; omit it when the declaration belongs to its block`);
+  }
+  if (value.some((entry) => entry.length === 0)) {
+    errors.push(`${where}.parts must not contain an empty selector`);
+  }
+}
+
 function validateCall(call: unknown, where: string, errors: string[]): void {
   if (typeof call !== 'object' || call === null) {
     errors.push(`${where} is not an object`);
@@ -184,6 +225,7 @@ function validateCall(call: unknown, where: string, errors: string[]): void {
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
   validateVariantTag(c.variant, where, errors);
+  validatePartsPath(c.parts, where, errors);
 }
 
 function validateBlock(block: unknown, where: string, errors: string[]): void {
@@ -254,6 +296,7 @@ function validateDimension(entry: unknown, where: string, errors: string[]): voi
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
   validateVariantTag(d.variant, where, errors);
+  validatePartsPath(d.parts, where, errors);
 }
 
 function validateConsumed(entry: unknown, where: string, errors: string[]): void {
@@ -272,6 +315,7 @@ function validateConsumed(entry: unknown, where: string, errors: string[]): void
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
   validateVariantTag(c.variant, where, errors);
+  validatePartsPath(c.parts, where, errors);
   // Null is a real value here: the producer could not resolve the local and
   // says so in its own gaps rather than picking between two definitions.
   if (c.from === null) {
@@ -314,6 +358,7 @@ function validateBorder(border: unknown, where: string, errors: string[]): void 
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
   validateVariantTag(b.variant, where, errors);
+  validatePartsPath(b.parts, where, errors);
 }
 
 /**
