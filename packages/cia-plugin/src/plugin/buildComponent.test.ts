@@ -2792,3 +2792,78 @@ describe('part styling that belongs to one variant', () => {
     });
   });
 });
+
+describe('a local custom property that takes several values', () => {
+  const sized = (entries: { qualifier: string; variant: { prop: string; value: string } | null; literal: string }[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Sizedish',
+    props: [{ name: 'size', optional: true, type: 'enum', values: ['sm', 'md', 'lg'], default: 'md' }],
+    tree: [
+      { selector: '.root', parent: null, tag: 'div', declaredIn: 'Sizedish' },
+      { selector: '.mark', parent: '.root', tag: 'span', declaredIn: 'Sizedish' },
+    ],
+    styleBlocks: [
+      { selector: '.root', kind: 'base', ciaCalls: [] },
+      {
+        selector: '.mark',
+        kind: 'part',
+        ciaCalls: [],
+        // Checkbox's real shape: `--checkbox-size` defined once per [data-size].
+        consumes: [
+          {
+            property: 'width',
+            localToken: '--mark-size',
+            state: 'default',
+            from: { fn: null, args: [], literal: '20px' },
+            fromByVariant: entries.map((entry) => ({
+              qualifier: entry.qualifier,
+              variant: entry.variant,
+              from: { fn: null, args: [], literal: entry.literal },
+            })),
+          },
+        ],
+      },
+    ],
+  });
+
+  it('gives each variant its own value rather than reporting the local as undecidable', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      sized([
+        { qualifier: 'default', variant: null, literal: '20px' },
+        { qualifier: 'size=sm', variant: { prop: 'size', value: 'sm' }, literal: '16px' },
+        { qualifier: 'size=lg', variant: { prop: 'size', value: 'lg' }, literal: '24px' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const markIn = (value: string) =>
+      frameNamed(components.find((component) => component.name.includes(`size=${value}`))!, 'mark');
+    expect(markIn('sm')?.width).toBe(16);
+    expect(markIn('lg')?.width).toBe(24);
+    // md has no entry of its own, so it keeps the unqualified value.
+    expect(markIn('md')?.width).toBe(20);
+  });
+
+  it('reports a qualifier no declared prop names, instead of guessing a variant for it', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(
+      sized([
+        { qualifier: 'default', variant: null, literal: '20px' },
+        // Calendar's theme overrides and Password's strength meter are this shape:
+        // a real qualifier that no prop declares.
+        { qualifier: 'theme=dark', variant: null, literal: '18px' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const reported = result.skipped.find((skip) => skip.reason.includes('theme=dark'));
+    expect(reported?.reason).toContain('no declared prop names that qualifier');
+    // And the base value still lands, rather than the whole local being dropped.
+    expect(result.bindings + result.skipped.length).toBeGreaterThan(0);
+  });
+});

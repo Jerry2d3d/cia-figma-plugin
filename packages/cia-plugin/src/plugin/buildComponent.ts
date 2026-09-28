@@ -634,6 +634,13 @@ class Resolver {
         return [{ kind: 'strokeWeight', weight }];
       }
     }
+    // A width reached through a local is still a width. Checkbox sizes its
+    // checkmark this way, and it had been falling through to the spacing path,
+    // which reported "no Figma equivalent" — true of that path and false of the
+    // property it was setting.
+    if (consumed.property in SIZE_LIMIT_FIELDS || consumed.property === 'width' || consumed.property === 'height') {
+      return this.sizeOps(consumed.property, literal, where, `${consumed.property}: ${literal} from ${consumed.localToken}`);
+    }
     const pixels = remOrPxToPixels(literal);
     if (pixels !== undefined) {
       return this.spacingOps(pixels, consumed.property, where, `${consumed.localToken} (${literal})`);
@@ -710,55 +717,63 @@ class Resolver {
         return;
       }
 
-      const limit = SIZE_LIMIT_FIELDS[dimension.property];
-      const value = dimension.value.trim();
-
-      // `max-width: none` removes a bound. On a min or max that is a real
-      // instruction; on a width it just means "size yourself", like `auto`.
-      if (value === 'none' || value === 'auto' || value === 'fit-content' || value === 'max-content') {
-        if (limit && value === 'none') {
-          ops.push({ kind: 'sizeLimit', field: limit, pixels: null });
-          return;
-        }
-        this.skipped.push({
-          where,
-          reason: `${stated} needs no action: the component already hugs its content, which is what "${value}" asks for`,
-        });
-        return;
-      }
-
-      const pixels = /^-?[\d.]+(px)?$/.test(value) ? remOrPxToPixels(value) : undefined;
-      if (pixels === undefined) {
-        this.skipped.push({
-          where,
-          reason:
-            `${stated} not applied: "${value}" is relative to something Figma has no equivalent for here ` +
-            '(a percentage fills a parent, and a component set on the canvas has no parent)',
-        });
-        return;
-      }
-
-      if (limit) {
-        // Figma requires a positive bound, and rejects the rest.
-        if (pixels <= 0) {
-          this.skipped.push({
-            where,
-            reason: `${stated} not applied: Figma requires a positive ${limit}`,
-          });
-          return;
-        }
-        ops.push({ kind: 'sizeLimit', field: limit, pixels });
-        return;
-      }
-
-      if (dimension.property === 'width' || dimension.property === 'height') {
-        ops.push({ kind: 'size', axis: dimension.property, pixels });
-        return;
-      }
-
-      this.skipped.push({ where, reason: `${stated} skipped: no Figma equivalent for ${dimension.property}` });
+      ops.push(...this.sizeOps(dimension.property, dimension.value, where, stated));
     });
 
+    return ops;
+  }
+
+  /**
+   * One width or height value, whether it was declared directly or reached
+   * through a local custom property. Checkbox sizes its checkmark by defining
+   * `--checkbox-size` per variant, so the same value arrives as a consumption
+   * rather than a dimension and had been falling through to "no Figma
+   * equivalent", which was true of the spacing path it took and false of the
+   * property it was setting.
+   */
+  private sizeOps(property: string, raw: string, where: string, stated: string): Op[] {
+    const ops: Op[] = [];
+    const limit = SIZE_LIMIT_FIELDS[property];
+    const value = raw.trim();
+
+    // `max-width: none` removes a bound. On a min or max that is a real
+    // instruction; on a width it just means "size yourself", like `auto`.
+    if (value === 'none' || value === 'auto' || value === 'fit-content' || value === 'max-content') {
+      if (limit && value === 'none') {
+        return [{ kind: 'sizeLimit', field: limit, pixels: null }];
+      }
+      this.skipped.push({
+        where,
+        reason: `${stated} needs no action: the component already hugs its content, which is what "${value}" asks for`,
+      });
+      return ops;
+    }
+
+    const pixels = /^-?[\d.]+(px|rem)?$/.test(value) ? remOrPxToPixels(value) : undefined;
+    if (pixels === undefined) {
+      this.skipped.push({
+        where,
+        reason:
+          `${stated} not applied: "${value}" is relative to something Figma has no equivalent for here ` +
+          '(a percentage fills a parent, and a component set on the canvas has no parent)',
+      });
+      return ops;
+    }
+
+    if (limit) {
+      // Figma requires a positive bound, and rejects the rest.
+      if (pixels <= 0) {
+        this.skipped.push({ where, reason: `${stated} not applied: Figma requires a positive ${limit}` });
+        return ops;
+      }
+      return [{ kind: 'sizeLimit', field: limit, pixels }];
+    }
+
+    if (property === 'width' || property === 'height') {
+      return [{ kind: 'size', axis: property, pixels }];
+    }
+
+    this.skipped.push({ where, reason: `${stated} skipped: no Figma equivalent for ${property}` });
     return ops;
   }
 
@@ -1110,7 +1125,46 @@ function isSpacingCall(call: CiaCall): boolean {
  * downstream step (axis discovery, the cartesian product, per-block op caching)
  * works on the result unchanged.
  */
-function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): ComponentSpec {
+/**
+ * Turns a local that takes several values into one consumption per value.
+ *
+ * Checkbox sizes its checkmark by defining `--checkbox-size` once per
+ * `[data-size]`, so the consumption carries four values rather than one. Where a
+ * declared prop names the qualifier, the value becomes an ordinary
+ * variant-tagged consumption and everything downstream handles it unchanged.
+ *
+ * A qualifier no prop names is reported instead. A theme override is a real
+ * value, but a theme in Figma is a MODE on a variable, so a per-theme literal
+ * cannot be expressed as one value on one node. An internal data attribute is a
+ * state nothing outside the component can set.
+ */
+function expandQualified(block: StyleBlock, reports: BuildSkip[]): ConsumedToken[] {
+  return (block.consumes ?? []).flatMap((consumed) => {
+    const values = consumed.fromByVariant;
+    if (!values || values.length === 0) {
+      return [consumed];
+    }
+    return values.flatMap((entry): ConsumedToken[] => {
+      if (entry.qualifier === 'default') {
+        return [{ ...consumed, from: entry.from, fromByVariant: undefined }];
+      }
+      if (entry.variant && !consumed.variant) {
+        return [{ ...consumed, from: entry.from, variant: entry.variant, fromByVariant: undefined }];
+      }
+      reports.push({
+        where: block.selector,
+        reason: entry.variant
+          ? `${consumed.localToken} at ${entry.qualifier} not built: it is already scoped to ` +
+            `${consumed.variant?.prop}=${consumed.variant?.value}, so it belongs to two axes at once`
+          : `${consumed.localToken} at ${entry.qualifier} not built: no declared prop names that qualifier, ` +
+            'so there is no variant to put it on',
+      });
+      return [];
+    });
+  });
+}
+
+function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[], reports: BuildSkip[]): ComponentSpec {
   const rewritten: StyleBlock[] = [];
 
   spec.styleBlocks.forEach((block) => {
@@ -1223,7 +1277,7 @@ function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): Compon
     route(block.ciaCalls, (target) => target.ciaCalls);
     route(block.borders, (target) => target.borders as BorderSpec[]);
     route(block.dimensions, (target) => target.dimensions as DimensionSpec[]);
-    route(block.consumes, (target) => target.consumes as ConsumedToken[]);
+    route(expandQualified(block, reports), (target) => target.consumes as ConsumedToken[]);
 
     rewritten.push(keep, ...split.values());
   });
@@ -2015,7 +2069,7 @@ export async function buildComponent(
 
   // Declarations naming a prop value become real variant blocks before anything
   // else looks at the spec, so axis discovery and op caching both see them.
-  const built = splitVariantDeclarations(spec, resolver.gaps);
+  const built = splitVariantDeclarations(spec, resolver.gaps, resolver.skipped);
   // The element tree says which element each part is. A part the tree can place
   // is built onto that element; one it cannot is still reported as before.
   const tree = built.tree ?? null;

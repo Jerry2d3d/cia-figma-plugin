@@ -1306,104 +1306,104 @@
       "selector": ".overlay",
       "parent": null,
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".modal",
       "parent": ".overlay",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".header",
       "parent": ".modal",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".title",
       "parent": ".header",
       "tag": "h2",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".subtitle",
       "parent": ".header",
       "tag": "p",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".error",
       "parent": ".header",
       "tag": "p",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".tabs",
       "parent": ".modal",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".tab",
       "parent": ".tabs",
       "tag": "button",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".tabActive",
       "parent": ".tabs",
       "tag": "button",
-      "declaredIn": "FOCUSABLE_SELECTOR",
+      "declaredIn": "CustomizeModal",
       "modifierOf": ".tab"
     },
     {
       "selector": ".content",
       "parent": ".modal",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".tabContent",
       "parent": ".content",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".section",
       "parent": ".tabContent",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".label",
       "parent": ".section",
       "tag": "span",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".buttonGroup",
       "parent": ".section",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".colorPicker",
       "parent": ".section",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".colorInput",
       "parent": ".colorPicker",
       "tag": "input",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".hexInput",
       "parent": ".colorPicker",
       "tag": "Input",
-      "declaredIn": "FOCUSABLE_SELECTOR",
+      "declaredIn": "CustomizeModal",
       "parents": [
         ".colorPicker",
         ".bgColorField"
@@ -1413,7 +1413,7 @@
       "selector": ".colorError",
       "parent": ".section",
       "tag": "p",
-      "declaredIn": "FOCUSABLE_SELECTOR",
+      "declaredIn": "CustomizeModal",
       "parents": [
         ".section",
         ".bgColorField"
@@ -1423,32 +1423,32 @@
       "selector": ".colorPresets",
       "parent": ".section",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".colorSwatch",
       "parent": ".colorPresets",
       "tag": "button",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".selected",
       "parent": ".colorPresets",
       "tag": "button",
-      "declaredIn": "FOCUSABLE_SELECTOR",
+      "declaredIn": "CustomizeModal",
       "modifierOf": ".colorSwatch"
     },
     {
       "selector": ".bgColorField",
       "parent": ".section",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".helperText",
       "parent": ".section",
       "tag": "p",
-      "declaredIn": "FOCUSABLE_SELECTOR",
+      "declaredIn": "CustomizeModal",
       "parents": [
         ".section",
         ".footer"
@@ -1458,63 +1458,58 @@
       "selector": ".fileInput",
       "parent": ".section",
       "tag": "input",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".uploadingIndicator",
       "parent": ".section",
       "tag": "p",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".textInputWrapper",
       "parent": ".section",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".inputLabel",
       "parent": ".textInputWrapper",
       "tag": "label",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".inputContainer",
       "parent": ".textInputWrapper",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".textInput",
       "parent": ".inputContainer",
       "tag": "Input",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".characterCounter",
       "parent": ".inputContainer",
       "tag": "span",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".footer",
       "parent": ".modal",
       "tag": "div",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     },
     {
       "selector": ".resetButton",
       "parent": ".footer",
       "tag": "Button",
-      "declaredIn": "FOCUSABLE_SELECTOR"
+      "declaredIn": "CustomizeModal"
     }
   ],
   "gaps": [
-    {
-      "kind": "no-base-block",
-      "selector": null,
-      "reason": "no root style block found: none of this component's top-level selectors is \".customizemodal\", \".root\", \".wrapper\" or a \"CustomizeModalWrapper\"/\"CustomizeModalComponent\" variation. Its root class is named something only its own TSX can resolve, so the base is left unset rather than guessed."
-    },
     {
       "kind": "part-rendered-in-several-places",
       "selector": ".hexInput",
@@ -1529,6 +1524,11 @@
       "kind": "part-rendered-in-several-places",
       "selector": ".helperText",
       "reason": "rendered in 2 distinct positions (under .section, .footer), all of them listed in this node's `parents`; `parent` names the first only, and how many copies exist in each position is not stated"
+    },
+    {
+      "kind": "no-base-block",
+      "selector": null,
+      "reason": "none of this component's top-level selectors is \".customizemodal\", \".root\", \".wrapper\" or a \"CustomizeModalWrapper\"/\"CustomizeModalComponent\" variation, so no block is marked `base`; but the tree names the root element: `.overlay`, and this payload does carry a style block for it — treat that block as the base rather than falling back to source order"
     }
   ]
 }

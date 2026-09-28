@@ -89,6 +89,26 @@ export interface ConsumedFrom {
   literal?: string | null;
 }
 
+/**
+ * One value a local custom property takes, and what decides it.
+ *
+ * Checkbox defines `--checkbox-size` three times, once per `[data-size]`, so the
+ * consumption has three values and a default. These were reported as undecidable
+ * for weeks before the producer resolved them.
+ *
+ * Read `qualifier`, not `variant`. `variant` is set only when a declared prop
+ * names the qualifier; a theme override and an internal data attribute are real
+ * qualifiers that no prop names, and they are indistinguishable from each other
+ * in every other field.
+ */
+export interface ConsumedVariant {
+  /** `default`, `size=sm`, `theme=dark`, `[data-strength="weak"]`. */
+  qualifier: string;
+  /** Set only when the qualifier is a prop the component declares. */
+  variant: DeclarationVariant | null;
+  from: ConsumedFrom | null;
+}
+
 export interface ConsumedToken {
   /** The CSS property being set, e.g. `background-color`. */
   property: string;
@@ -104,6 +124,12 @@ export interface ConsumedToken {
    * own gaps, so null here means "already accounted for upstream".
    */
   from: ConsumedFrom | null;
+  /**
+   * Every value this local takes, when it takes more than one. `from` carries the
+   * unqualified one, so a reader that ignores this field gets the base rather
+   * than nothing. Absent on older specs and on locals defined once.
+   */
+  fromByVariant?: ConsumedVariant[];
 }
 
 /**
@@ -573,6 +599,29 @@ function validateConsumed(entry: unknown, where: string, errors: string[]): void
   }
   validateVariantTag(c.variant, where, errors);
   validatePartsPath(c.parts, where, errors);
+  if (c.fromByVariant !== undefined) {
+    if (!Array.isArray(c.fromByVariant) || c.fromByVariant.length === 0) {
+      errors.push(`${where}.fromByVariant must be a non-empty array when present`);
+    } else {
+      c.fromByVariant.forEach((entry, index) => {
+        const at = `${where}.fromByVariant[${index}]`;
+        if (typeof entry !== "object" || entry === null) {
+          errors.push(`${at} is not an object`);
+          return;
+        }
+        const e = entry as Record<string, unknown>;
+        // The qualifier is what tells two entries apart. A theme override and an
+        // internal data attribute both have a null variant, so without this they
+        // would be identical in every field.
+        if (typeof e.qualifier !== "string" || e.qualifier.length === 0) {
+          errors.push(`${at}.qualifier must be a non-empty string`);
+        }
+        if (e.variant !== null && e.variant !== undefined) {
+          validateVariantTag(e.variant, at, errors);
+        }
+      });
+    }
+  }
   // Null is a real value here: the producer could not resolve the local and
   // says so in its own gaps rather than picking between two definitions.
   if (c.from === null) {

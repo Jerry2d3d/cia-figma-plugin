@@ -820,42 +820,66 @@
           "fn": null,
           "args": [],
           "literal": "16px",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "sm"
+          }
         },
         {
           "localToken": "--checkbox-border-width",
           "fn": null,
           "args": [],
           "literal": "1.5px",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "sm"
+          }
         },
         {
           "localToken": "--checkbox-size",
           "fn": null,
           "args": [],
           "literal": "20px",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "md"
+          }
         },
         {
           "localToken": "--checkbox-border-width",
           "fn": null,
           "args": [],
           "literal": "2px",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "md"
+          }
         },
         {
           "localToken": "--checkbox-size",
           "fn": null,
           "args": [],
           "literal": "24px",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "lg"
+          }
         },
         {
           "localToken": "--checkbox-border-width",
           "fn": null,
           "args": [],
           "literal": "2px",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "lg"
+          }
         },
         {
           "localToken": "--checkbox-checkmark-color",
@@ -864,7 +888,11 @@
             "text-primary"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "primary"
+          }
         },
         {
           "localToken": "--checkbox-border-color-checked",
@@ -873,7 +901,11 @@
             "text-primary"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "primary"
+          }
         },
         {
           "localToken": "--checkbox-bg-color-checked",
@@ -882,7 +914,11 @@
             "action-primary-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-checkmark-color",
@@ -891,7 +927,11 @@
             "surface-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-border-color-hover",
@@ -900,7 +940,11 @@
             "action-primary-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-border-color-focus",
@@ -909,7 +953,11 @@
             "action-primary-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-border-color-checked",
@@ -918,7 +966,11 @@
             "action-primary-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-bg-color-indeterminate",
@@ -927,7 +979,11 @@
             "action-primary-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-indeterminate-line-color",
@@ -936,7 +992,11 @@
             "surface-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-border-color-indeterminate",
@@ -945,7 +1005,11 @@
             "action-primary-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "secondary"
+          }
         },
         {
           "localToken": "--checkbox-bg-color-checked",
@@ -954,7 +1018,11 @@
             "error-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-checkmark-color",
@@ -963,7 +1031,11 @@
             "surface-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-border-color-hover",
@@ -972,7 +1044,11 @@
             "error-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-border-color-focus",
@@ -981,7 +1057,11 @@
             "error-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-border-color-checked",
@@ -990,7 +1070,11 @@
             "error-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-bg-color-indeterminate",
@@ -999,7 +1083,11 @@
             "error-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-indeterminate-line-color",
@@ -1008,7 +1096,11 @@
             "surface-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-border-color-indeterminate",
@@ -1017,7 +1109,11 @@
             "error-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "localToken": "--checkbox-bg-color-checked",
@@ -1026,7 +1122,11 @@
             "success-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-checkmark-color",
@@ -1035,7 +1135,11 @@
             "surface-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-border-color-hover",
@@ -1044,7 +1148,11 @@
             "success-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-border-color-focus",
@@ -1053,7 +1161,11 @@
             "success-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-border-color-checked",
@@ -1062,7 +1174,11 @@
             "success-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-bg-color-indeterminate",
@@ -1071,7 +1187,11 @@
             "success-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-indeterminate-line-color",
@@ -1080,7 +1200,11 @@
             "surface-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         },
         {
           "localToken": "--checkbox-border-color-indeterminate",
@@ -1089,7 +1213,11 @@
             "success-default"
           ],
           "literal": null,
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "success"
+          }
         }
       ]
     },
@@ -1168,25 +1296,233 @@
           "property": "width",
           "localToken": "--checkbox-size",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "20px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "16px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "24px"
+              }
+            }
+          ]
         },
         {
           "property": "height",
           "localToken": "--checkbox-size",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "20px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "16px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "24px"
+              }
+            }
+          ]
         },
         {
           "property": "background-color",
           "localToken": "--checkbox-bg-color",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "surface-default"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-subtle"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "border",
           "localToken": "--checkbox-border-width",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "2px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "2px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "1.5px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "2px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "2px"
+              }
+            }
+          ]
         },
         {
           "property": "border",
@@ -1224,7 +1560,71 @@
           "property": "border-color",
           "localToken": "--checkbox-border-color-hover",
           "state": "hover",
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-primary"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "error-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "success-default"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "outline",
@@ -1240,7 +1640,71 @@
           "property": "outline",
           "localToken": "--checkbox-border-color-focus",
           "state": "focus",
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "action-primary-default"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "error-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "success-default"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "outline-offset",
@@ -1259,7 +1723,83 @@
           "parts": [
             ".is-checked &"
           ],
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "surface-default"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "error-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "success-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-subtle"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "border-color",
@@ -1268,7 +1808,98 @@
           "parts": [
             ".is-checked &"
           ],
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-primary"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=primary",
+              "variant": {
+                "prop": "color",
+                "value": "primary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "error-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "success-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "border-emphasis"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "background-color",
@@ -1277,7 +1908,83 @@
           "parts": [
             ".is-indeterminate &"
           ],
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "surface-default"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "error-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "success-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-subtle"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "border-color",
@@ -1286,7 +1993,83 @@
           "parts": [
             ".is-indeterminate &"
           ],
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-primary"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "action-primary-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "error-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "success-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "border-emphasis"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "background-color",
@@ -1355,7 +2138,98 @@
           "property": "color",
           "localToken": "--checkbox-checkmark-color",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-primary"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=primary",
+              "variant": {
+                "prop": "color",
+                "value": "primary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            }
+          ]
         },
         {
           "property": "transition",
@@ -1381,7 +2255,83 @@
           "property": "color",
           "localToken": "--checkbox-indeterminate-line-color",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": "color",
+            "args": [
+              "text-primary"
+            ]
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=secondary",
+              "variant": {
+                "prop": "color",
+                "value": "secondary"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=error",
+              "variant": {
+                "prop": "color",
+                "value": "error"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "color=success",
+              "variant": {
+                "prop": "color",
+                "value": "success"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "surface-default"
+                ]
+              }
+            },
+            {
+              "qualifier": "theme=dark",
+              "variant": null,
+              "state": "default",
+              "in": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+              "from": {
+                "fn": "color",
+                "args": [
+                  "text-primary"
+                ]
+              }
+            }
+          ]
         }
       ],
       "defines": []
@@ -1542,7 +2492,66 @@
           "property": "margin-left",
           "localToken": "--checkbox-size",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "20px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "16px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "24px"
+              }
+            }
+          ]
         },
         {
           "property": "margin-right",
@@ -1551,7 +2560,66 @@
           "parts": [
             ".checkboxWrapper[data-label=\"left\"] &"
           ],
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "20px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "16px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "24px"
+              }
+            }
+          ]
         }
       ],
       "defines": []
@@ -1630,7 +2698,66 @@
           "property": "margin-left",
           "localToken": "--checkbox-size",
           "state": "default",
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "20px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "16px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "24px"
+              }
+            }
+          ]
         },
         {
           "property": "margin-right",
@@ -1639,7 +2766,66 @@
           "parts": [
             ".checkboxWrapper[data-label=\"left\"] &"
           ],
-          "from": null
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "20px"
+          },
+          "fromByVariant": [
+            {
+              "qualifier": "default",
+              "variant": null,
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=sm",
+              "variant": {
+                "prop": "size",
+                "value": "sm"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "16px"
+              }
+            },
+            {
+              "qualifier": "size=md",
+              "variant": {
+                "prop": "size",
+                "value": "md"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "20px"
+              }
+            },
+            {
+              "qualifier": "size=lg",
+              "variant": {
+                "prop": "size",
+                "value": "lg"
+              },
+              "state": "default",
+              "in": ".checkboxWrapper",
+              "from": {
+                "fn": null,
+                "args": [],
+                "literal": "24px"
+              }
+            }
+          ]
         }
       ],
       "defines": []
@@ -1866,86 +3052,5 @@
       "tag": "div"
     }
   ],
-  "gaps": [
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-size for width, which is defined more than once with different values (literal 20px, literal 16px, literal 24px), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-size for height, which is defined more than once with different values (literal 20px, literal 16px, literal 24px), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-bg-color for background-color, which is defined more than once with different values (color(surface-default), color(surface-subtle)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-border-width for border, which is defined more than once with different values (literal 2px, literal 1.5px), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-border-color-hover for border-color, which is defined more than once with different values (color(text-primary), color(action-primary-default), color(error-default), color(success-default)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-border-color-focus for outline, which is defined more than once with different values (color(action-primary-default), color(error-default), color(success-default)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-bg-color-checked for background-color, which is defined more than once with different values (color(surface-default), color(action-primary-default), color(error-default), color(success-default), color(surface-subtle)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-border-color-checked for border-color, which is defined more than once with different values (color(text-primary), color(action-primary-default), color(error-default), color(success-default), color(border-emphasis)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-bg-color-indeterminate for background-color, which is defined more than once with different values (color(surface-default), color(action-primary-default), color(error-default), color(success-default), color(surface-subtle)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmark",
-      "reason": "consumes --checkbox-border-color-indeterminate for border-color, which is defined more than once with different values (color(text-primary), color(action-primary-default), color(error-default), color(success-default), color(border-emphasis)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".checkmarkIcon, .indeterminateIcon",
-      "reason": "consumes --checkbox-checkmark-color for color, which is defined more than once with different values (color(text-primary), color(surface-default)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".indeterminateIcon",
-      "reason": "consumes --checkbox-indeterminate-line-color for color, which is defined more than once with different values (color(text-primary), color(surface-default)), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".helperText",
-      "reason": "consumes --checkbox-size for margin-left, which is defined more than once with different values (literal 20px, literal 16px, literal 24px), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".helperText",
-      "reason": "consumes --checkbox-size for margin-right, which is defined more than once with different values (literal 20px, literal 16px, literal 24px), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".errorMessage",
-      "reason": "consumes --checkbox-size for margin-left, which is defined more than once with different values (literal 20px, literal 16px, literal 24px), so which one applies depends on state or variant"
-    },
-    {
-      "kind": "ambiguous-local-property",
-      "selector": ".errorMessage",
-      "reason": "consumes --checkbox-size for margin-right, which is defined more than once with different values (literal 20px, literal 16px, literal 24px), so which one applies depends on state or variant"
-    }
-  ]
+  "gaps": []
 }
