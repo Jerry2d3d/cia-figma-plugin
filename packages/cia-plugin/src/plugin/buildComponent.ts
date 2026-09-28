@@ -393,6 +393,8 @@ type Op =
   | { kind: 'textCase'; value: 'UPPER' }
   /** A fixed width or height in pixels, which also pins that axis. */
   | { kind: 'size'; axis: 'width' | 'height'; pixels: number }
+  /** `width: 100%` on a child: fill whatever contains it. */
+  | { kind: 'fillContainer'; axis: 'width' | 'height' }
   /** A min or max bound. Null removes the bound, which is what `none` means. */
   | { kind: 'sizeLimit'; field: 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'; pixels: number | null }
   | { kind: 'strokeWeight'; weight: number };
@@ -750,13 +752,21 @@ class Resolver {
       return ops;
     }
 
+    // `100%` is fill-the-container, which Figma does have for a child of an
+    // auto-layout frame. It had been refused on the grounds that a component set
+    // on the canvas has no parent: true before the element tree existed, and
+    // false for the 34 of these that sit on a child.
+    if (value === '100%' && (property === 'width' || property === 'height')) {
+      return [{ kind: 'fillContainer', axis: property }];
+    }
+
     const pixels = /^-?[\d.]+(px|rem)?$/.test(value) ? remOrPxToPixels(value) : undefined;
     if (pixels === undefined) {
       this.skipped.push({
         where,
-        reason:
-          `${stated} not applied: "${value}" is relative to something Figma has no equivalent for here ` +
-          '(a percentage fills a parent, and a component set on the canvas has no parent)',
+        reason: /%$/.test(value)
+          ? `${stated} not applied: Figma sizes a child as fill or fixed, with no proportion of its parent between them`
+          : `${stated} not applied: "${value}" is relative to something Figma has no equivalent for here`,
       });
       return ops;
     }
@@ -1717,6 +1727,7 @@ async function buildTree(
   placeholder: string,
   textHome: string | null,
   assignment: { prop: string; value: string }[],
+  deferredFill: { frame: StyledFrame; axis: 'width' | 'height' }[],
 ): Promise<{ bindings: number; labelText?: TextNode; built: number }> {
   let bindings = 0;
   let built = 0;
@@ -1775,7 +1786,7 @@ async function buildTree(
         ...assignment.flatMap(({ prop, value }) => opsBySelector.get(`${node.selector}|${prop}=${value}`) ?? []),
       ];
       // eslint-disable-next-line no-await-in-loop
-      bindings += await applyOps(api, frame, text, isTextHome ? placeholder : layerName(node.selector), ops);
+      bindings += await applyOps(api, frame, text, isTextHome ? placeholder : layerName(node.selector), ops, deferredFill);
       // eslint-disable-next-line no-await-in-loop
       await place(node.selector, frame, [...chain, node.selector]);
     }
@@ -1821,6 +1832,13 @@ async function applyOps(
   text: TextNode | undefined,
   label: string,
   ops: Op[],
+  /**
+   * Fill-the-container requests, applied by the caller once every frame has its
+   * layout. Figma rejects a sizing mode on a node whose PARENT is not yet an
+   * auto-layout frame, and a root gets its layout after its children are built,
+   * so setting this in place threw.
+   */
+  deferredFill?: { frame: StyledFrame; axis: 'width' | 'height' }[],
 ): Promise<number> {
   let bindings = 0;
 
@@ -1989,6 +2007,12 @@ async function applyOps(
     const clamp = (value: number) => Math.max(value, 0.01);
     component.resize(clamp(width ?? component.width), clamp(height ?? component.height));
   }
+
+  (["width", "height"] as const).forEach((axis) => {
+    if (lastOp(ops, "fillContainer", (op) => op.axis === axis)) {
+      deferredFill?.push({ frame: component, axis });
+    }
+  });
 
   // Applied after any resize, so a max that contradicts a stated width still wins,
   // the same way CSS resolves it.
@@ -2282,6 +2306,7 @@ export async function buildComponent(
   const textHome = treeNodes ? textHomeSelector(treeNodes) : null;
 
   for (const plan of plans) {
+    const deferredFill: { frame: StyledFrame; axis: 'width' | 'height' }[] = [];
     const component = api.createComponent();
     component.name = plan.name;
     let text: TextNode | undefined;
@@ -2294,14 +2319,34 @@ export async function buildComponent(
     const ops = plan.blocks.flatMap((block) => opsByBlock.get(block) ?? []);
     if (treeNodes) {
       // eslint-disable-next-line no-await-in-loop
-      const result = await buildTree(api, component, treeNodes, rootSelector, opsBySelector, placeholder, textHome, plan.assignment);
+      const result = await buildTree(api, component, treeNodes, rootSelector, opsBySelector, placeholder, textHome, plan.assignment, deferredFill);
       bindings += result.bindings;
       text = text ?? result.labelText;
     }
     // The root is styled after its children exist, so hugging them is measured
     // against real content rather than an empty frame.
     // eslint-disable-next-line no-await-in-loop
-    bindings += await applyOps(api, component, text, placeholder, ops);
+    bindings += await applyOps(api, component, text, placeholder, ops, deferredFill);
+    // Every frame now has its layout, so a child can be told to fill its parent.
+    // The root itself is never filled: it has no parent to fill.
+    deferredFill.forEach(({ frame, axis }) => {
+      if (frame === component) {
+        // Only once, not once per variant, and said rather than dropped: the
+        // root really has nothing to fill, and that is the original reason this
+        // was refused everywhere.
+        if (plan === plans[0]) {
+          resolver.skipped.push({
+            where: 'contract',
+            reason:
+              `${axis}: 100% on the component's own element not applied: it fills whatever contains it, ` +
+              'and a component set on the canvas has nothing to fill',
+          });
+        }
+        return;
+      }
+      const field = axis === 'width' ? 'layoutSizingHorizontal' : 'layoutSizingVertical';
+      (frame as unknown as Record<string, string>)[field] = 'FILL';
+    });
     components.push(component);
     if (text) {
       texts.push(text);

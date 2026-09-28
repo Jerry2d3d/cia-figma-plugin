@@ -120,6 +120,9 @@ class FakeComponent extends FakeProperties {
 
   appendChild(child: FakeText | FakeFrame) {
     this.children.push(child);
+    if (child instanceof FakeFrame) {
+      child.parentFrame = this;
+    }
   }
 
   setBoundVariable(field: string, variable: Variable) {
@@ -134,6 +137,41 @@ class FakeComponent extends FakeProperties {
  */
 class FakeFrame {
   name = '';
+
+  /** Set by whoever appends it, so the strict sizing check below can look up. */
+  parentFrame: FakeComponent | FakeFrame | null = null;
+
+  private sizing: Record<string, string> = {};
+
+  /**
+   * Figma throws "node must be an auto-layout frame or a child of an auto-layout
+   * frame" here, and it threw for real once. The fake refuses the same way, so
+   * the ordering that made it throw fails in a test instead of in somebody Figma
+   * file.
+   */
+  set layoutSizingHorizontal(value: string) {
+    this.requireAutoLayoutParent('layoutSizingHorizontal');
+    this.sizing.horizontal = value;
+  }
+
+  get layoutSizingHorizontal() {
+    return this.sizing.horizontal ?? 'HUG';
+  }
+
+  set layoutSizingVertical(value: string) {
+    this.requireAutoLayoutParent('layoutSizingVertical');
+    this.sizing.vertical = value;
+  }
+
+  get layoutSizingVertical() {
+    return this.sizing.vertical ?? 'HUG';
+  }
+
+  private requireAutoLayoutParent(field: string) {
+    if (!this.parentFrame || this.parentFrame.layoutMode === 'NONE') {
+      throw new Error(`in set_${field}: node must be an auto-layout frame or a child of an auto-layout frame`);
+    }
+  }
 
   itemSpacing = 0;
 
@@ -182,6 +220,9 @@ class FakeFrame {
 
   appendChild(child: FakeText | FakeFrame) {
     this.children.push(child);
+    if (child instanceof FakeFrame) {
+      child.parentFrame = this;
+    }
   }
 
   setBoundVariable(field: string, variable: Variable) {
@@ -1617,7 +1658,7 @@ describe('widths and heights stated as plain values', () => {
     expect(components[0].primaryAxisSizingMode).toBe('AUTO');
   });
 
-  it('refuses to invent a number for a percentage, and says why', async () => {
+  it('says the component own element has nothing to fill, rather than dropping it', async () => {
     const { api, components } = createFakeApi();
 
     const { result } = await buildComponent(
@@ -1627,8 +1668,11 @@ describe('widths and heights stated as plain values', () => {
     );
 
     expect(components[0].width).toBe(100);
-    expect(result.skipped[0].reason).toContain('width: 100% not applied');
-    expect(result.skipped[0].reason).toContain('has no parent');
+    // A child filling its parent is real and now built. The ROOT filling its
+    // parent is not, because a component set on the canvas has none, and that is
+    // stated once rather than left as silence.
+    const reported = result.skipped.find((skip) => skip.reason.includes('nothing to fill'));
+    expect(reported?.reason).toContain("width: 100% on the component's own element");
   });
 
   it('says an `auto` width needs no action rather than reporting it as a failure', async () => {
@@ -2924,5 +2968,69 @@ describe('a local overridden for a theme', () => {
 
     const reported = result.skipped.find((skip) => skip.reason.includes('theme=dark'));
     expect(reported?.reason).toContain('no declared prop names that qualifier');
+  });
+});
+
+describe('a child that fills its parent', () => {
+  const filling = (value: string): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Fillish',
+    props: [],
+    tree: [
+      { selector: '.root', parent: null, tag: 'div', declaredIn: 'Fillish' },
+      { selector: '.bar', parent: '.root', tag: 'div', declaredIn: 'Fillish' },
+    ],
+    styleBlocks: [
+      { selector: '.root', kind: 'base', ciaCalls: [] },
+      {
+        selector: '.bar',
+        kind: 'part',
+        ciaCalls: [],
+        dimensions: [{ property: 'width', value, state: 'default' }],
+      },
+    ],
+  });
+
+  it('applies 100% as fill, which Figma does have for a child', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(filling('100%'), { collectionName: 'boilerplate' }, api);
+
+    // This used to be refused on the grounds that a component set on the canvas
+    // has no parent. True before the element tree existed, false for a child.
+    expect(frameNamed(components[0], 'bar')?.layoutSizingHorizontal).toBe('FILL');
+    expect(result.skipped.some((skip) => skip.reason.includes('width: 100% not applied'))).toBe(false);
+  });
+
+  it('applies it only after the parent has its layout, which Figma requires', async () => {
+    const { api, components } = createFakeApi();
+
+    // The fake throws the same error Figma threw for real if this is set while
+    // the parent is not yet an auto-layout frame, so reaching here at all is the
+    // assertion. The root gets its layout after its children are built.
+    await buildComponent(filling('100%'), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].layoutMode).toBe('HORIZONTAL');
+  });
+
+  it('still refuses a proportion, because Figma has fill or fixed and nothing between', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(filling('70%'), { collectionName: 'boilerplate' }, api);
+
+    expect(frameNamed(components[0], 'bar')?.layoutSizingHorizontal).toBe('HUG');
+    const reported = result.skipped.find((skip) => skip.reason.includes('width: 70%'));
+    expect(reported?.reason).toContain('fill or fixed, with no proportion of its parent between them');
+  });
+
+  it('never fills the component root, which has no parent to fill', async () => {
+    const { api, components } = createFakeApi();
+    const spec = filling('100%');
+    spec.styleBlocks[0].dimensions = [{ property: 'width', value: '100%', state: 'default' }];
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // Reaching here means nothing tried to set a sizing mode on the root.
+    expect(components[0].layoutMode).toBe('HORIZONTAL');
   });
 });
