@@ -2565,3 +2565,55 @@ describe('a base block that is not itself the top of the tree', () => {
     expect(frameNamed(components[0], 'menu')).toBeDefined();
   });
 });
+
+describe('a file with two public components and no base block', () => {
+  const popupish = (): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Popupish',
+    props: [],
+    tree: [
+      // Popup.tsx's real shape: two exported components, neither styled by a base
+      // block, so the stylesheet cannot say which one this spec is about.
+      { selector: '.popover', parent: null, tag: 'div', declaredIn: 'Popover' },
+      { selector: '.body', parent: '.popover', tag: 'div', declaredIn: 'Popover' },
+      { selector: '.panel', parent: null, tag: 'div', declaredIn: 'Popupish' },
+    ],
+    styleBlocks: [
+      { selector: '.panel', kind: 'part', ciaCalls: [] },
+      { selector: '.body', kind: 'part', ciaCalls: [] },
+    ],
+  });
+
+  it('uses the declaration that shares the component name, rather than file order', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(popupish(), { collectionName: 'boilerplate' }, api);
+
+    // `.popover` comes first, so taking the first top would build the other one.
+    expect(result.builtFrom).toBe('.panel');
+    expect(frameNamed(components[0], 'body')).toBeUndefined();
+  });
+
+  it('says which evidence decided, since it is weaker here than a base block', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(popupish(), { collectionName: 'boilerplate' }, api);
+
+    const reported = result.gaps.find((gap) => gap.reason.includes('declares more than one thing'));
+    // Crediting the base block here would have been a false claim: there is none.
+    expect(reported?.reason).toContain('chosen by the declaration named Popupish');
+    expect(reported?.reason).not.toContain('base style block');
+  });
+
+  it('admits when nothing chose, rather than implying something did', async () => {
+    const { api } = createFakeApi();
+    const spec = popupish();
+    // No declaration matches the component name either.
+    spec.component = 'Unrelated';
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const reported = result.gaps.find((gap) => gap.reason.includes('declares more than one thing'));
+    expect(reported?.reason).toContain('first in the file, with nothing to choose on');
+  });
+});

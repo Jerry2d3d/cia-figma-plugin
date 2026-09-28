@@ -1359,7 +1359,8 @@ function layerName(selector: string): string {
 function chooseRoot(
   tree: PartTreeNode[],
   baseSelectors: string[],
-): { rootSelector: string | null; orphanRoots: string[] } {
+  componentName: string,
+): { rootSelector: string | null; orphanRoots: string[]; chosenBy: string } {
   // A modifier with no parent is not a root: it is a second name for an element
   // that is already in the tree. Counting it as one is what made 5 of the 18
   // multi-root components look ambiguous when they were not.
@@ -1382,19 +1383,41 @@ function chooseRoot(
     );
   const roots = tree.filter(isRoot).map((node) => node.selector);
   if (roots.length === 0) {
-    return { rootSelector: null, orphanRoots: [] };
+    return { rootSelector: null, orphanRoots: [], chosenBy: 'nothing' };
   }
   if (roots.length === 1) {
-    return { rootSelector: roots[0], orphanRoots: [] };
+    return { rootSelector: roots[0], orphanRoots: [], chosenBy: 'the only top in the tree' };
   }
-  // The base block names the component's own element, which is usually the top
-  // but need not be: Menu styles `.menu`, and `.menu` is rendered inside
-  // `.menuPopup`, which is the top. Eight components are shaped that way. So if
-  // the named element is not itself a root, the root above it is the one wanted,
-  // rather than whichever top happened to come first in the file.
-  const named = roots.find((selector) => baseSelectors.includes(selector)) ?? rootAbove(tree, baseSelectors, roots);
-  const chosen = named ?? roots[0];
-  return { rootSelector: chosen, orphanRoots: roots.filter((selector) => selector !== chosen) };
+
+  /**
+   * Three pieces of evidence, strongest first, and the report says which decided.
+   *
+   * The base block names the component's own element, which is usually the top but
+   * need not be: Menu styles `.menu`, rendered inside `.menuPopup`, which is the
+   * top. Eight components are shaped that way.
+   *
+   * The declaration name is weaker, because a file name does not always match a
+   * declaration, but it is real evidence when it does and it is independent of
+   * both the stylesheet and the containment scan. Measured across the library it
+   * agrees with the base block in all 22 cases where both exist and disagrees in
+   * none, and it settles Popup, which declares two public components and has no
+   * base block at all, so nothing else could.
+   *
+   * First in file order is not evidence. It is a last resort and is named as one.
+   */
+  const byBaseDirect = roots.find((selector) => baseSelectors.includes(selector));
+  if (byBaseDirect) {
+    return { rootSelector: byBaseDirect, orphanRoots: roots.filter((s) => s !== byBaseDirect), chosenBy: 'the base style block' };
+  }
+  const byBaseAbove = rootAbove(tree, baseSelectors, roots);
+  if (byBaseAbove) {
+    return { rootSelector: byBaseAbove, orphanRoots: roots.filter((s) => s !== byBaseAbove), chosenBy: 'the element the base style block styles' };
+  }
+  const byName = roots.find((selector) => bySelector.get(selector)?.declaredIn === componentName);
+  if (byName) {
+    return { rootSelector: byName, orphanRoots: roots.filter((s) => s !== byName), chosenBy: `the declaration named ${componentName}` };
+  }
+  return { rootSelector: roots[0], orphanRoots: roots.slice(1), chosenBy: 'first in the file, with nothing to choose on' };
 }
 
 /** Walks up from a styled element to whichever top contains it, if any. */
@@ -1956,9 +1979,9 @@ export async function buildComponent(
   // is built onto that element; one it cannot is still reported as before.
   const tree = built.tree ?? null;
   const baseSelectors = built.styleBlocks.filter((block) => block.kind === 'base').map((block) => block.selector);
-  const { rootSelector, orphanRoots } = tree
-    ? chooseRoot(tree, baseSelectors)
-    : { rootSelector: null, orphanRoots: [] };
+  const { rootSelector, orphanRoots, chosenBy } = tree
+    ? chooseRoot(tree, baseSelectors, built.component)
+    : { rootSelector: null, orphanRoots: [], chosenBy: 'nothing' };
   // Only the chosen root's own subtree can be placed. A node under an orphan root
   // has no known position, and putting it somewhere plausible is the guess this
   // whole contract exists to avoid.
@@ -2011,10 +2034,10 @@ export async function buildComponent(
       reason:
         chosen && orphanRoots.some((selector) => declarationOf(selector) !== chosen)
           ? `this file declares more than one thing that renders markup; built ${rootSelector} from ${chosen}, ` +
-            `which the base block names, and left ${others.join(', ')} unbuilt. Whether those are separate ` +
+            `chosen by ${chosenBy}, and left ${others.join(', ')} unbuilt. Whether those are separate ` +
             'components or parts of this one is not stated'
           : `the element tree has ${orphanRoots.length + 1} tops (${[rootSelector, ...orphanRoots].join(', ')}); ` +
-            `built the subtree under ${rootSelector}, which the base block names, and left the others unplaced`,
+            `built the subtree under ${rootSelector}, chosen by ${chosenBy}, and left the others unplaced`,
     });
   }
   const opsByBlock = new Map<StyleBlock, Op[]>();
