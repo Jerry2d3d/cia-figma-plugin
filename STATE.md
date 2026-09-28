@@ -1,9 +1,40 @@
-# Where we are — 2026-09-27
+# Where we are — 2026-09-28
 
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
 
-## TYPOGRAPHY AND SIZES NOW BUILD (2026-09-27, latest)
+## WHERE IT ACTUALLY STANDS
+
+Everything below this section is a **dated record**, written as each thing
+landed. It contains numbers that were true when written and have been superseded
+several times over, and at least one claim that was wrong and is corrected later
+in the same file. A record is not maintained, because correcting it destroys it;
+this section is the part that is.
+
+The whole library builds, against `boilerplate.variables.json`:
+
+| | |
+|---|---|
+| specs | 99 |
+| components produced | 282 |
+| bindings | 4935 |
+| gaps this builder found | 79 |
+| gaps the spec reports | 58 |
+| arriving empty | 3 |
+| tests | 204 |
+
+Those figures are a **floor**, not a target. They are measured against one
+theme's tokens, and a collection carrying several holds the union, so a real run
+does better. They are pinned in `site/src/content/measured.ts` and enforced by
+`libraryDryRun.test.ts`, so the runbook cannot drift from them silently.
+
+What is left is not in this repo. Three components cannot be scanned into an
+element tree, a handful of gaps are genuine upstream asks, and the next real step
+is a person composing a screen in Figma.
+
+**A reader who only wants what is true now can stop here.**
+
+## TYPOGRAPHY AND SIZES NOW BUILD (2026-09-27)
 
 Four commits: `9a4a038a`, `17ac709a`, `41034157`, `fec57675`.
 
@@ -92,7 +123,8 @@ size has no token used to keep the base binding and silently render at the base
 size. Trading a binding for the right size is the trade this whole change makes.
 
 **None of the 61 remaining gaps is a builder fault.** In the `ready` bucket the
-remaining ones are upstream: `space-2xs` (five), `font-size-2xs` (one) and Stack's
+remaining ones are upstream: `space-2xs` (five, SUPERSEDED below: it is declared
+by boilerplate and those gaps were the theme selection), `font-size-2xs` (one) and Stack's
 `space($gap)`, an unresolved mixin parameter the exporter chose to leave alone
 because there is one occurrence. LightDarkToggle's `onChange`, which was typed as
 an enum because the union came off the callback's parameter, is fixed upstream.
@@ -122,7 +154,7 @@ copies had mixin arguments leaked into its selector. Fixed upstream in `de51c3c`
 writing a spec now removes that component's file from the sibling buckets and
 reports what it removed. 99 files for 99 components.
 
-## THE ELEMENT TREE IS BUILT (`c6602bed`, latest)
+## THE ELEMENT TREE IS BUILT (`c6602bed`)
 
 figma-import-export ships the tree read from each component's JSX: every node
 with its parent and its JSX tag, for 93 of 99. That was the last missing piece.
@@ -145,7 +177,8 @@ number a person can see on the canvas.
 The gaps tripling is the same shape as everything else this week: those gaps
 existed all along and nothing counted them. 466 part blocks are resolved for the
 first time, so their missing tokens are visible instead of being skipped before
-anything looked. 53 of them are one absent token, `space-2xs`.
+anything looked. 53 of them named `space-2xs`, which was later found NOT to be
+absent at all: boilerplate declares it and the measurement had excluded that theme.
 
 Each built frame carries a text child, which is not decoration: an auto-layout
 frame with no children collapses to nothing in Figma, so a part with only a
@@ -533,10 +566,20 @@ reported a missing token sitting in the theme they come from.
 figures now use the boilerplate file and say so, and they are a **floor**: a
 collection holding several themes carries the union, so a real run does better.
 
-**There is no single answer to "does cia export X".** Five distinct variable-name
-sets across sixteen per-theme files. `modal-radius` and `tooltip-radius` are the
-same shape, declared by three themes and one. A consumer asking that question of
-one file is sampling.
+**There is no single answer to "does cia export X".** Upstream measured it
+exactly: across all 24 theme files there are six distinct variable-name sets, a
+union of 148, **140 present in every theme and 8 that vary**. So asking one file
+is sampling, but only for those eight, which makes reading the union right and
+cheap. Of the eight, `space-2xs`, `modal-radius` and `tooltip-radius` are worth
+promoting into the base; the five radius and shadow tokens look deliberate, since
+a theme wanting square cards simply declares no card radius.
+
+**The evidence was already in this file.** In the dated record below, written
+days earlier: "building Button against the boilerplate collection produced two
+space-2xs gaps; building against boilerplate-dark produced none." That is the
+same finding, recorded and then not carried forward, while newer sections went on
+calling the token absent. Knowing and losing it is worse than not knowing, because
+nothing goes looking for a fact it has already written down.
 
 Final: **282 variants, 4935 bindings, 79 build gaps plus 58 relayed, 3 arriving
 empty, 204 tests.**
@@ -689,7 +732,7 @@ not been guessed at. Needs one check in Figma.
 frame, so per-frame component references and Prompt attachment can be checked
 when there is more than one place for them to go.
 
-## WHERE IT STANDS NOW (2026-09-26, latest)
+## WHERE IT STANDS NOW (2026-09-26)
 
 **The whole library builds.** The other side landed variant classification, so
 all 99 specs now build: 202 components, 1072 bindings, 26 with real variants,
