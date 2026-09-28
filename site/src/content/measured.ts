@@ -29,6 +29,29 @@ export interface MeasuredLibrary {
   arriveEmpty: number;
 }
 
+/**
+ * What the token file the runbook points at actually contains. This is the FIRST
+ * thing a tester does, so a wrong number here is the one that makes them think
+ * the whole thing is broken before they reach anything else.
+ */
+export interface MeasuredTokens {
+  /** Variables in the combined export. */
+  variables: number;
+  /** Modes in it, which is two per theme. */
+  modes: number;
+  /** Themes it combines. Eight exist as separate files; this is how many are in. */
+  themes: number;
+  /** Values the export could not represent, all of them CSS keywords. */
+  gaps: number;
+}
+
+export const MEASURED_TOKENS: MeasuredTokens = {
+  variables: 131,
+  modes: 4,
+  themes: 2,
+  gaps: 57,
+};
+
 export const MEASURED: MeasuredLibrary = {
   specs: 99,
   variants: 282,

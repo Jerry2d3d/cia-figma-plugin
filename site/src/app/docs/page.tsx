@@ -2,13 +2,13 @@ import type { Metadata } from 'next';
 import { Alert } from '@bp/components/Alert';
 import { CopyRow } from '@/components/CopyRow';
 import { PATHS } from '@/content/pipeline';
-import { MEASURED } from '@/content/measured';
+import { MEASURED, MEASURED_TOKENS } from '@/content/measured';
 import styles from '@/components/content.module.scss';
 
 export const metadata: Metadata = {
   title: 'Test runbook',
   description:
-    'Build everything from an empty Figma file: five themes, the whole component library, a two-screen design and a theme switch.',
+    'Build everything from an empty Figma file: every theme, the whole component library, a two-screen design and a theme switch.',
 };
 
 export default function DocsPage() {
@@ -19,7 +19,7 @@ export default function DocsPage() {
           <p className="eyebrow">Internal · runbook</p>
           <h1 className={styles.title}>From an empty Figma file</h1>
           <p className="lede">
-            Five themes, all 99 components, the Prompt, a two-screen design and a theme switch.
+            Every theme in the token file, all {MEASURED.specs} components, the Prompt, a two-screen design and a theme switch.
             About 40 minutes, most of it waiting on one build. Nothing here can damage anything
             outside the new Figma file.
           </p>
@@ -114,9 +114,11 @@ export default function DocsPage() {
               <p className={styles.body}>Button A, then the file below.</p>
               <CopyRow label="Button A · the themes file" value={PATHS.tokens} />
               <Alert variant="success" title="Expect">
-                Collection <strong>cia</strong>, 133 created, 9 modes added, no gaps, and a line
-                saying the variable map was saved. Nine rather than ten is right: a new collection
-                arrives with one mode already, which gets renamed rather than left behind.
+                Collection <strong>cia</strong>, {MEASURED_TOKENS.variables} created,{' '}
+                {MEASURED_TOKENS.modes - 1} modes added, {MEASURED_TOKENS.gaps} gaps, and a line saying
+                the variable map was saved. One fewer mode than you might count is right: a new
+                collection arrives with one already, which gets renamed rather than left behind. The
+                gaps are all CSS keywords like <code>none</code>, which no Figma Variable can hold.
               </Alert>
               <p className={styles.body}>
                 Open Figma&apos;s Variables panel and confirm ten mode columns. Find{' '}
@@ -161,7 +163,7 @@ export default function DocsPage() {
               </p>
               <div className={styles.internalNote}>
                 <Alert variant="warning" title="Sizes are right but not themeable">
-                  69 typography values are applied as plain numbers rather than bound, because cia
+                  Hundreds of typography values are applied as plain numbers rather than bound, because cia
                   exports no Variable for them. They render correctly and they will not change when
                   you switch theme. That is the single biggest upstream ask on the token side.
                 </Alert>
@@ -238,8 +240,9 @@ export default function DocsPage() {
               <p className={styles.body}>
                 Select the Login frame, find the variable modes control in the right panel, and
                 change it from <code>sketchbook Light</code> to <code>terminal Dark</code>. The whole
-                screen should re-theme. Nothing is rebuilt and nothing is relinked. Try{' '}
-                <code>glass Light</code> and <code>press Dark</code> too.
+                screen should re-theme. Nothing is rebuilt and nothing is relinked. Try all{' '}
+                {MEASURED_TOKENS.modes} modes in the dropdown. Only the themes in the file you loaded
+                appear there, so if you want the other six, the combined export has to include them.
               </p>
             </div>
           </div>

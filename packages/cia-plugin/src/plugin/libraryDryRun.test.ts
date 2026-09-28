@@ -25,7 +25,7 @@ import path from 'path';
 import { BuildApi, buildComponent } from '@/plugin/buildComponent';
 import { ComponentSpec, validateComponentSpec } from '@/shared/componentSpec';
 // The site publishes these to a person about to run the build by hand.
-import { MEASURED } from '../../../../site/src/content/measured';
+import { MEASURED, MEASURED_TOKENS } from '../../../../site/src/content/measured';
 
 /** Where figma-import-export writes its bucketed specs and its token export. */
 const SPEC_ROOT = process.env.CIA_SPEC_ROOT ?? 'K:/repo/figma-import-export/output/components';
@@ -198,6 +198,22 @@ function createApi(variables: FakeVariable[]) {
   return { api, components };
 }
 
+describeLibrary('the token file the runbook points at', () => {
+  it('still contains what the runbook tells a tester to expect', () => {
+    // The first step of the test run. A wrong number here is the one that makes
+    // somebody think the whole pipeline is broken before reaching anything else,
+    // and the runbook had claimed 133 variables, 9 modes and no gaps against a
+    // file holding 131, 4 and 57.
+    const payload = JSON.parse(fs.readFileSync(TOKENS, 'utf8'));
+    expect({
+      variables: payload.variables.length,
+      modes: payload.modes.length,
+      themes: new Set((payload.modes as string[]).map((mode) => mode.split(' ')[0])).size,
+      gaps: (payload.gaps ?? []).length,
+    }).toEqual(MEASURED_TOKENS);
+  });
+});
+
 describeLibrary('the whole shipped library', () => {
   it('has exactly one spec per component, so a folder-wide import builds nothing twice', () => {
     const byName = new Map<string, string[]>();
@@ -224,6 +240,7 @@ describeLibrary('the whole shipped library', () => {
     const invalid: string[] = [];
     const builtFromWrongElement: string[] = [];
     let relayed = 0;
+
     const clean: Record<string, { n: number; zero: number }> = {};
 
     for (const { file, bucket } of files) {

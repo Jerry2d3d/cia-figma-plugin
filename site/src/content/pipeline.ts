@@ -3,7 +3,7 @@
  * single edit rather than a hunt through five pages.
  */
 
-import { MEASURED } from '@/content/measured';
+import { MEASURED, MEASURED_TOKENS } from '@/content/measured';
 
 export type StatusLevel = 'working' | 'blocked' | 'pending';
 
@@ -18,13 +18,13 @@ export const STATUS: StatusItem[] = [
     title: 'Tokens into Figma',
     level: 'working',
     detail:
-      '128 variables in one collection with Light and Dark modes. Colours, numbers and font stacks all land correctly.',
+      `${MEASURED_TOKENS.variables} variables in one collection, with a Light and a Dark mode for each of the ${MEASURED_TOKENS.themes} themes it combines. Colours, numbers and font stacks all land correctly.`,
   },
   {
     title: 'All 99 components build',
     level: 'working',
     detail:
-      `${MEASURED.variants} components and ${MEASURED.bindings} live bindings across the whole library, 42 of them with real variants. Up from one component with variants two days ago.`,
+      `${MEASURED.variants} components and ${MEASURED.bindings} live bindings across the whole library, 39 of them with real variants. Up from one component with variants two days ago.`,
   },
   {
     title: 'Components build their inner parts',
@@ -57,10 +57,10 @@ export const STATUS: StatusItem[] = [
       'The plugin saves a variable map into the file, so a bound gap reports as space-md rather than an opaque id. No Enterprise plan needed.',
   },
   {
-    title: 'Five themes, one library',
+    title: 'Many themes, one library',
     level: 'working',
     detail:
-      'Every component binds once to a single collection. Switching a frame to another theme re-themes it instantly, with no rebuild, and two themes can sit side by side.',
+      `Every component binds once to a single collection. Switching a frame to another theme re-themes it instantly, with no rebuild, and two themes can sit side by side. Eight themes are exported; the combined file currently carries ${MEASURED_TOKENS.themes}.`,
   },
   {
     title: 'The screen read-back',
