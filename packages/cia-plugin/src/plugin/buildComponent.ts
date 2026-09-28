@@ -16,6 +16,13 @@ export interface BuildGap {
   /** The style block selector the gap came from, or `contract` for a spec-level gap. */
   where: string;
   reason: string;
+  /**
+   * Who found it. `spec` gaps come from the producer reading the source and are
+   * passed through untouched; `builder` gaps are this plugin failing to represent
+   * something in Figma. They are acted on by different people in different repos,
+   * so the panel shows them apart rather than in one list of 309.
+   */
+  origin?: 'builder' | 'spec';
 }
 
 export interface BuildSkip {
@@ -1847,6 +1854,20 @@ export async function buildComponent(
   });
 
   const resolver = new Resolver(variablesByName);
+
+  // What the producer could not resolve is passed straight through, before this
+  // builder has an opinion about anything. These were being dropped: 149 of them
+  // across the 99 specs, and the panel a person looks at never mentioned one.
+  // A local custom property defined twice, a part rendered under three different
+  // parents, a flag that guards only shared parts: all of that is exactly what
+  // the gap list is for, and none of it is this builder's to discover.
+  (spec.gaps ?? []).forEach((gap) => {
+    resolver.gaps.push({
+      where: gap.selector ?? 'contract',
+      reason: `${gap.kind}: ${gap.reason}`,
+      origin: 'spec',
+    });
+  });
 
   // Declarations naming a prop value become real variant blocks before anything
   // else looks at the spec, so axis discovery and op caching both see them.

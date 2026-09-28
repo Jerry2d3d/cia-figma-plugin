@@ -1,0 +1,1490 @@
+{
+  "specVersion": 2,
+  "component": "CustomizeModal",
+  "props": [
+    {
+      "name": "isOpen",
+      "optional": false,
+      "type": "boolean",
+      "values": null
+    },
+    {
+      "name": "onClose",
+      "optional": false,
+      "type": "() => void",
+      "values": null
+    },
+    {
+      "name": "settings",
+      "optional": false,
+      "type": "QRCustomization",
+      "values": null
+    },
+    {
+      "name": "onSettingsChange",
+      "optional": false,
+      "type": "(settings: Partial<QRCustomization>) => void",
+      "values": null
+    },
+    {
+      "name": "onReset",
+      "optional": false,
+      "type": "() => void",
+      "values": null
+    },
+    {
+      "name": "triggerElement",
+      "optional": true,
+      "type": "HTMLElement | null",
+      "values": null
+    }
+  ],
+  "styleBlocks": [
+    {
+      "selector": ".overlay",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "z",
+          "args": [
+            "modal"
+          ],
+          "property": "z-index",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "padding",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".modal",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "surface-default"
+          ],
+          "property": "background",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "xl"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "600px",
+          "state": "default"
+        },
+        {
+          "property": "width",
+          "value": "100%",
+          "state": "default"
+        },
+        {
+          "property": "max-height",
+          "value": "90vh",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".header",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xl"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "border-bottom",
+          "state": "default"
+        },
+        {
+          "fn": "flex",
+          "args": [
+            "$justify: between",
+            "$align: start"
+          ],
+          "property": "layout",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-bottom-width",
+          "width": "1px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".title",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "2xl"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "bold"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "margin",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".subtitle",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "color",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".error",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "margin",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color-static",
+          "args": [
+            "error-default"
+          ],
+          "property": "background",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "property": "border-left",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "sm"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-left-width",
+          "width": "3px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".tabs",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "gap",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xl"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "border-bottom",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-bottom-width",
+          "width": "1px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".tab",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "padding",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-bottom-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".tabActive",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "border-bottom-color",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".content",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "xl"
+          ],
+          "property": "padding",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".tabContent",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "xl"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".section",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".label",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "semibold"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".helperText",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "color",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".buttonGroup",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".colorPicker",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".colorInput",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "lg"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "sm"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "border-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        }
+      ],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "60px",
+          "state": "default"
+        },
+        {
+          "property": "height",
+          "value": "40px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".bgColorField",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "margin-top",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".colorPresets",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".colorSwatch",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "lg"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "transition",
+          "args": [
+            "all",
+            "fast"
+          ],
+          "property": "transition",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "outline",
+          "state": "focus"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "border-color",
+          "state": "default",
+          "parts": [
+            ".selected"
+          ]
+        },
+        {
+          "fn": "color-static",
+          "args": [
+            "action-primary-default"
+          ],
+          "property": "box-shadow",
+          "state": "default",
+          "parts": [
+            ".selected"
+          ]
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "default"
+        },
+        {
+          "property": "outline-width",
+          "width": "2px",
+          "style": "solid",
+          "state": "focus"
+        }
+      ],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "40px",
+          "state": "default"
+        },
+        {
+          "property": "height",
+          "value": "40px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".fileInput",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "border-color",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "lg"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-subtle"
+          ],
+          "property": "background",
+          "state": "default"
+        },
+        {
+          "fn": "font-size",
+          "args": [
+            "base"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "transition",
+          "args": [
+            "all",
+            "fast"
+          ],
+          "property": "transition",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "border-color",
+          "state": "hover"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-muted"
+          ],
+          "property": "background",
+          "state": "hover"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "margin-right",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "background",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-inverse"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "sm"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "medium"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        },
+        {
+          "fn": "transition",
+          "args": [
+            "all",
+            "fast"
+          ],
+          "property": "transition",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary-hover"
+          ],
+          "property": "background",
+          "state": "hover"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "2px",
+          "style": "dashed",
+          "state": "default"
+        },
+        {
+          "property": "border-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".textInputWrapper",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".inputLabel",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "medium"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".inputContainer",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "gap",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".characterCounter",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "medium"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "min-width",
+          "value": "45px",
+          "state": "default"
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".footer",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xl"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "border-top",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "gap",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "surface-subtle"
+          ],
+          "property": "background",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-top-width",
+          "width": "1px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".uploadingIndicator",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "brand",
+          "args": [
+            "primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "margin-top",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".colorError",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "margin",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default"
+        },
+        {
+          "fn": "color-static",
+          "args": [
+            "error-default"
+          ],
+          "property": "background",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "error-default"
+          ],
+          "property": "border-left",
+          "state": "default"
+        },
+        {
+          "fn": "radius",
+          "args": [
+            "sm"
+          ],
+          "property": "border-radius",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-left-width",
+          "width": "3px",
+          "style": "solid",
+          "state": "default"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": "@include cia.media-down(sm)",
+      "kind": "other",
+      "ciaCalls": [
+        {
+          "fn": "media-down",
+          "args": [
+            "sm"
+          ],
+          "property": "media-query",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding",
+          "state": "default",
+          "parts": [
+            ".header, .content, .footer"
+          ]
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "padding",
+          "state": "default",
+          "parts": [
+            ".tabs"
+          ]
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding",
+          "state": "default",
+          "parts": [
+            ".tabs"
+          ]
+        },
+        {
+          "fn": "space",
+          "args": [
+            "xs"
+          ],
+          "property": "padding",
+          "state": "default",
+          "parts": [
+            ".tab"
+          ]
+        },
+        {
+          "fn": "space",
+          "args": [
+            "md"
+          ],
+          "property": "padding",
+          "state": "default",
+          "parts": [
+            ".tab"
+          ]
+        },
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default",
+          "parts": [
+            ".tab"
+          ]
+        }
+      ],
+      "borders": [],
+      "dimensions": [
+        {
+          "property": "max-width",
+          "value": "100%",
+          "state": "default",
+          "parts": [
+            ".modal"
+          ]
+        },
+        {
+          "property": "max-height",
+          "value": "100vh",
+          "state": "default",
+          "parts": [
+            ".modal"
+          ]
+        }
+      ],
+      "consumes": [],
+      "defines": []
+    }
+  ],
+  "tree": [
+    {
+      "selector": ".overlay",
+      "parent": null,
+      "tag": "div"
+    },
+    {
+      "selector": ".modal",
+      "parent": ".overlay",
+      "tag": "div"
+    },
+    {
+      "selector": ".header",
+      "parent": ".modal",
+      "tag": "div"
+    },
+    {
+      "selector": ".title",
+      "parent": ".header",
+      "tag": "h2"
+    },
+    {
+      "selector": ".subtitle",
+      "parent": ".title",
+      "tag": "p"
+    },
+    {
+      "selector": ".error",
+      "parent": ".subtitle",
+      "tag": "p"
+    },
+    {
+      "selector": ".tabs",
+      "parent": ".modal",
+      "tag": "div"
+    },
+    {
+      "selector": ".tab",
+      "parent": ".tabs",
+      "tag": "button"
+    },
+    {
+      "selector": ".tabActive",
+      "parent": ".tabs",
+      "tag": "button",
+      "modifierOf": ".tab"
+    },
+    {
+      "selector": ".content",
+      "parent": ".modal",
+      "tag": "div"
+    },
+    {
+      "selector": ".tabContent",
+      "parent": ".content",
+      "tag": "div"
+    },
+    {
+      "selector": ".section",
+      "parent": ".tabContent",
+      "tag": "div"
+    },
+    {
+      "selector": ".label",
+      "parent": ".section",
+      "tag": "span"
+    },
+    {
+      "selector": ".buttonGroup",
+      "parent": ".label",
+      "tag": "div"
+    },
+    {
+      "selector": ".colorPicker",
+      "parent": ".label",
+      "tag": "div"
+    },
+    {
+      "selector": ".colorInput",
+      "parent": ".colorPicker",
+      "tag": "input"
+    },
+    {
+      "selector": ".hexInput",
+      "parent": ".colorPicker",
+      "tag": "Input"
+    },
+    {
+      "selector": ".colorError",
+      "parent": ".label",
+      "tag": "p"
+    },
+    {
+      "selector": ".colorPresets",
+      "parent": ".label",
+      "tag": "div"
+    },
+    {
+      "selector": ".colorSwatch",
+      "parent": ".colorPresets",
+      "tag": "button"
+    },
+    {
+      "selector": ".selected",
+      "parent": ".colorPresets",
+      "tag": "button",
+      "modifierOf": ".colorSwatch"
+    },
+    {
+      "selector": ".bgColorField",
+      "parent": ".label",
+      "tag": "div"
+    },
+    {
+      "selector": ".helperText",
+      "parent": ".label",
+      "tag": "p"
+    },
+    {
+      "selector": ".fileInput",
+      "parent": ".label",
+      "tag": "input"
+    },
+    {
+      "selector": ".uploadingIndicator",
+      "parent": ".label",
+      "tag": "p"
+    },
+    {
+      "selector": ".textInputWrapper",
+      "parent": ".label",
+      "tag": "div"
+    },
+    {
+      "selector": ".inputLabel",
+      "parent": ".textInputWrapper",
+      "tag": "label"
+    },
+    {
+      "selector": ".inputContainer",
+      "parent": ".inputLabel",
+      "tag": "div"
+    },
+    {
+      "selector": ".textInput",
+      "parent": ".inputContainer",
+      "tag": "Input"
+    },
+    {
+      "selector": ".characterCounter",
+      "parent": ".inputContainer",
+      "tag": "span"
+    },
+    {
+      "selector": ".footer",
+      "parent": ".modal",
+      "tag": "div"
+    },
+    {
+      "selector": ".resetButton",
+      "parent": ".footer",
+      "tag": "Button"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "no-base-block",
+      "selector": null,
+      "reason": "no root style block found: none of this component's top-level selectors is \".customizemodal\", \".root\", \".wrapper\" or a \"CustomizeModalWrapper\"/\"CustomizeModalComponent\" variation. Its root class is named something only its own TSX can resolve, so the base is left unset rather than guessed."
+    },
+    {
+      "kind": "part-rendered-in-several-places",
+      "selector": ".hexInput",
+      "reason": "rendered under .colorPicker and also under .bgColorField; the tree keeps one node per class, so it names the first position only and how many of this part exist is not stated"
+    },
+    {
+      "kind": "part-rendered-in-several-places",
+      "selector": ".colorError",
+      "reason": "rendered under .label and also under .bgColorField; the tree keeps one node per class, so it names the first position only and how many of this part exist is not stated"
+    },
+    {
+      "kind": "part-rendered-in-several-places",
+      "selector": ".helperText",
+      "reason": "rendered under .label and also under .section, .footer; the tree keeps one node per class, so it names the first position only and how many of this part exist is not stated"
+    }
+  ]
+}

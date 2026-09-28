@@ -133,6 +133,62 @@ export function ComponentBuildPanel({ collections, status, onStatusChange }: Pro
   );
 }
 
+interface GapEntry {
+  component: string;
+  gap: BuildResult['gaps'][number];
+}
+
+/**
+ * One list of gaps. The spec's own findings are collapsed by default: they are
+ * real and they are the majority, but a person running a build is usually asking
+ * what Figma could not do, and 149 upstream findings in front of that answer
+ * bury it.
+ */
+function GapList({
+  title,
+  entries,
+  single,
+  collapsed = false,
+}: {
+  title: string;
+  entries: GapEntry[];
+  single: boolean;
+  collapsed?: boolean;
+}) {
+  if (entries.length === 0) {
+    return null;
+  }
+  const items = (
+    <ul>
+      {entries.map((entry) => (
+        <li key={`${entry.component}:${entry.gap.where}:${entry.gap.reason}`}>
+          <strong>{single ? entry.gap.where : `${entry.component} · ${entry.gap.where}`}</strong>:{' '}
+          {entry.gap.reason}
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (collapsed) {
+    return (
+      <details className="skipped">
+        <summary>
+          {entries.length} gap(s) {title}
+        </summary>
+        {items}
+      </details>
+    );
+  }
+  return (
+    <>
+      <p>
+        {entries.length} gap(s) {title}:
+      </p>
+      {items}
+    </>
+  );
+}
+
 function BuildSummary({
   results,
   failures,
@@ -213,21 +269,24 @@ function BuildSummary({
         </>
       )}
 
-      {gaps.length > 0 && (
-        <>
-          <p>{gaps.length} gap(s) to route upstream:</p>
-          <ul>
-            {gaps.map((entry) => (
-              <li key={`${entry.component}:${entry.gap.where}:${entry.gap.reason}`}>
-                <strong>
-                  {single ? entry.gap.where : `${entry.component} · ${entry.gap.where}`}
-                </strong>
-                : {entry.gap.reason}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      {/*
+        Shown apart because they are acted on by different people. A builder gap is
+        something this plugin could not represent in Figma. A spec gap is the
+        producer saying it could not read the source, passed straight through, and
+        it belongs to whoever owns the component or the design system. Together
+        they run to a few hundred, and one list that long gets scrolled past.
+      */}
+      <GapList
+        title="could not be built in Figma"
+        entries={gaps.filter((entry) => entry.gap.origin !== 'spec')}
+        single={Boolean(single)}
+      />
+      <GapList
+        title="reported by the spec, about the source"
+        entries={gaps.filter((entry) => entry.gap.origin === 'spec')}
+        single={Boolean(single)}
+        collapsed
+      />
 
       {skipped > 0 && (
         <details className="skipped">

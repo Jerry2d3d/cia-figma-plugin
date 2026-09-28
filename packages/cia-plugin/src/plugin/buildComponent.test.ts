@@ -5,12 +5,14 @@ import headingSpecJson from '@/__fixtures__/Heading.component-spec.json';
 import containerSpecJson from '@/__fixtures__/Container.component-spec.json';
 import checkboxSpecJson from '@/__fixtures__/Checkbox.component-spec.json';
 import inputSpecJson from '@/__fixtures__/Input.component-spec.json';
+import customizeModalSpecJson from '@/__fixtures__/CustomizeModal.component-spec.json';
 
 const buttonSpec = buttonSpecJson as ComponentSpec;
 const headingSpec = headingSpecJson as ComponentSpec;
 const containerSpec = containerSpecJson as ComponentSpec;
 const checkboxSpec = checkboxSpecJson as ComponentSpec;
 const inputSpec = inputSpecJson as ComponentSpec;
+const customizeModalSpec = customizeModalSpecJson as ComponentSpec;
 
 class FakeVariable {
   constructor(
@@ -2299,5 +2301,74 @@ describe('Input, its info button is one element under two names', () => {
         (s) => s.reason.includes('mutually exclusive names for it') && s.reason.includes('infoIcon'),
       ),
     ).toBe(true);
+  });
+});
+
+describe("the producer's own findings", () => {
+  it('relays them instead of dropping them, marked as coming from the spec', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Reportish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.root',
+          kind: 'base',
+          // No `space-2xs` in the collection, so this is a gap the builder finds.
+          ciaCalls: [{ fn: 'space', args: ['2xs'], property: 'gap', state: 'default' }],
+        },
+      ],
+      gaps: [
+        {
+          kind: 'ambiguous-local-property',
+          selector: '.root',
+          reason: '--gap is defined twice with different values',
+        },
+        { kind: 'no-part-tree', selector: null, reason: 'the JSX scan did not account for everything' },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const relayed = result.gaps.filter((gap) => gap.origin === 'spec');
+    expect(relayed).toHaveLength(2);
+    expect(relayed[0]).toEqual({
+      where: '.root',
+      reason: 'ambiguous-local-property: --gap is defined twice with different values',
+      origin: 'spec',
+    });
+    // A gap about the whole component has no selector, so it reads as contract.
+    expect(relayed[1].where).toBe('contract');
+    // The builder's own finding stays distinguishable from the producer's, which
+    // is the whole point: they are acted on in different repos.
+    const own = result.gaps.filter((gap) => gap.origin !== 'spec');
+    expect(own).toHaveLength(1);
+    expect(own[0].reason).toContain('no variable named "space-2xs"');
+  });
+
+  it('builds a spec that reports nothing exactly as before', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps.every((gap) => gap.origin !== 'spec' || gap.reason.includes(':'))).toBe(true);
+  });
+});
+
+describe('CustomizeModal, whose parts are rendered in several places', () => {
+  it('surfaces that a part it built in one position exists in others too', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(customizeModalSpec, { collectionName: 'boilerplate' }, api);
+
+    // `.helperText` is under `.label`, `.section` AND `.footer`. The tree keeps one
+    // node per class, so the builder puts it in one place and would otherwise say
+    // nothing about the other two.
+    const multi = result.gaps.filter((gap) => gap.reason.startsWith('part-rendered-in-several-places'));
+    expect(multi.length).toBeGreaterThan(0);
+    const helper = multi.find((gap) => gap.where === '.helperText');
+    expect(helper?.reason).toContain('.section, .footer');
+    expect(helper?.origin).toBe('spec');
   });
 });

@@ -201,6 +201,25 @@ export interface ComponentProp {
   controls?: string[];
 }
 
+/**
+ * Something the producer could not resolve about the source, reported rather than
+ * guessed at. `kind` is a stable slug, `selector` names the block when there is
+ * one, and `reason` is written to be read by a person.
+ *
+ * These were being dropped on the floor. 149 of them existed across the 99
+ * specs and nothing in this plugin's report mentioned any: the producer said a
+ * local custom property was defined twice, or that a part is rendered under three
+ * different parents, and the panel a person actually looks at never said so. The
+ * same failure this whole week has kept turning up, which is that a count only
+ * covers what it was built to count.
+ */
+export interface SpecGap {
+  kind: string;
+  /** Null for a gap about the component as a whole. */
+  selector: string | null;
+  reason: string;
+}
+
 export interface ComponentSpec {
   specVersion: number;
   component: string;
@@ -208,6 +227,8 @@ export interface ComponentSpec {
   styleBlocks: StyleBlock[];
   /** Null when the JSX scan could not account for everything; absent on older specs. */
   tree?: PartTreeNode[] | null;
+  /** What the producer could not resolve. Absent on older specs. */
+  gaps?: SpecGap[];
 }
 
 export type ComponentSpecValidation =
@@ -568,6 +589,29 @@ export function validateComponentSpec(input: unknown): ComponentSpecValidation {
     errors.push('"styleBlocks" must be an array');
   } else {
     value.styleBlocks.forEach((block, index) => validateBlock(block, `styleBlocks[${index}]`, errors));
+  }
+  if (value.gaps !== undefined) {
+    if (!Array.isArray(value.gaps)) {
+      errors.push('"gaps" must be an array');
+    } else {
+      value.gaps.forEach((gap, index) => {
+        const where = `gaps[${index}]`;
+        if (typeof gap !== 'object' || gap === null) {
+          errors.push(`${where} is not an object`);
+          return;
+        }
+        const g = gap as Record<string, unknown>;
+        if (typeof g.kind !== 'string' || g.kind.length === 0) {
+          errors.push(`${where}.kind must be a non-empty string`);
+        }
+        if (g.selector !== null && typeof g.selector !== 'string') {
+          errors.push(`${where}.selector must be a string or null`);
+        }
+        if (typeof g.reason !== 'string' || g.reason.length === 0) {
+          errors.push(`${where}.reason must be a non-empty string`);
+        }
+      });
+    }
   }
   if (value.tree !== undefined && value.tree !== null) {
     validateTree(value.tree, errors);
