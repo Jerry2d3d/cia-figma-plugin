@@ -29,8 +29,20 @@ import { MEASURED } from '../../../../site/src/content/measured';
 
 /** Where figma-import-export writes its bucketed specs and its token export. */
 const SPEC_ROOT = process.env.CIA_SPEC_ROOT ?? 'K:/repo/figma-import-export/output/components';
+/**
+ * The BOILERPLATE token file, not the combined `cia.variables.json`.
+ *
+ * The components are BoilerPlate components, and boilerplate is the only one of
+ * the eight themes that declares `space-2xs`, which 53 of them use. Measuring
+ * against a combined export that happened to exclude it produced 73 gaps that
+ * were an artefact of the theme selection rather than a missing token, and this
+ * builder reported them upstream for days as a token cia does not have.
+ *
+ * A collection including boilerplate can only do better than this file, since it
+ * holds the union of its themes. So these figures are the floor for a real run.
+ */
 const TOKENS =
-  process.env.CIA_TOKENS ?? 'K:/repo/figma-import-export/output/variables/cia.variables.json';
+  process.env.CIA_TOKENS ?? 'K:/repo/figma-import-export/output/variables/boilerplate.variables.json';
 
 /** The folders this export is the authority for, one bucket per readiness. */
 const BUCKETS = ['ready', 'partial', 'blocked'];
@@ -215,14 +227,19 @@ describeLibrary('the token file, whichever export produced it', () => {
   it('names one mode per theme and scheme', () => {
     const modes = payload().modes as string[];
     expect(modes.length).toBeGreaterThan(0);
+    // A single-theme export names its modes `Light` and `Dark`; a combined one
+    // prefixes the theme. Asserting only the second shape was the same mistake
+    // as pinning a total: true of the file that happened to be there.
     modes.forEach((mode) => {
-      expect(mode).toMatch(/^\S+ (Light|Dark)$/);
+      expect(mode).toMatch(/(^|\s)(Light|Dark)$/);
     });
     // Every theme present carries both schemes, or a component switching to one
     // of its modes would find nothing on the other.
     const schemes = new Map<string, Set<string>>();
     modes.forEach((mode) => {
-      const [theme, scheme] = mode.split(' ');
+      const parts = mode.split(' ');
+      const scheme = parts[parts.length - 1];
+      const theme = parts.slice(0, -1).join(' ') || 'the only theme';
       schemes.set(theme, (schemes.get(theme) ?? new Set()).add(scheme));
     });
     schemes.forEach((found, theme) => {

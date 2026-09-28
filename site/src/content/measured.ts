@@ -29,11 +29,19 @@ export interface MeasuredLibrary {
   arriveEmpty: number;
 }
 
+/**
+ * Measured against the BOILERPLATE token file, because these are BoilerPlate
+ * components and boilerplate is the only one of the eight themes that declares
+ * `space-2xs`, which 53 of them use. Measuring against a combined export that
+ * excluded it showed 73 gaps that were the theme selection rather than a missing
+ * token. A collection holding boilerplate and others can only do better, since it
+ * carries the union, so these are the floor for a real run rather than a target.
+ */
 export const MEASURED: MeasuredLibrary = {
   specs: 99,
   variants: 282,
-  bindings: 4639,
-  buildGaps: 152,
+  bindings: 4935,
+  buildGaps: 79,
   specGaps: 58,
   arriveEmpty: 3,
 };
