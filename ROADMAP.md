@@ -34,7 +34,7 @@ from becoming four sources of truth.
 | Payload | Direction | Version | Where validated |
 |---|---|---|---|
 | Token contract `{ specVersion, collection, modes, variables, gaps }` | figma-import-export → plugin | `1.0.0`, or `1.1.0` when it carries alias values | `src/shared/tokenContract.ts` |
-| Component spec `{ specVersion, component, props, styleBlocks, borders, gaps }` | figma-import-export → plugin | `2` | `src/shared/componentSpec.ts` |
+| Component spec `{ specVersion, component, props, styleBlocks, tree, gaps }` | figma-import-export → plugin | `2` | `src/shared/componentSpec.ts` |
 | Variable-name map, written into the file as shared plugin data | plugin → figma-import-export | `1.0.0` | `src/plugin/variableMap.ts` |
 | Frame type, written onto the frame as shared plugin data | plugin → figma-import-export | `1.0.0` | `src/plugin/frameType.ts` |
 | Component spec (read-back of a Figma component) | plugin → figma-import-export | not built (Phase 3) | — |
@@ -49,6 +49,13 @@ know cia internals: `color(x)` → variable `x`; `space(x)` / `pad-asym(y, x)`
 → `space-x`; `radius(x)` → `radius-x`; `font(w, s)` → `font-weight-w` and
 `font-size-s`. FLOAT values are expected in px (the exporter already
 converts rem).
+
+Four of cia's Sass maps are **mirrored** in `buildComponent.ts`, because they
+expand at compile time and leave nothing in the CSS to read: `$_type-scale`,
+`$font-sizes`, `$line-heights` and `$letter-spacings`. Without them
+`type(heading-1)` was a gap and every Heading level built at the same size. If
+cia changes one of those maps the mirror must change with it, so a test asserts
+the typography contract is still one step per axis and fails the day it grows.
 
 ## Status
 
@@ -65,8 +72,12 @@ a fake. Three rounds in a real file, 2026-09-25 to 09-27:
   `Prompt` rules a PM left. Six bindings on a real frame resolved to six token
   names with none left over, and both sides read the same document identically.
 
-**The whole library builds.** All 99 component specs, 202 components, 1146
-bindings, nothing rejected. The remaining gaps are upstream typography tokens.
+**The whole library builds, with its inner parts** (2026-09-28). All 99 specs,
+282 components, 4935 bindings, nothing rejected. A component now arrives as a
+nested tree of named frames rather than one styled box, so the styling of its
+label, icon and rows lands on the right element. 3 components still arrive empty
+because their JSX cannot be scanned. The figures are a floor: they are measured
+against one theme's tokens, and a collection carrying several holds the union.
 
 **Theming is one library, not one per theme** (2026-09-27). A component binds
 to a variable inside a specific collection, so a library built against a
@@ -117,86 +128,119 @@ unverified and is checkable in minutes once one arrow exists between two
 frames. Confirmed with Jerry that this is not needed for a first release: it
 improves navigation rather than enabling it.
 
-## The biggest remaining gap: parts are 85% of the styling (measured 2026-09-27)
+## Parts are built (2026-09-28). This section used to be the biggest gap
 
-v1 builds a component as one auto-layout frame plus a label, and skips `part`
-blocks. That was a deliberate scope choice. It turns out to be most of the
-design system:
+It said 85% of the design system never reached Figma, because v1 built one frame
+plus a label and skipped `part` blocks. That was true and is no longer.
 
-| Where the styling is | Default-state cia calls, all 99 components |
-|---|---|
-| base + variant blocks, which this builds | 586 |
-| part + other blocks, which this skips | 3335 |
+figma-import-export now ships each component's element tree, read from its JSX:
+every node with its parent and its tag, for 93 of 99. Every node is built as a
+nested frame and each part's styling lands on the element it names. Unstyled
+nodes are built too, because a designer has to see and switch off the parts.
 
-So **about 15% of the component styling reaches Figma**. For 19 components it
-is 0%, and they arrive as empty frames: DataTable's spec carries 486 calls
-across 140 blocks and none of them are in a base or variant; DesignSandbox
-carries 1229 across 400.
+| | before | after |
+|---|---|---|
+| bindings | 891 | 4935 |
+| arriving empty | 25 | 3 |
 
-This reframes specVersion 3 from a nice-to-have for complex components into
-the highest-value work left on either side, above anything token-related.
-Jerry found it by importing components and noticing they had no styling, which
-is the point: a token gap is invisible until something renders wrong, while an
-empty frame is visible immediately.
+**What it took, in case any of it is needed again.** Nine additive contract
+fields, none of them changing specVersion: the element tree, descendant paths,
+per-declaration variant tags, mutually exclusive class names, which declaration
+each node came from, widths and heights, resolved mixin arguments, logical border
+properties, and per-qualifier values for a local custom property. Each one was
+co-designed before either side built, and each one landed because the consumer
+said what it could not represent rather than guessing.
 
-**The design problem, not yet solved.** A named child frame per part selector
-is the obvious reading, but DataTable's 140 parts are not 140 children of one
-frame. They are a tree, and the spec currently flattens it. Co-design with
-figma-import-export before either side builds, per the rule that has held all
-along.
+**The three that still arrive empty** are DataTable, HeroCodePanel and one other
+whose JSX picks class names at runtime through `styles[variant]`, which a static
+scan cannot follow and should not guess. That is the honest limit.
+
+## Waiting on Jerry (2026-09-28)
+
+Nothing here blocks the Figma run. They are decisions only he can make, written
+down because they have been scattered across messages rather than recorded.
+
+**1. The old Tokens Studio package.** `packages/tokens-studio-for-figma/` is
+1,798 files and 199 MB of the forked plugin this one replaced. He asked for it to
+go; it was not deleted because deleting that much is not reversible from here
+without an explicit yes. Nothing in `cia-plugin` imports it. One word and it goes.
+
+**2. css-is-awesome: what should `font-size(2xs)` do?** Four components ask for
+a size cia does not define, and cia silently falls back to 16px instead of
+erroring, so they render at body size and nobody sees a problem. The
+css-is-awesome session recommends **warning rather than erroring** (erroring is a
+breaking change for any consumer doing it today) and **not adding a `2xs` step**
+(adding it would silently change those four from 16px to 10px, which is a
+different wrong nobody chose). It wants Jerry to decide. Note `space()`
+deliberately accepts unknown keys so layout mixins take raw lengths, so this
+cannot be a blanket fix across all accessors.
+
+**3. Three token asks, which need three different people.** Deliberately not
+routed as one list, because bundling them puts the only one needing judgement
+behind the only one needing typing:
+
+| Ask | Size | Who |
+|---|---|---|
+| 27 components override a semantic colour in dark | Largest. A design question | Whoever owns the semantic layer. If `surface-default` were right in dark, Checkbox would not reach for `surface-subtle` |
+| No scrim or backdrop colour exists | One token | Whoever owns the token set. A dimmed backdrop is the one colour a dark theme must change, and it is currently a hardcoded `rgba()` in 7 places |
+| 12 hardcoded shadows | 12 edits | Anyone. `elevation()` already exists; these components just are not using it |
+
+**4. Promote three tokens into the base?** `space-2xs` is declared by
+boilerplate only, `modal-radius` by three themes, `tooltip-radius` by one. If a
+component using any theme should get them, they belong in the base. The other
+five varying tokens look deliberate: a theme wanting square cards declares no
+card radius.
+
+**5. The typography scale is one step per axis.** cia exports exactly
+`font-size-base`, `font-weight-medium` and `line-height-normal`. Every other size
+and weight in every component is applied as a correct number that cannot follow a
+theme. Promoting just `sm` and `xs` would make roughly 320 of 408 call sites
+themeable. This is the single biggest thing standing between "renders right" and
+"re-themes right".
 
 ## Next, in order
 
-1. **Import the full library** (a person, in Figma). Sync `cia.variables.json`
-   into the `cia` collection, then build all 99 specs in one pass against it.
-   Verified from this side: 99 of 99 build, 202 components, 1146 bindings, no
-   rejections. This comes before navigation because the library is what screens
-   are composed from.
+1. **Compose a real screen in Figma** (Jerry, by hand). This is the only thing
+   outstanding on either side, and everything below it is blocked on what it
+   shows. The runbook on the site is the step-by-step:
+   `http://localhost:3210/docs`. Export the tokens first, because the file on
+   disk is whatever export ran last.
 2. **Prove navigation on a multi-frame screen.** Mark each frame with its type,
-   draw prototype connections between them, and read the file back. Two things
-   to learn: whether REST returns the connections, and whether per-frame
-   components and Prompts attach to the right frame when there is more than one
-   place for them to go.
-3. **Child structure in the component spec** (both sides). A single frame with
-   a label cannot express DataTable, Modal, DashboardNav or MultiStepForm.
-   Needs a spec version carrying children and slots, co-designed before either
-   side builds.
-4. **Read a component back, and flag drift** (Phase 3 here, diff tool there).
+   draw prototype connections, read the file back. Two unknowns: whether REST
+   returns the connections, and whether per-frame components and Prompts attach
+   to the right frame when there is more than one place for them to go.
+3. **Read a component back, and flag drift** (Phase 3 here, diff tool there).
+   An "export selection" action serialising a Figma component into the spec
+   shape, so a designer restyling a component in Figma is reported rather than
+   silently diverging.
+4. **The three components that cannot be scanned**, if they matter. Their JSX
+   picks class names at runtime, which a static scan cannot follow.
 
 ## What this plugin needs from figma-import-export
 
-Requests, so the other side knows what it will be asked for. **The first one
-now blocks every component except Button:**
+**Everything previously listed here has been delivered** (2026-09-28). Nine
+additive contract fields over two days, each co-designed before either side
+built it. Kept below as a record of what the asks were, because the pattern is
+the useful part: every one was found by a consumer saying what it could not
+represent, rather than by a producer guessing what might help.
 
-- **Classify variant style blocks for components whose selectors are
-  prefixed.** Button builds 12 variants only because its SCSS class names
-  equal its prop enum values (`.primary`, `.small`). Every other component
-  names them component-first and camelCased, and the producer falls back to
-  `kind: "part"`, so the plugin builds them flat with no variants at all:
-  `.badgePrimary` for `variant=primary`, `.textWeightMedium` for
-  `weight=medium`, `.avatarLg` for `size=lg`, `.heading1` for `level=1`, and
-  the same in Card, Container and Spinner. The producer already has the prop
-  enums and the selectors; matching them belongs there. The plugin reports
-  this as a named contract gap and will not invent a naming convention,
-  because a wrong mapping produces silently wrong components.
-- **A base style block for `Heading` and `Container`.** Every block in both
-  is a `part`, so they build unstyled.
+Delivered: variant classification for prefixed selectors; a base block for
+Heading; `border-width`; the element tree; descendant paths; per-declaration
+variant tags; mutually exclusive class names; the declaration each node came
+from; widths and heights; resolved mixin arguments; logical border properties;
+per-qualifier values for a local custom property.
 
-- **Per-instance detail from `figma_map_screen`.** Today it returns a
-  deduped, sorted list of component names. To build a page the AI needs,
-  per instance: component name, variant props (Figma exposes the
-  `prop=value` names this plugin writes as `componentProperties`), boolean
-  flags, text overrides, and the enclosing frame. Same output shape family
-  as Feature 33.8, just deeper.
-- **Layout read-back with token names.** Auto-layout frames: direction,
-  alignment, and gap/padding reported as the bound Variable's *name*
-  (`space-md`), not a pixel value, so the AI writes `cia.space(md)`.
-- **`border-width` in the component spec.** Currently only `border-color`
-  is carried.
-- **specVersion 3 with child structure** (parts as child nodes, slots for
-  children), co-designed before either side builds it.
-- **Reading the `Prompt` component** (see below) in `figma_map_screen`,
-  output in reading order next to the frame it sits in.
+**Still open, and small:**
+
+- **Per-instance detail from `figma_map_screen`.** Needed to build a page from
+  a screen: per instance, the component name, variant props, boolean flags, text
+  overrides and enclosing frame. Partly there; proven on one screen.
+- **Layout sizing read-back.** Delivered upstream but **unverified against real
+  data**, and worth wiring before alignment if frames are ever rebuilt from a
+  screen map. A frame rebuilt with wrong alignment looks wrong immediately; one
+  rebuilt with wrong sizing looks correct until its content changes length.
+- **Reading the `Prompt` component** in `figma_map_screen`, in reading order
+  next to the frame it sits in.
 
 ## Figma plan: Starter (confirmed 2026-09-18)
 
