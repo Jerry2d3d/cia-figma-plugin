@@ -500,8 +500,25 @@ The token figures are pinned now alongside the component ones. The dated log
 entries are deliberately untouched: a log records what was true on a day, a status
 claims what is true now, and only the second can rot.
 
+**Then the token correction was itself wrong** (`402a5007`). The original 133
+variables and 10 modes were CORRECT for the five-theme export the runbook was
+written against. `output/` in the other repo is local scratch, so the file there
+is whichever export ran last, and reading its totals looked like measuring and was
+sampling. Nothing narrowed and nothing rotted: the artefact changed underneath a
+claim that stayed true of the thing it described. Lowering it to match a
+two-theme file was **pinning the ground to the last footprint on it**.
+
+So the runbook carries the export COMMAND and the five themes, and tells a tester
+to generate the file rather than read whatever is there. No totals are published
+for it, because that exporter cannot be run from here and a number nobody measured
+should not be printed. The test checks what is true of ANY export: a mode per
+theme and scheme, both schemes for every theme, every variable holding a value in
+every mode since Figma has no empty state, and every gap carrying a reason.
+
+"No gaps" was wrong either way, at 57 and at 150.
+
 Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 202 tests.**
+empty, 204 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
