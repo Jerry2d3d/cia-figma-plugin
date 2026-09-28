@@ -122,7 +122,7 @@ class FakeComponent extends FakeProperties {
 
   maxHeight: number | null = null;
 
-  children: FakeText[] = [];
+  children: (FakeText | FakeComponent)[] = [];
 
   bound: Record<string, string> = {};
 
@@ -131,7 +131,7 @@ class FakeComponent extends FakeProperties {
     this.height = height;
   }
 
-  appendChild(child: FakeText) {
+  appendChild(child: FakeText | FakeComponent) {
     this.children.push(child);
   }
 
@@ -147,6 +147,9 @@ class FakeComponentSet extends FakeProperties {
     super();
   }
 }
+
+/** A child of the element tree. Same styled surface as a component. */
+class FakeFrame extends FakeComponent {}
 
 function specFiles(): { file: string; bucket: string }[] {
   const found: { file: string; bucket: string }[] = [];
@@ -181,6 +184,7 @@ function createApi(variables: FakeVariable[]) {
       return component as unknown as ComponentNode;
     },
     createText: () => new FakeText() as unknown as TextNode,
+    createFrame: () => new FakeFrame() as unknown as FrameNode,
     combineAsVariants: (nodes: ComponentNode[]) =>
       new FakeComponentSet(nodes as unknown as FakeComponent[]) as unknown as ComponentSetNode,
     loadFontAsync: async () => undefined,

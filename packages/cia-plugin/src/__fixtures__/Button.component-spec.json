@@ -198,7 +198,10 @@
             "text-primary"
           ],
           "property": "color",
-          "state": "hover"
+          "state": "hover",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -237,6 +240,7 @@
           "state": "focus"
         }
       ],
+      "dimensions": [],
       "consumes": [],
       "defines": []
     },
@@ -270,6 +274,24 @@
         }
       ],
       "borders": [],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "18px",
+          "state": "default",
+          "parts": [
+            "svg"
+          ]
+        },
+        {
+          "property": "height",
+          "value": "18px",
+          "state": "default",
+          "parts": [
+            "svg"
+          ]
+        }
+      ],
       "consumes": [],
       "defines": []
     },
@@ -309,7 +331,10 @@
             "text-inverse"
           ],
           "property": "color",
-          "state": "default"
+          "state": "default",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -341,7 +366,10 @@
             "text-inverse"
           ],
           "property": "color",
-          "state": "hover"
+          "state": "hover",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -374,6 +402,7 @@
           "state": "focus"
         }
       ],
+      "dimensions": [],
       "consumes": [],
       "defines": []
     },
@@ -413,7 +442,10 @@
             "text-inverse"
           ],
           "property": "color",
-          "state": "default"
+          "state": "default",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -462,6 +494,7 @@
           "state": "focus"
         }
       ],
+      "dimensions": [],
       "consumes": [],
       "defines": []
     },
@@ -493,7 +526,10 @@
             "text-primary"
           ],
           "property": "color",
-          "state": "default"
+          "state": "default",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -517,7 +553,10 @@
             "text-inverse"
           ],
           "property": "color",
-          "state": "hover"
+          "state": "hover",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -550,6 +589,7 @@
           "state": "focus"
         }
       ],
+      "dimensions": [],
       "consumes": [],
       "defines": []
     },
@@ -573,7 +613,10 @@
             "text-primary"
           ],
           "property": "color",
-          "state": "default"
+          "state": "default",
+          "parts": [
+            ".icon"
+          ]
         },
         {
           "fn": "color",
@@ -622,6 +665,7 @@
           "state": "focus"
         }
       ],
+      "dimensions": [],
       "consumes": [],
       "defines": []
     },
@@ -660,6 +704,24 @@
         }
       ],
       "borders": [],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "16px",
+          "state": "default",
+          "parts": [
+            ".icon svg"
+          ]
+        },
+        {
+          "property": "height",
+          "value": "16px",
+          "state": "default",
+          "parts": [
+            ".icon svg"
+          ]
+        }
+      ],
       "consumes": [],
       "defines": []
     },
@@ -698,6 +760,24 @@
         }
       ],
       "borders": [],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "18px",
+          "state": "default",
+          "parts": [
+            ".icon svg"
+          ]
+        },
+        {
+          "property": "height",
+          "value": "18px",
+          "state": "default",
+          "parts": [
+            ".icon svg"
+          ]
+        }
+      ],
       "consumes": [],
       "defines": []
     },
@@ -736,6 +816,24 @@
         }
       ],
       "borders": [],
+      "dimensions": [
+        {
+          "property": "width",
+          "value": "20px",
+          "state": "default",
+          "parts": [
+            ".icon svg"
+          ]
+        },
+        {
+          "property": "height",
+          "value": "20px",
+          "state": "default",
+          "parts": [
+            ".icon svg"
+          ]
+        }
+      ],
       "consumes": [],
       "defines": []
     },
@@ -749,7 +847,11 @@
             "2xs"
           ],
           "property": "padding",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "small"
+          }
         },
         {
           "fn": "space",
@@ -757,7 +859,11 @@
             "xs"
           ],
           "property": "padding",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "small"
+          }
         },
         {
           "fn": "font",
@@ -767,7 +873,11 @@
             "normal"
           ],
           "property": "typography",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "small"
+          }
         },
         {
           "fn": "space-raw",
@@ -775,7 +885,11 @@
             "2xs"
           ],
           "property": "gap",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "small"
+          }
         },
         {
           "fn": "space-raw",
@@ -783,7 +897,11 @@
             "xs"
           ],
           "property": "padding",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "medium"
+          }
         },
         {
           "fn": "space",
@@ -791,7 +909,11 @@
             "sm"
           ],
           "property": "padding",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "medium"
+          }
         },
         {
           "fn": "font",
@@ -801,7 +923,11 @@
             "normal"
           ],
           "property": "typography",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "medium"
+          }
         },
         {
           "fn": "space",
@@ -809,7 +935,11 @@
             "2xs"
           ],
           "property": "gap",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "medium"
+          }
         },
         {
           "fn": "pad-asym",
@@ -818,7 +948,11 @@
             "md"
           ],
           "property": "padding",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
         },
         {
           "fn": "font",
@@ -828,7 +962,11 @@
             "normal"
           ],
           "property": "typography",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
         },
         {
           "fn": "space-raw",
@@ -836,12 +974,34 @@
             "xs"
           ],
           "property": "gap",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "size",
+            "value": "large"
+          }
         }
       ],
       "borders": [],
+      "dimensions": [],
       "consumes": [],
       "defines": []
+    }
+  ],
+  "tree": [
+    {
+      "selector": ".button",
+      "parent": null,
+      "tag": "button"
+    },
+    {
+      "selector": ".icon",
+      "parent": ".button",
+      "tag": "span"
+    },
+    {
+      "selector": ".label",
+      "parent": ".button",
+      "tag": "span"
     }
   ],
   "gaps": []

@@ -6,13 +6,19 @@
       "name": "checked",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".checkmarkIcon"
+      ]
     },
     {
       "name": "indeterminate",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".indeterminateIcon"
+      ]
     },
     {
       "name": "onChange",
@@ -51,7 +57,10 @@
       "name": "required",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".required"
+      ]
     },
     {
       "name": "helperText",
@@ -63,7 +72,10 @@
       "name": "error",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".errorMessage"
+      ]
     },
     {
       "name": "errorMessage",
@@ -424,7 +436,11 @@
             "error-default"
           ],
           "property": "--checkbox-bg-color-checked",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -432,7 +448,11 @@
             "surface-default"
           ],
           "property": "--checkbox-checkmark-color",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -440,7 +460,11 @@
             "error-default"
           ],
           "property": "--checkbox-border-color-hover",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -448,7 +472,11 @@
             "error-default"
           ],
           "property": "--checkbox-border-color-focus",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -456,7 +484,11 @@
             "error-default"
           ],
           "property": "--checkbox-border-color-checked",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -464,7 +496,11 @@
             "error-default"
           ],
           "property": "--checkbox-bg-color-indeterminate",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -472,7 +508,11 @@
             "surface-default"
           ],
           "property": "--checkbox-indeterminate-line-color",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -480,7 +520,11 @@
             "error-default"
           ],
           "property": "--checkbox-border-color-indeterminate",
-          "state": "default"
+          "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          }
         },
         {
           "fn": "color",
@@ -1212,30 +1256,45 @@
           "property": "background-color",
           "localToken": "--checkbox-bg-color-checked",
           "state": "default",
+          "parts": [
+            ".is-checked &"
+          ],
           "from": null
         },
         {
           "property": "border-color",
           "localToken": "--checkbox-border-color-checked",
           "state": "default",
+          "parts": [
+            ".is-checked &"
+          ],
           "from": null
         },
         {
           "property": "background-color",
           "localToken": "--checkbox-bg-color-indeterminate",
           "state": "default",
+          "parts": [
+            ".is-indeterminate &"
+          ],
           "from": null
         },
         {
           "property": "border-color",
           "localToken": "--checkbox-border-color-indeterminate",
           "state": "default",
+          "parts": [
+            ".is-indeterminate &"
+          ],
           "from": null
         },
         {
           "property": "background-color",
           "localToken": "--checkbox-bg-color-disabled",
           "state": "default",
+          "parts": [
+            ".is-disabled &"
+          ],
           "from": {
             "fn": "color",
             "args": [
@@ -1247,6 +1306,9 @@
           "property": "border-color",
           "localToken": "--checkbox-border-color-disabled",
           "state": "default",
+          "parts": [
+            ".is-disabled &"
+          ],
           "from": {
             "fn": "color",
             "args": [
@@ -1258,6 +1320,9 @@
           "property": "border-color",
           "localToken": "--checkbox-border-color-error",
           "state": "default",
+          "parts": [
+            ".is-error:not(.is-checked):not(.is-indeterminate) &"
+          ],
           "from": {
             "fn": "color",
             "args": [
@@ -1269,7 +1334,7 @@
       "defines": []
     },
     {
-      "selector": ".indeterminateIcon",
+      "selector": ".checkmarkIcon, .indeterminateIcon",
       "kind": "part",
       "ciaCalls": [],
       "borders": [],
@@ -1301,7 +1366,17 @@
             "args": [],
             "literal": "all 150ms ease-in-out"
           }
-        },
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".indeterminateIcon",
+      "kind": "part",
+      "ciaCalls": [],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
         {
           "property": "color",
           "localToken": "--checkbox-indeterminate-line-color",
@@ -1350,6 +1425,9 @@
           "property": "color",
           "localToken": "--checkbox-disabled-text-color",
           "state": "default",
+          "parts": [
+            ".checkboxWrapper[data-disabled] &, .checkboxWrapper[data-readonly] &"
+          ],
           "from": {
             "fn": "color",
             "args": [
@@ -1361,6 +1439,10 @@
           "property": "color",
           "localToken": "--checkbox-error-text-color",
           "state": "default",
+          "variant": {
+            "prop": "color",
+            "value": "error"
+          },
           "from": {
             "fn": "color",
             "args": [
@@ -1447,7 +1529,10 @@
             "xs"
           ],
           "property": "margin-right",
-          "state": "default"
+          "state": "default",
+          "parts": [
+            ".checkboxWrapper[data-label=\"left\"] &"
+          ]
         }
       ],
       "borders": [],
@@ -1463,6 +1548,9 @@
           "property": "margin-right",
           "localToken": "--checkbox-size",
           "state": "default",
+          "parts": [
+            ".checkboxWrapper[data-label=\"left\"] &"
+          ],
           "from": null
         }
       ],
@@ -1510,7 +1598,10 @@
             "xs"
           ],
           "property": "margin-right",
-          "state": "default"
+          "state": "default",
+          "parts": [
+            ".checkboxWrapper[data-label=\"left\"] &"
+          ]
         },
         {
           "fn": "font-size",
@@ -1545,14 +1636,17 @@
           "property": "margin-right",
           "localToken": "--checkbox-size",
           "state": "default",
+          "parts": [
+            ".checkboxWrapper[data-label=\"left\"] &"
+          ],
           "from": null
         }
       ],
       "defines": []
     },
     {
-      "selector": ".darkTheme .checkboxWrapper",
-      "kind": "part",
+      "selector": "[data-theme=\"dark\"] .checkboxWrapper, .dark .checkboxWrapper, .darkTheme .checkboxWrapper",
+      "kind": "other",
       "ciaCalls": [
         {
           "fn": "color",
@@ -1715,6 +1809,63 @@
       ]
     }
   ],
+  "tree": [
+    {
+      "selector": ".checkboxContainer",
+      "parent": null,
+      "tag": "div"
+    },
+    {
+      "selector": ".input",
+      "parent": ".checkboxContainer",
+      "tag": "input"
+    },
+    {
+      "selector": ".checkmark",
+      "parent": ".checkboxContainer",
+      "tag": "span"
+    },
+    {
+      "selector": ".checkmarkIcon",
+      "parent": ".checkmark",
+      "tag": "svg"
+    },
+    {
+      "selector": ".indeterminateIcon",
+      "parent": ".checkmark",
+      "tag": "svg"
+    },
+    {
+      "selector": ".label",
+      "parent": null,
+      "tag": "label"
+    },
+    {
+      "selector": ".required",
+      "parent": ".label",
+      "tag": "span"
+    },
+    {
+      "selector": ".checkboxWrapper",
+      "parent": null,
+      "tag": "div"
+    },
+    {
+      "selector": ".checkboxRow",
+      "parent": ".checkboxWrapper",
+      "tag": "div"
+    },
+    {
+      "selector": ".helperText",
+      "parent": ".checkboxWrapper",
+      "tag": "div"
+    },
+    {
+      "selector": ".errorMessage",
+      "parent": ".checkboxWrapper",
+      "tag": "div"
+    }
+  ],
   "gaps": [
     {
       "kind": "ambiguous-local-property",
@@ -1768,7 +1919,7 @@
     },
     {
       "kind": "ambiguous-local-property",
-      "selector": ".indeterminateIcon",
+      "selector": ".checkmarkIcon, .indeterminateIcon",
       "reason": "consumes --checkbox-checkmark-color for color, which is defined more than once with different values (color(text-primary), color(surface-default)), so which one applies depends on state or variant"
     },
     {

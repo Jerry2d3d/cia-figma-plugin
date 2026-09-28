@@ -15,6 +15,7 @@ const buildApi: BuildApi & PromptApi = {
   getLocalVariablesAsync: () => figma.variables.getLocalVariablesAsync(),
   createComponent: () => figma.createComponent(),
   createText: () => figma.createText(),
+  createFrame: () => figma.createFrame(),
   loadFontAsync: (font) => figma.loadFontAsync(font),
   setBoundVariableForPaint: (paint, field, variable) =>
     figma.variables.setBoundVariableForPaint(paint, field, variable),

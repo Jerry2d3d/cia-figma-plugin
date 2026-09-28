@@ -140,12 +140,39 @@ export interface StyleBlock {
   consumes?: ConsumedToken[];
 }
 
+/**
+ * One node of the component's element tree, read from its JSX.
+ *
+ * `parent` is the nearest ancestor carrying a class of its own, so unstyled
+ * wrappers are transparent, and `tag` is the JSX element. A node need NOT have a
+ * style block: 105 nodes across the library are rendered but never styled, and
+ * that is worth knowing rather than filtering, because it says a child exists and
+ * somewhere exists to put text. So the join runs one way: a styled part is looked
+ * up in the tree, never the reverse.
+ *
+ * Added upstream 2026-09-28. 93 of 99 components scan cleanly; the other six get
+ * no tree at all rather than a partial one, because a half-built tree looks like
+ * structure while missing exactly the parts nobody would think to check.
+ */
+export interface PartTreeNode {
+  selector: string;
+  /** Null for the root node. */
+  parent: string | null;
+  tag: string;
+}
+
 export interface ComponentProp {
   name: string;
   optional: boolean;
   type: string;
   values: string[] | null;
   default?: string;
+  /**
+   * For a boolean prop: the block selectors it shows or hides, resolved from the
+   * JSX rather than guessed from the name. Absent means unknown, never
+   * "controls nothing".
+   */
+  controls?: string[];
 }
 
 export interface ComponentSpec {
@@ -153,6 +180,8 @@ export interface ComponentSpec {
   component: string;
   props: ComponentProp[];
   styleBlocks: StyleBlock[];
+  /** Null when the JSX scan could not account for everything; absent on older specs. */
+  tree?: PartTreeNode[] | null;
 }
 
 export type ComponentSpecValidation =
@@ -204,6 +233,72 @@ function validatePartsPath(value: unknown, where: string, errors: string[]): voi
   if (value.some((entry) => entry.length === 0)) {
     errors.push(`${where}.parts must not contain an empty selector`);
   }
+}
+
+/**
+ * Shape and structure both, because this one gets walked rather than only read.
+ * A duplicate selector, a parent that does not exist or a cycle would each turn
+ * into a wrong or non-terminating build, so they are rejected here where the
+ * message can name them, rather than discovered halfway through creating frames
+ * in somebody's Figma file.
+ */
+function validateTree(value: unknown, errors: string[]): void {
+  if (!Array.isArray(value)) {
+    errors.push('"tree" must be an array or null');
+    return;
+  }
+  const selectors = new Set<string>();
+  const parentOf = new Map<string, string | null>();
+
+  value.forEach((entry, index) => {
+    const where = `tree[${index}]`;
+    if (typeof entry !== 'object' || entry === null) {
+      errors.push(`${where} is not an object`);
+      return;
+    }
+    const node = entry as Record<string, unknown>;
+    if (typeof node.selector !== 'string' || node.selector.length === 0) {
+      errors.push(`${where}.selector must be a non-empty string`);
+      return;
+    }
+    if (node.parent !== null && (typeof node.parent !== 'string' || node.parent.length === 0)) {
+      errors.push(`${where}.parent must be a non-empty string or null`);
+    }
+    if (typeof node.tag !== 'string' || node.tag.length === 0) {
+      errors.push(`${where}.tag must be a non-empty string`);
+    }
+    if (selectors.has(node.selector)) {
+      errors.push(`${where}.selector "${node.selector}" appears twice in the tree`);
+      return;
+    }
+    selectors.add(node.selector);
+    parentOf.set(node.selector, (node.parent as string | null) ?? null);
+  });
+
+  // Several roots is not rejected here. 18 of 99 components arrive that way, and
+  // it is a real signal rather than malformed input: the scan could not connect a
+  // subtree, or a conditional modifier class was read as a second element. Either
+  // way the data is well formed and the builder reports the ambiguity, because
+  // refusing the whole tree would lose the parts it did place correctly.
+  parentOf.forEach((parent, selector) => {
+    if (parent !== null && !selectors.has(parent)) {
+      errors.push(`tree node "${selector}" names parent "${parent}", which is not in the tree`);
+    }
+  });
+
+  // Walk each node to its root; anything that does not arrive is in a cycle.
+  parentOf.forEach((_parent, selector) => {
+    const seen = new Set<string>([selector]);
+    let current = parentOf.get(selector) ?? null;
+    while (current !== null && selectors.has(current)) {
+      if (seen.has(current)) {
+        errors.push(`tree node "${selector}" is in a parent cycle through "${current}"`);
+        return;
+      }
+      seen.add(current);
+      current = parentOf.get(current) ?? null;
+    }
+  });
 }
 
 function validateCall(call: unknown, where: string, errors: string[]): void {
@@ -406,6 +501,9 @@ export function validateComponentSpec(input: unknown): ComponentSpecValidation {
     errors.push('"styleBlocks" must be an array');
   } else {
     value.styleBlocks.forEach((block, index) => validateBlock(block, `styleBlocks[${index}]`, errors));
+  }
+  if (value.tree !== undefined && value.tree !== null) {
+    validateTree(value.tree, errors);
   }
 
   if (errors.length > 0) {

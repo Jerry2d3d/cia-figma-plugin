@@ -18,7 +18,10 @@
       "name": "error",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".errorIcon"
+      ]
     },
     {
       "name": "errorMessage",
@@ -30,13 +33,21 @@
       "name": "success",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".successIcon"
+      ]
     },
     {
       "name": "loading",
       "optional": true,
       "type": "boolean",
-      "values": null
+      "values": null,
+      "controls": [
+        ".loadingIcon",
+        ".spinner",
+        ".spinnerCircle"
+      ]
     },
     {
       "name": "size",
@@ -1187,6 +1198,78 @@
         }
       ],
       "defines": []
+    }
+  ],
+  "tree": [
+    {
+      "selector": ".inputWrapper",
+      "parent": null,
+      "tag": "div"
+    },
+    {
+      "selector": ".label",
+      "parent": ".inputWrapper",
+      "tag": "label"
+    },
+    {
+      "selector": ".required",
+      "parent": ".label",
+      "tag": "span"
+    },
+    {
+      "selector": ".inputContainer",
+      "parent": ".inputWrapper",
+      "tag": "div"
+    },
+    {
+      "selector": ".infoIconOutside",
+      "parent": ".inputContainer",
+      "tag": "button"
+    },
+    {
+      "selector": ".infoIcon",
+      "parent": ".inputContainer",
+      "tag": "button"
+    },
+    {
+      "selector": ".tooltip",
+      "parent": ".infoIconOutside",
+      "tag": "span"
+    },
+    {
+      "selector": ".input",
+      "parent": ".inputContainer",
+      "tag": "input"
+    },
+    {
+      "selector": ".icon",
+      "parent": ".inputContainer",
+      "tag": "span"
+    },
+    {
+      "selector": ".loadingIcon",
+      "parent": ".inputContainer",
+      "tag": "span"
+    },
+    {
+      "selector": ".spinner",
+      "parent": ".loadingIcon",
+      "tag": "svg"
+    },
+    {
+      "selector": ".spinnerCircle",
+      "parent": ".spinner",
+      "tag": "circle"
+    },
+    {
+      "selector": ".successIcon",
+      "parent": ".inputContainer",
+      "tag": "span"
+    },
+    {
+      "selector": ".errorIcon",
+      "parent": ".inputContainer",
+      "tag": "span"
     }
   ],
   "gaps": []

@@ -107,7 +107,7 @@ class FakeComponent extends FakeProperties {
 
   maxHeight: number | null = null;
 
-  children: FakeText[] = [];
+  children: (FakeText | FakeFrame)[] = [];
 
   bound: Record<string, string> = {};
 
@@ -116,7 +116,69 @@ class FakeComponent extends FakeProperties {
     this.height = height;
   }
 
-  appendChild(child: FakeText) {
+  appendChild(child: FakeText | FakeFrame) {
+    this.children.push(child);
+  }
+
+  setBoundVariable(field: string, variable: Variable) {
+    this.bound[field] = variable.id;
+  }
+}
+
+/**
+ * A tree child. Same styled surface as a component, which is the point: the
+ * builder applies one set of operations to both, so the fake has to accept the
+ * same ones or the test would pass on a shape Figma does not have.
+ */
+class FakeFrame {
+  name = '';
+
+  itemSpacing = 0;
+
+  paddingTop = 0;
+
+  paddingLeft = 0;
+
+  fills: SolidPaint[] = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+
+  strokes: SolidPaint[] = [];
+
+  strokeWeight = 0;
+
+  strokeAlign = '';
+
+  layoutMode = 'NONE';
+
+  primaryAxisSizingMode = '';
+
+  counterAxisSizingMode = '';
+
+  primaryAxisAlignItems = '';
+
+  counterAxisAlignItems = '';
+
+  width = 100;
+
+  height = 100;
+
+  minWidth: number | null = null;
+
+  maxWidth: number | null = null;
+
+  minHeight: number | null = null;
+
+  maxHeight: number | null = null;
+
+  children: (FakeText | FakeFrame)[] = [];
+
+  bound: Record<string, string> = {};
+
+  resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
+
+  appendChild(child: FakeText | FakeFrame) {
     this.children.push(child);
   }
 
@@ -131,6 +193,58 @@ class FakeComponentSet extends FakeProperties {
   constructor(public children: FakeComponent[]) {
     super();
   }
+}
+
+/**
+ * The text node a component or a tree frame carries. Once the element tree is
+ * built, a root's first child may be a frame rather than the label, so tests ask
+ * for the text by what it is instead of by position.
+ */
+function labelOf(node: FakeComponent | FakeFrame): FakeText {
+  // Named rather than positional: every built frame carries a text node, so the
+  // component's own label is the one called "label", wherever the tree put it.
+  const found = textIn(node, (text) => text.name === "label") ?? textIn(node);
+  if (!found) {
+    throw new Error(`${node.name || "node"} has no text anywhere beneath it`);
+  }
+  return found;
+}
+
+/** Depth-first, because the element tree can put the label several levels down. */
+function textIn(
+  node: FakeComponent | FakeFrame,
+  match: (text: FakeText) => boolean = () => true,
+): FakeText | undefined {
+  for (const child of node.children) {
+    if (child instanceof FakeText) {
+      if (match(child)) {
+        return child;
+      }
+      continue;
+    }
+    const nested = textIn(child, match);
+    if (nested) {
+      return nested;
+    }
+  }
+  return undefined;
+}
+
+/** A named descendant frame, for asserting the element tree was built. */
+function frameNamed(node: FakeComponent | FakeFrame, name: string): FakeFrame | undefined {
+  for (const child of node.children) {
+    if (child instanceof FakeText) {
+      continue;
+    }
+    if (child.name === name) {
+      return child;
+    }
+    const nested = frameNamed(child, name);
+    if (nested) {
+      return nested;
+    }
+  }
+  return undefined;
 }
 
 /** Variable names exactly as figma-import-export's boilerplate token export has them today. */
@@ -174,6 +288,7 @@ function createFakeApi(collectionName = 'boilerplate') {
     new FakeVariable('surface-muted', 'other', 'COLOR'),
   ];
   const components: FakeComponent[] = [];
+  const frames: FakeFrame[] = [];
   const sets: FakeComponentSet[] = [];
   const loadedFonts: FontName[] = [];
   const page = {} as BaseNode & ChildrenMixin;
@@ -187,6 +302,11 @@ function createFakeApi(collectionName = 'boilerplate') {
       return component as unknown as ComponentNode;
     },
     createText: () => new FakeText() as unknown as TextNode,
+    createFrame: () => {
+      const frame = new FakeFrame();
+      frames.push(frame);
+      return frame as unknown as FrameNode;
+    },
     loadFontAsync: async (font) => {
       loadedFonts.push(font);
     },
@@ -201,7 +321,7 @@ function createFakeApi(collectionName = 'boilerplate') {
     currentPage: page,
   };
 
-  return { api, components, sets, loadedFonts };
+  return { api, components, frames, sets, loadedFonts };
 }
 
 const boundColor = (paint: SolidPaint) => paint.boundVariables?.color?.id;
@@ -253,7 +373,7 @@ describe('buildComponent', () => {
       bottomRightRadius: 'radius-lg',
     });
 
-    const label = primaryMedium.children[0];
+    const label = labelOf(primaryMedium);
     expect(label.characters).toBe('Button');
     expect(label.fontName).toEqual({ family: 'Inter', style: 'Semi Bold' });
     expect(loadedFonts).toContainEqual({ family: 'Inter', style: 'Semi Bold' });
@@ -269,7 +389,7 @@ describe('buildComponent', () => {
     const outlineLarge = components.find((c) => c.name === 'variant=outline, size=large') as FakeComponent;
     expect(boundColor(outlineLarge.fills[0])).toBe('surface-muted');
     expect(boundColor(outlineLarge.strokes[0])).toBe('border-emphasis');
-    expect(boundColor(outlineLarge.children[0].fills[0])).toBe('text-primary');
+    expect(boundColor(labelOf(outlineLarge).fills[0])).toBe('text-primary');
     expect(outlineLarge.bound.paddingTop).toBe('space-sm');
     expect(outlineLarge.bound.paddingLeft).toBe('space-lg');
     expect(outlineLarge.bound.itemSpacing).toBe('space-sm');
@@ -304,9 +424,13 @@ describe('buildComponent', () => {
     const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
 
     const skipped = result.skipped.map((skip) => `${skip.where}: ${skip.reason}`);
-    expect(skipped).toContain('.button: 4 hover call(s) skipped: v1 builds the default state only');
+    expect(skipped).toContain('.button: 3 hover call(s) skipped: v1 builds the default state only');
     expect(skipped).toContain('.button: 2 focus call(s) skipped: v1 builds the default state only');
-    expect(skipped).toContain('.icon: part skipped: v1 builds the root frame and its label only');
+    // `.icon` is in Button's element tree, so it is built rather than skipped.
+    // Only its hover styling and its transition remain unbuilt, for the ordinary
+    // reasons that apply to every block.
+    expect(skipped.some((s) => s.startsWith('.icon: part skipped'))).toBe(false);
+    expect(skipped).toContain('.icon: 1 hover call(s) skipped: v1 builds the default state only');
     expect(skipped).toContain(
       '@include cia.mobile-only: skipped: media queries and other non-variant blocks are not built',
     );
@@ -331,7 +455,7 @@ describe('buildComponent', () => {
     // .small is font(semibold, sm, normal): 14px at a 1.5 multiplier.
     const small = components.find((component) => component.name.includes('small'));
     expect(small).toBeDefined();
-    const label = small!.children[0];
+    const label = labelOf(small!);
     expect(label.fontSize).toBe(14);
     expect(label.lineHeight).toEqual({ value: 150, unit: 'PERCENT' });
     // The weight has no token either, but the Figma style needs none.
@@ -380,7 +504,7 @@ describe('buildComponent', () => {
     });
     // Every variant's label follows the set's TEXT property.
     components.forEach((component) => {
-      expect(component.children[0].componentPropertyReferences?.characters).toBe(sets[0].properties.label && 'label#1:0');
+      expect(labelOf(component).componentPropertyReferences?.characters).toBe(sets[0].properties.label && 'label#1:0');
     });
     expect(result.skipped).toContainEqual({
       where: 'props',
@@ -417,8 +541,8 @@ describe('buildComponent', () => {
     const built = components[0];
     expect(boundColor(built.fills[0])).toBe('surface-subtle');
     expect(boundColor(built.strokes[0])).toBe('brand-primary');
-    expect(built.children[0].fontName.style).toBe('Bold');
-    expect(built.children[0].bound).toEqual({ fontSize: 'font-size-xs', fontWeight: 'font-weight-bold' });
+    expect(labelOf(built).fontName.style).toBe('Bold');
+    expect(labelOf(built).bound).toEqual({ fontSize: 'font-size-xs', fontWeight: 'font-weight-bold' });
     expect(built.bound.paddingTop).toBe('space-xs');
     expect(built.bound.paddingLeft).toBe('space-md');
     expect(result.gaps.filter((gap) => gap.where === '.badge')).toEqual([]);
@@ -454,8 +578,8 @@ describe('buildComponent', () => {
       'font(reg, base) applied as Regular: cia exports no "font-weight-normal" variable, so this weight cannot follow a theme',
     );
     // The italic preset resolves to a real Figma style and a real weight token.
-    expect(components[0].children[0].fontName).toEqual({ family: 'Inter', style: 'Medium Italic' });
-    expect(components[0].children[0].bound.fontWeight).toBe('font-weight-medium');
+    expect(labelOf(components[0]).fontName).toEqual({ family: 'Inter', style: 'Medium Italic' });
+    expect(labelOf(components[0]).bound.fontWeight).toBe('font-weight-medium');
   });
 
   it('names the two structural problems the real component specs have', async () => {
@@ -515,7 +639,7 @@ describe('buildComponent', () => {
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
     // `display` is size 8, weight bold, line height 1.25, letter spacing -0.025em.
-    const label = components[0].children[0];
+    const label = labelOf(components[0]);
     expect(label.fontName.style).toBe('Bold');
     expect(label.fontSize).toBe(36);
     expect(label.letterSpacing).toEqual({ value: -2.5, unit: 'PERCENT' });
@@ -814,7 +938,7 @@ describe('declared defaults', () => {
 
     await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
-    expect(components[0].children[0].characters).toBe('Code');
+    expect(labelOf(components[0]).characters).toBe('Code');
     expect(components[0].properties.label).toEqual({ type: 'TEXT', defaultValue: 'Code' });
     expect(sets).toHaveLength(0);
   });
@@ -824,7 +948,7 @@ describe('declared defaults', () => {
 
     await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
 
-    expect(components[0].children[0].characters).toBe('Button');
+    expect(labelOf(components[0]).characters).toBe('Button');
   });
 });
 
@@ -869,7 +993,9 @@ describe('components whose styling is all in parts', () => {
     const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
 
     expect(result.bindings).toBeGreaterThan(0);
-    expect(result.unbuiltPartCalls).toBe(3);
+    // Button's `.icon` is in its element tree, so its styling now lands on that
+    // node instead of being counted as unbuildable.
+    expect(result.unbuiltPartCalls).toBe(0);
   });
 });
 
@@ -1299,7 +1425,7 @@ describe('a block that sets font-size more than once', () => {
     // folded into one block. Only `base` has a variable in the collection.
     const { result } = await buildComponent(foldedSpec(['sm', 'base', 'lg']), { collectionName: 'boilerplate' }, api);
 
-    expect(components[0].children[0].bound.fontSize).toBe('font-size-base');
+    expect(labelOf(components[0]).bound.fontSize).toBe('font-size-base');
     expect(result.gaps).toHaveLength(1);
     expect(result.gaps[0].reason).toContain('font-size is set 3 times in one block');
     expect(result.gaps[0].reason).toContain('14px, font-size-base, 18px');
@@ -1313,8 +1439,8 @@ describe('a block that sets font-size more than once', () => {
 
     const { result } = await buildComponent(foldedSpec(['sm', 'lg']), { collectionName: 'boilerplate' }, api);
 
-    expect(components[0].children[0].fontSize).toBe(14);
-    expect(components[0].children[0].bound.fontSize).toBeUndefined();
+    expect(labelOf(components[0]).fontSize).toBe(14);
+    expect(labelOf(components[0]).bound.fontSize).toBeUndefined();
     expect(result.gaps[0].reason).toContain('used 14px');
   });
 
@@ -1323,7 +1449,7 @@ describe('a block that sets font-size more than once', () => {
 
     const { result } = await buildComponent(foldedSpec(['sm', 'sm']), { collectionName: 'boilerplate' }, api);
 
-    expect(components[0].children[0].fontSize).toBe(14);
+    expect(labelOf(components[0]).fontSize).toBe(14);
     expect(result.gaps).toEqual([]);
   });
 
@@ -1357,8 +1483,8 @@ describe('a block that sets font-size more than once', () => {
     const base = components.find((component) => !component.name.includes('small'));
     // The small variant costs a binding to gain the right size. Before the scale
     // was mirrored it kept the binding and rendered at the base size instead.
-    expect(small?.children[0].fontSize).toBe(14);
-    expect(base?.children[0].bound.fontSize).toBe('font-size-base');
+    expect(labelOf(small as FakeComponent).fontSize).toBe(14);
+    expect(labelOf(base as FakeComponent).bound.fontSize).toBe('font-size-base');
   });
 });
 
@@ -1378,7 +1504,7 @@ describe('Heading, from the real spec', () => {
     const byLevel = new Map(
       components.map((component) => {
         const level = /level=(\d)/.exec(component.name)?.[1] ?? '?';
-        return [level, component.children[0]];
+        return [level, labelOf(component)];
       }),
     );
 
@@ -1611,11 +1737,11 @@ describe('declarations tagged with the prop value they belong to', () => {
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
     expect(result.variantNames).toEqual(['size=md', 'size=sm', 'size=lg']);
-    const byValue = new Map(components.map((c) => [/size=(\w+)/.exec(c.name)?.[1], c.children[0]]));
+    const byValue = new Map(components.map((c) => [/size=(\w+)/.exec(c.name)?.[1], labelOf(c)]));
     expect(byValue.get('sm')?.fontSize).toBe(14);
     expect(byValue.get('lg')?.fontSize).toBe(18);
     expect(byValue.get('md')?.bound.fontSize).toBe('font-size-base');
-    components.forEach((component) => expect(component.children[0].fills).toHaveLength(1));
+    components.forEach((component) => expect(labelOf(component).fills).toHaveLength(1));
     expect(result.gaps).toEqual([]);
   });
 
@@ -1669,7 +1795,7 @@ describe('declarations tagged with the prop value they belong to', () => {
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
     expect(result.variantNames).toHaveLength(1);
-    expect(components[0].children[0].fontSize).toBe(12);
+    expect(labelOf(components[0]).fontSize).toBe(12);
     expect(result.skipped.some((s) => s.reason.includes('part skipped'))).toBe(true);
   });
 
@@ -1710,12 +1836,17 @@ describe('Checkbox, from the real spec', () => {
 
     expect(result.variantNames).toHaveLength(12);
     const sizes = new Set(
-      components.map((component) => `${/size=(\w+)/.exec(component.name)?.[1]}:${component.children[0].fontSize}`),
+      components.map((component) => `${/size=(\w+)/.exec(component.name)?.[1]}:${labelOf(component).fontSize}`),
     );
     expect(sizes).toContain('sm:14');
     expect(sizes).toContain('lg:18');
-    expect(result.gaps.some((g) => g.reason.includes('times in one block'))).toBe(false);
-    expect(result.skipped.some((s) => s.reason.includes('the color axis builds 4 variants'))).toBe(true);
+    // The fold on the wrapper is gone, which was the point of the variant tag.
+    const folds = result.gaps.filter((gap) => gap.reason.includes('times in one block'));
+    expect(folds.map((gap) => gap.where)).not.toContain('.checkboxWrapper');
+    // One remains, on a part, and it is a pseudo-element rather than a variant or
+    // a descendant: `.errorMessage::before` is an error icon with its own size,
+    // and a pseudo-element is not tagged the way a child selector now is.
+    expect(folds.map((gap) => gap.where)).toEqual(['.errorMessage']);
   });
 });
 
@@ -1745,7 +1876,7 @@ describe('declarations that came from a descendant selector', () => {
 
     // The root keeps its own background and takes neither child's size.
     expect(components[0].fills).toHaveLength(1);
-    expect(components[0].children[0].fontSize).toBe(12);
+    expect(labelOf(components[0]).fontSize).toBe(12);
     // Two sizes for one element was the old ambiguity, and it is gone.
     expect(result.gaps).toEqual([]);
     // They are reported as unbuilt child styling instead.
@@ -1778,10 +1909,9 @@ describe('declarations that came from a descendant selector', () => {
     const parts = result.skipped.filter((s) => s.reason.includes('part skipped'));
     // Two children, not three: the two declarations on `.label` share one.
     expect(parts).toHaveLength(2);
-    expect(parts.map((s) => s.where)).toEqual([
-      '.inputWrapper .label',
-      '.inputWrapper .helperText, .errorMessage',
-    ]);
+    // Keyed by the innermost selector, because that is the element being styled
+    // and the name the element tree knows it by. The selector list stays whole.
+    expect(parts.map((s) => s.where)).toEqual(['.label', '.helperText, .errorMessage']);
     expect(result.bindings).toBe(0);
   });
 
@@ -1813,9 +1943,9 @@ describe('declarations that came from a descendant selector', () => {
 
     // No size axis forms: nothing about the root differs between the two sizes.
     expect(result.variantNames).toHaveLength(1);
-    expect(components[0].children[0].fontSize).toBe(12);
+    expect(labelOf(components[0]).fontSize).toBe(12);
     // The variant is kept in the name, so the fact is not lost.
-    expect(result.skipped.some((s) => s.where === '.wrapper .label [size=lg]')).toBe(true);
+    expect(result.skipped.some((s) => s.where === '.label [size=lg]')).toBe(true);
   });
 
   it('applies a declaration with no path, so an ordinary block is untouched', async () => {
@@ -1835,7 +1965,7 @@ describe('declarations that came from a descendant selector', () => {
 
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
-    expect(components[0].children[0].bound.fontSize).toBe('font-size-base');
+    expect(labelOf(components[0]).bound.fontSize).toBe('font-size-base');
     expect(result.unbuiltPartCalls).toBe(0);
   });
 });
@@ -1850,15 +1980,159 @@ describe('Input, from the real spec', () => {
     // to the `.helperText, .errorMessage` pair, neither of which is the root.
     expect(result.gaps.some((g) => g.reason.includes('one block'))).toBe(false);
     components.forEach((component) => {
-      expect(component.children[0].fontSize).toBe(12);
+      expect(labelOf(component).fontSize).toBe(12);
     });
+    // `.label` is in Input's element tree, so its size is built onto that node.
+    // The two-selector list is not a single node, so it is still reported.
+    expect(frameNamed(components[0], 'label')).toBeDefined();
     expect(
-      result.skipped.some((s) => s.where === '.inputWrapper[data-size="large"] .label'),
+      result.skipped.some((s) => s.where === '.helperText, .errorMessage'),
     ).toBe(true);
-    expect(
-      result.skipped.some(
-        (s) => s.where === '.inputWrapper[data-size="large"] .helperText, .errorMessage',
-      ),
-    ).toBe(true);
+  });
+});
+
+describe('the component element tree', () => {
+  const treeSpec = (tree: { selector: string; parent: string | null; tag: string }[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Treeish',
+    props: [],
+    tree,
+    styleBlocks: [
+      { selector: '.root', kind: 'base', ciaCalls: [{ fn: 'color', args: ['surface-default'], property: 'background-color', state: 'default' }] },
+      { selector: '.icon', kind: 'part', ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }] },
+      { selector: '.label', kind: 'part', ciaCalls: [{ fn: 'font-size', args: ['base'], property: 'font-size', state: 'default' }] },
+    ],
+  });
+
+  it('builds each node as a nested frame and styles it, instead of discarding the part', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      treeSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.icon', parent: '.root', tag: 'span' },
+        { selector: '.label', parent: '.root', tag: 'span' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const icon = frameNamed(components[0], 'icon');
+    const label = frameNamed(components[0], 'label');
+    expect(icon).toBeDefined();
+    expect(label).toBeDefined();
+    // The part's colour landed on its own node's text, not on the root.
+    expect(labelOf(icon!).fills).toHaveLength(1);
+    expect(labelOf(label!).bound.fontSize).toBe('font-size-base');
+    // Nothing is reported as unbuildable, because everything found a node.
+    expect(result.unbuiltPartCalls).toBe(0);
+    expect(result.skipped.some((s) => s.reason.includes('part skipped'))).toBe(false);
+  });
+
+  it('nests a grandchild under its own parent, not under the root', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      treeSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.icon', parent: '.root', tag: 'span' },
+        { selector: '.label', parent: '.icon', tag: 'span' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const icon = frameNamed(components[0], 'icon');
+    expect(icon).toBeDefined();
+    // Found inside the icon, which is only true if containment was honoured.
+    expect(frameNamed(icon!, 'label')).toBeDefined();
+    expect(components[0].children.filter((child) => child instanceof FakeFrame)).toHaveLength(1);
+  });
+
+  it('puts the component text in the label node rather than loose on the root', async () => {
+    const { api, components, sets } = createFakeApi();
+    const spec = treeSpec([
+      { selector: '.root', parent: null, tag: 'div' },
+      { selector: '.label', parent: '.root', tag: 'span' },
+    ]);
+    spec.props = [{ name: 'label', optional: true, type: 'string', values: null, default: 'Go' }];
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const label = frameNamed(components[0], 'label');
+    expect(labelOf(label!).characters).toBe('Go');
+    expect(labelOf(label!).name).toBe('label');
+    // The root has no text of its own: exactly one text node carries the label.
+    expect(components[0].children.some((child) => child instanceof FakeText)).toBe(false);
+    expect(result.properties).toContain('label: TEXT');
+    expect(sets.length + 1).toBeGreaterThan(0);
+  });
+
+  it('keeps the root label when the tree offers nowhere to put it', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      treeSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.icon', parent: '.root', tag: 'span' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    // No `.label` node, so the root carries the text as it always did.
+    expect(components[0].children.some((child) => child instanceof FakeText)).toBe(true);
+  });
+
+  it('gives every built node a text child, so a frame with only a background is visible', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      treeSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.icon', parent: '.root', tag: 'span' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const icon = frameNamed(components[0], 'icon');
+    // An auto-layout frame with no children collapses to nothing in Figma, and
+    // the name makes the structure readable on the canvas.
+    expect(labelOf(icon!).characters).toBe('icon');
+    expect(icon!.layoutMode).toBe('HORIZONTAL');
+  });
+
+  it('builds one subtree and reports the rest when several nodes claim no parent', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      treeSpec([
+        // `.root` is what the base block names, so it wins.
+        { selector: '.icon', parent: null, tag: 'span' },
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.label', parent: '.root', tag: 'span' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(frameNamed(components[0], 'label')).toBeDefined();
+    // `.icon` has no known position, so it is not placed somewhere plausible.
+    expect(frameNamed(components[0], 'icon')).toBeUndefined();
+    const reported = result.gaps.find((gap) => gap.reason.includes('claiming no parent'));
+    expect(reported?.reason).toContain('built the subtree under .root');
+    expect(result.skipped.some((s) => s.where === '.icon' && s.reason.includes('not in the component element tree'))).toBe(true);
+  });
+
+  it('builds nothing from a tree when the producer could not scan the component', async () => {
+    const { api, components } = createFakeApi();
+    const spec = treeSpec([]);
+    spec.tree = null;
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children.filter((child) => child instanceof FakeFrame)).toHaveLength(0);
+    expect(result.skipped.some((s) => s.reason.includes('has no element tree'))).toBe(true);
   });
 });

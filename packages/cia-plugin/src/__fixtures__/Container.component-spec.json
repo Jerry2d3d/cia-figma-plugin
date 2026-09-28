@@ -183,5 +183,12 @@
       "defines": []
     }
   ],
+  "tree": [
+    {
+      "selector": ".container",
+      "parent": null,
+      "tag": "Component"
+    }
+  ],
   "gaps": []
 }

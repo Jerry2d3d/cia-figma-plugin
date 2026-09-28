@@ -63,3 +63,75 @@ describe('validateComponentSpec', () => {
     expect(validateComponentSpec('nope').valid).toBe(false);
   });
 });
+
+describe('the element tree', () => {
+  const withTree = (tree: unknown) => ({
+    specVersion: 2,
+    component: 'Treeish',
+    props: [],
+    styleBlocks: [],
+    tree,
+  });
+
+  it('accepts a well-formed tree', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.label', parent: '.root', tag: 'span' },
+      ]),
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('accepts null, which is how the producer says it could not scan the component', () => {
+    expect(validateComponentSpec(withTree(null)).valid).toBe(true);
+  });
+
+  it('accepts several roots, because that is a real signal rather than malformed input', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.a', parent: null, tag: 'div' },
+        { selector: '.b', parent: null, tag: 'div' },
+      ]),
+    );
+    // 18 of 99 components arrive this way. The builder reports the ambiguity;
+    // rejecting the tree here would lose the parts it does place correctly.
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects a parent that is not in the tree, which would build nothing', () => {
+    const result = validateComponentSpec(
+      withTree([{ selector: '.label', parent: '.missing', tag: 'span' }]),
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors[0]).toContain('names parent ".missing", which is not in the tree');
+    }
+  });
+
+  it('rejects a duplicate selector, because two nodes cannot be one element', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.root', parent: null, tag: 'span' },
+      ]),
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors[0]).toContain('appears twice in the tree');
+    }
+  });
+
+  it('rejects a parent cycle rather than walking it forever', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.a', parent: '.b', tag: 'div' },
+        { selector: '.b', parent: '.a', tag: 'div' },
+      ]),
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors.some((error) => error.includes('parent cycle'))).toBe(true);
+    }
+  });
+});

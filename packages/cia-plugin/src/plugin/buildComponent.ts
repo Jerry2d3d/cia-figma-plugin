@@ -8,6 +8,7 @@ import {
   DeclarationParts,
   DeclarationVariant,
   DimensionSpec,
+  PartTreeNode,
   StyleBlock,
 } from '@/shared/componentSpec';
 
@@ -51,6 +52,8 @@ export interface BuildApi {
   getLocalVariablesAsync(): Promise<Variable[]>;
   createComponent(): ComponentNode;
   createText(): TextNode;
+  /** Used for the element tree: each styled child of a component is a frame. */
+  createFrame(): FrameNode;
   loadFontAsync(font: FontName): Promise<void>;
   setBoundVariableForPaint(paint: SolidPaint, field: 'color', variable: Variable): SolidPaint;
   combineAsVariants(nodes: ComponentNode[], parent: BaseNode & ChildrenMixin): ComponentSetNode;
@@ -772,7 +775,13 @@ class Resolver {
       // cia's `brand(x)` resolves to `var(--brand-x)`, a colour like any other.
       case 'brand':
         return this.resolvePaint(`brand-${call.args[0]}`, call, where, signature);
-      case 'radius': {
+      // `radius-raw(x)` returns the theme's value directly instead of a var(), so
+      // in CSS it is baked at compile time and cannot follow a theme. It is bound
+      // here anyway, for the same reason `space-raw` is: the size it names is the
+      // same token, and binding makes the Figma component follow the theme, where
+      // a baked number would silently be one theme's value in all ten.
+      case 'radius':
+      case 'radius-raw': {
         const variable = this.lookup(`radius-${call.args[0]}`, 'FLOAT', where, `${signature} as border-radius`);
         return variable ? [{ kind: 'radius', value: variable }] : [];
       }
@@ -1128,12 +1137,17 @@ function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): Compon
      * recognisably that, even though neither is built yet.
      */
     const partBucket = (parts: DeclarationParts, tag?: DeclarationVariant): StyleBlock => {
-      const path = parts.join(' ');
-      const key = tag ? `${path} [${tag.prop}=${tag.value}]` : path;
+      // The innermost selector is the element being styled, and it is the name the
+      // element tree knows that node by, so it is what the block is keyed on: a
+      // child styled from two different ancestors is still one child. A selector
+      // list is kept whole, because it names several elements and matches no
+      // single node, which is exactly what should be reported rather than built.
+      const innermost = parts[parts.length - 1];
+      const key = tag ? `${innermost} [${tag.prop}=${tag.value}]` : innermost;
       let target = split.get(key);
       if (!target) {
         target = {
-          selector: `${block.selector} ${key}`,
+          selector: key,
           kind: 'part',
           ciaCalls: [],
           borders: [],
@@ -1306,10 +1320,162 @@ function lastOp<K extends Op['kind']>(
     .pop();
 }
 
+/** A readable name for a canvas layer, from a selector: `.helperText` -> helperText. */
+function layerName(selector: string): string {
+  return selector.replace(/^[.#]/, '') || selector;
+}
+
+/**
+ * Which tree node is the component's own root element, and what could not be
+ * connected to it.
+ *
+ * 18 of 99 components arrive with several nodes claiming no parent, and that is
+ * never a real forest. Checkbox's `.label` and `.checkboxContainer` genuinely are
+ * descendants of `.checkboxRow`; the scan just could not join them. Switch's
+ * `.disabled` and Text's `.textMuted` are conditional classes on an element that
+ * already has one, so they are not separate elements at all.
+ *
+ * The base style block names the root element independently of the tree, so it
+ * settles which root is real. Attaching the others beneath it would invent
+ * containment for Checkbox and invent an element for Text, so they are reported
+ * and their subtrees left unbuilt, exactly as parts were before any tree existed.
+ */
+function chooseRoot(
+  tree: PartTreeNode[],
+  baseSelectors: string[],
+): { rootSelector: string | null; orphanRoots: string[] } {
+  const roots = tree.filter((node) => node.parent === null).map((node) => node.selector);
+  if (roots.length === 0) {
+    return { rootSelector: null, orphanRoots: [] };
+  }
+  if (roots.length === 1) {
+    return { rootSelector: roots[0], orphanRoots: [] };
+  }
+  const named = roots.find((selector) => baseSelectors.includes(selector));
+  const chosen = named ?? roots[0];
+  return { rootSelector: chosen, orphanRoots: roots.filter((selector) => selector !== chosen) };
+}
+
+/** Every node in the subtree under one root, including the root itself. */
+function subtreeOf(tree: PartTreeNode[], rootSelector: string): Set<string> {
+  const inside = new Set<string>([rootSelector]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    tree.forEach((node) => {
+      if (node.parent !== null && inside.has(node.parent) && !inside.has(node.selector)) {
+        inside.add(node.selector);
+        grew = true;
+      }
+    });
+  }
+  return inside;
+}
+
+/**
+ * Builds the component's element tree as nested frames, and applies each part
+ * block's styling to the frame it belongs to.
+ *
+ * Until this existed, a part's styling was reported and discarded, so 25
+ * components arrived as empty frames and the rest wore only what their root
+ * block declared. The tree says which element each part is, so the styling can
+ * land on the right node instead of nowhere.
+ *
+ * Every node in the tree is built, including the 105 that have no styling of
+ * their own, because the point of a library component is that a designer can see
+ * and switch off its parts. An unstyled node is still a real element, and it is
+ * where text goes.
+ *
+ * Each frame carries a text child. That is not decoration: an auto-layout frame
+ * with no children collapses to nothing in Figma, so a part with only a
+ * background colour would be invisible. Naming it after its selector also makes
+ * the structure readable on the canvas.
+ */
+async function buildTree(
+  api: BuildApi,
+  root: ComponentNode,
+  tree: PartTreeNode[],
+  rootSelector: string | null,
+  opsBySelector: Map<string, Op[]>,
+  placeholder: string,
+  textHome: string | null,
+): Promise<{ bindings: number; labelText?: TextNode; built: number }> {
+  const frameBySelector = new Map<string, StyledFrame>();
+  if (rootSelector) {
+    frameBySelector.set(rootSelector, root);
+  }
+  let bindings = 0;
+  let built = 0;
+  let labelText: TextNode | undefined;
+
+  // The producer emits parents before children, but a spec is external input, so
+  // the order is earned rather than assumed: repeat until nothing more can be
+  // placed, which also terminates on a tree whose shape this cannot walk.
+  const pending = tree.filter((node) => node.parent !== null);
+  while (pending.length > 0) {
+    const placeable = pending.filter((node) => frameBySelector.has(node.parent as string));
+    if (placeable.length === 0) {
+      break;
+    }
+    for (const node of placeable) {
+      pending.splice(pending.indexOf(node), 1);
+      const parent = frameBySelector.get(node.parent as string) as StyledFrame;
+      const frame = api.createFrame();
+      frame.name = layerName(node.selector);
+      parent.appendChild(frame);
+      frameBySelector.set(node.selector, frame);
+      built += 1;
+
+      const text = api.createText();
+      const isTextHome = node.selector === textHome;
+      text.name = isTextHome ? 'label' : layerName(node.selector);
+      frame.appendChild(text);
+      if (isTextHome) {
+        labelText = text;
+      }
+
+      const ops = opsBySelector.get(node.selector) ?? [];
+      // eslint-disable-next-line no-await-in-loop
+      bindings += await applyOps(api, frame, text, isTextHome ? placeholder : layerName(node.selector), ops);
+    }
+  }
+
+  return { bindings, labelText, built };
+}
+
+/**
+ * Where the component's text prop should live once the tree is built.
+ *
+ * A component that renders a `.label` span should put its text in that span, not
+ * loose on the root frame beside it. Matched on the selector's own name against
+ * the same prop names the text prop is found by, so this follows the existing
+ * rule rather than introducing a second one. Null when the tree offers no such
+ * node, and then the root keeps its own text exactly as before.
+ */
+function textHomeSelector(tree: PartTreeNode[]): string | null {
+  const child = tree.find(
+    (node) => node.parent !== null && TEXT_PROP_NAMES.includes(layerName(node.selector).toLowerCase()),
+  );
+  return child?.selector ?? null;
+}
+
+/**
+ * A component root and a tree child take exactly the same operations: both are
+ * auto-layout frames with fills, strokes, padding and a label. Widening this to
+ * both is what let the element tree reuse the whole resolver rather than growing
+ * a second, thinner copy of it that would drift.
+ */
+type StyledFrame = ComponentNode | FrameNode;
+
 async function applyOps(
   api: BuildApi,
-  component: ComponentNode,
-  text: TextNode,
+  component: StyledFrame,
+  /**
+   * Absent when the element tree carries the text on a child instead, so the root
+   * has no text of its own. Every text operation below is then a no-op rather
+   * than a crash: the styling belongs to whichever node actually holds the type.
+   */
+  text: TextNode | undefined,
   label: string,
   ops: Op[],
 ): Promise<number> {
@@ -1325,12 +1491,14 @@ async function applyOps(
   // The font has to be loaded before `characters` or any text binding can be
   // set, so the (last-wins) font style is settled before anything else.
   const fontName: FontName = { family: DEFAULT_FONT_FAMILY, style: lastOp(ops, 'fontStyle')?.style ?? 'Regular' };
-  await api.loadFontAsync(fontName);
-  text.fontName = fontName;
-  text.characters = label;
+  if (text) {
+    await api.loadFontAsync(fontName);
+    text.fontName = fontName;
+    text.characters = label;
+  }
 
   const bindText = (field: VariableBindableTextField, variable: Variable | undefined) => {
-    if (variable) {
+    if (variable && text) {
       text.setBoundVariable(field, variable);
       bindings += 1;
     }
@@ -1357,24 +1525,26 @@ async function applyOps(
 
   // Size first, then line height, so a percentage line height resolves against
   // the size this component actually asked for rather than Figma's default.
-  const fontSize = lastOp(ops, 'fontSize')?.value;
-  if (typeof fontSize === 'number') {
-    text.fontSize = fontSize;
-  } else if (fontSize) {
-    bindText('fontSize', fontSize);
-  }
-  bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
+  if (text) {
+    const fontSize = lastOp(ops, 'fontSize')?.value;
+    if (typeof fontSize === 'number') {
+      text.fontSize = fontSize;
+    } else if (fontSize) {
+      bindText('fontSize', fontSize);
+    }
+    bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
 
-  const lineHeight = lastOp(ops, 'lineHeight')?.multiplier;
-  if (lineHeight !== undefined) {
-    text.lineHeight = { value: lineHeight * 100, unit: 'PERCENT' };
-  }
-  const letterSpacing = lastOp(ops, 'letterSpacing')?.em;
-  if (letterSpacing !== undefined) {
-    text.letterSpacing = { value: letterSpacing * 100, unit: 'PERCENT' };
-  }
-  if (lastOp(ops, 'textCase')) {
-    text.textCase = 'UPPER';
+    const lineHeight = lastOp(ops, 'lineHeight')?.multiplier;
+    if (lineHeight !== undefined) {
+      text.lineHeight = { value: lineHeight * 100, unit: 'PERCENT' };
+    }
+    const letterSpacing = lastOp(ops, 'letterSpacing')?.em;
+    if (letterSpacing !== undefined) {
+      text.letterSpacing = { value: letterSpacing * 100, unit: 'PERCENT' };
+    }
+    if (lastOp(ops, 'textCase')) {
+      text.textCase = 'UPPER';
+    }
   }
 
   // A variant's own border width wins over the base block's, so this is settled
@@ -1394,8 +1564,10 @@ async function applyOps(
         bindings += 1;
         break;
       case 'textFill':
-        text.fills = [api.setBoundVariableForPaint(solidPaint(), 'color', op.variable)];
-        bindings += 1;
+        if (text) {
+          text.fills = [api.setBoundVariableForPaint(solidPaint(), 'color', op.variable)];
+          bindings += 1;
+        }
         break;
       case 'stroke':
         component.strokes = [api.setBoundVariableForPaint(solidPaint(), 'color', op.variable)];
@@ -1568,12 +1740,49 @@ export async function buildComponent(
   // Declarations naming a prop value become real variant blocks before anything
   // else looks at the spec, so axis discovery and op caching both see them.
   const built = splitVariantDeclarations(spec, resolver.gaps);
+  // The element tree says which element each part is. A part the tree can place
+  // is built onto that element; one it cannot is still reported as before.
+  const tree = built.tree ?? null;
+  const baseSelectors = built.styleBlocks.filter((block) => block.kind === 'base').map((block) => block.selector);
+  const { rootSelector, orphanRoots } = tree
+    ? chooseRoot(tree, baseSelectors)
+    : { rootSelector: null, orphanRoots: [] };
+  // Only the chosen root's own subtree can be placed. A node under an orphan root
+  // has no known position, and putting it somewhere plausible is the guess this
+  // whole contract exists to avoid.
+  const placeable = tree && rootSelector ? subtreeOf(tree, rootSelector) : new Set<string>();
+  if (orphanRoots.length > 0) {
+    resolver.gaps.push({
+      where: 'contract',
+      reason:
+        `the element tree has ${orphanRoots.length + 1} nodes claiming no parent (${[rootSelector, ...orphanRoots].join(', ')}); ` +
+        `built the subtree under ${rootSelector}, which the base block names, and left the others unplaced. ` +
+        'Either the scan could not connect them or they are conditional classes on an element that already has one',
+    });
+  }
   const opsByBlock = new Map<StyleBlock, Op[]>();
+  const opsBySelector = new Map<string, Op[]>();
   let unbuiltPartCalls = 0;
   built.styleBlocks.forEach((block) => {
     if (block.kind === 'part') {
+      if (placeable.has(block.selector)) {
+        // Two blocks can name one element: its own rule, and a rule nested inside
+        // an ancestor. Both apply, so they accumulate in source order rather than
+        // the second replacing the first, which is the closest this gets to the
+        // cascade without inventing specificity.
+        opsBySelector.set(block.selector, [
+          ...(opsBySelector.get(block.selector) ?? []),
+          ...resolver.resolveBlock(block),
+        ]);
+        return;
+      }
       unbuiltPartCalls += block.ciaCalls.filter((call) => call.state === 'default').length;
-      resolver.skipped.push({ where: block.selector, reason: 'part skipped: v1 builds the root frame and its label only' });
+      resolver.skipped.push({
+        where: block.selector,
+        reason: tree
+          ? 'part skipped: it is not in the component element tree, so there is no node to style'
+          : 'part skipped: this component has no element tree, so v1 builds the root frame and its label only',
+      });
       return;
     }
     if (block.kind === 'other') {
@@ -1640,18 +1849,36 @@ export async function buildComponent(
   const texts: TextNode[] = [];
   let bindings = 0;
 
+  // Six of 99 components get no tree rather than a partial one, and those keep
+  // the previous shape: a root frame and a label.
+  const treeNodes = tree ? tree.filter((node) => placeable.has(node.selector)) : null;
+  const textHome = treeNodes ? textHomeSelector(treeNodes) : null;
+
   for (const plan of plans) {
     const component = api.createComponent();
     component.name = plan.name;
-    const text = api.createText();
-    text.name = 'label';
-    component.appendChild(text);
+    let text: TextNode | undefined;
+    if (!textHome) {
+      text = api.createText();
+      text.name = 'label';
+      component.appendChild(text);
+    }
 
     const ops = plan.blocks.flatMap((block) => opsByBlock.get(block) ?? []);
+    if (treeNodes) {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await buildTree(api, component, treeNodes, rootSelector, opsBySelector, placeholder, textHome);
+      bindings += result.bindings;
+      text = text ?? result.labelText;
+    }
+    // The root is styled after its children exist, so hugging them is measured
+    // against real content rather than an empty frame.
     // eslint-disable-next-line no-await-in-loop
     bindings += await applyOps(api, component, text, placeholder, ops);
     components.push(component);
-    texts.push(text);
+    if (text) {
+      texts.push(text);
+    }
   }
 
   let node: ComponentNode | ComponentSetNode = components[0];
