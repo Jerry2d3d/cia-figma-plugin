@@ -24,6 +24,8 @@ import fs from 'fs';
 import path from 'path';
 import { BuildApi, buildComponent } from '@/plugin/buildComponent';
 import { ComponentSpec, validateComponentSpec } from '@/shared/componentSpec';
+// The site publishes these to a person about to run the build by hand.
+import { MEASURED } from '../../../../site/src/content/measured';
 
 /** Where figma-import-export writes its bucketed specs and its token export. */
 const SPEC_ROOT = process.env.CIA_SPEC_ROOT ?? 'K:/repo/figma-import-export/output/components';
@@ -221,6 +223,7 @@ describeLibrary('the whole shipped library', () => {
     const shapes = new Map<string, number>();
     const invalid: string[] = [];
     const builtFromWrongElement: string[] = [];
+    let relayed = 0;
     const clean: Record<string, { n: number; zero: number }> = {};
 
     for (const { file, bucket } of files) {
@@ -244,6 +247,7 @@ describeLibrary('the whole shipped library', () => {
       if (result.bindings === 0 && result.unbuiltPartCalls > 0) {
         totals.empty += 1;
       }
+      relayed += result.gaps.filter((gap) => gap.origin === 'spec').length;
       result.gaps.forEach((gap) => {
         // Collapse ids and numbers so the same shape of gap groups together.
         const key = gap.reason.replace(/"[^"]*"/g, '"…"').replace(/\d+/g, 'N').slice(0, 72);
@@ -297,6 +301,19 @@ describeLibrary('the whole shipped library', () => {
           .map(([reason, count]) => `  ${String(count).padStart(3)}  ${reason}`),
       ].join('\n'),
     );
+
+    // The runbook tells a tester to expect these, so a tester comparing the page
+    // against the panel must not be the first to notice they diverged. A stale
+    // page looks exactly like a broken build and is the likelier of the two.
+    // Nothing here says the numbers are RIGHT, only that they are still true.
+    expect({
+      specs: files.length,
+      variants: totals.variants,
+      bindings: totals.bindings,
+      buildGaps: totals.gaps - relayed,
+      specGaps: relayed,
+      arriveEmpty: totals.empty,
+    }).toEqual(MEASURED);
 
     // A spec the validator rejects is the one hard failure: it means the two
     // repos disagree about the contract, which no amount of reporting fixes.

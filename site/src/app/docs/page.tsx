@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Alert } from '@bp/components/Alert';
 import { CopyRow } from '@/components/CopyRow';
 import { PATHS } from '@/content/pipeline';
+import { MEASURED } from '@/content/measured';
 import styles from '@/components/content.module.scss';
 
 export const metadata: Metadata = {
@@ -140,11 +141,12 @@ export default function DocsPage() {
               </ol>
               <CopyRow label="Button B · the component specs folder" value={PATHS.spec} />
               <p className={styles.body}>
-                The folder should hold exactly 99 files. If Ctrl+A picks more, some are stale
+                The folder should hold exactly {MEASURED.specs} files. If Ctrl+A picks more, some are stale
                 duplicates from an older export, and the panel will report duplicate sets.
               </p>
               <Alert variant="success" title="Expect">
-                Built 99 components, 282 variants and 4639 bindings, about 152 build gaps plus 58 the spec reports, and a collapsed
+                Built {MEASURED.specs} components, {MEASURED.variants} variants and {MEASURED.bindings} bindings,
+                about {MEASURED.buildGaps} build gaps plus {MEASURED.specGaps} the spec reports, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>

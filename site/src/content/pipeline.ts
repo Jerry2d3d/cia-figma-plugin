@@ -3,6 +3,8 @@
  * single edit rather than a hunt through five pages.
  */
 
+import { MEASURED } from '@/content/measured';
+
 export type StatusLevel = 'working' | 'blocked' | 'pending';
 
 export interface StatusItem {
@@ -22,7 +24,7 @@ export const STATUS: StatusItem[] = [
     title: 'All 99 components build',
     level: 'working',
     detail:
-      '282 components and 4639 live bindings across the whole library, 42 of them with real variants. Up from one component with variants two days ago.',
+      `${MEASURED.variants} components and ${MEASURED.bindings} live bindings across the whole library, 42 of them with real variants. Up from one component with variants two days ago.`,
   },
   {
     title: 'Components build their inner parts',
