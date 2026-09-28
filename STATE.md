@@ -114,12 +114,24 @@ All five font-size folds are gone, so the ambiguity machinery from `17ac709a` ha
 nothing left to resolve in this library. It stays, because a block really can
 state two sizes for one element, but it is no longer load-bearing.
 
-**Three stale spec files.** `Calendar`, `ConfirmPopup` and `Stack` each exist
-twice, in `blocked/` and in `partial/` or `ready/`. The `blocked/` copies are from
-a known-broken intermediate build, and `blocked/Stack` has a mangled selector,
-`"start: flex-start, end: flex-end, center: center, stretch: stretch, .stack"`,
-where mixin arguments leaked into the selector. Take the newer copy of each.
-Reported upstream.
+**Three stale spec files, found and fixed at the cause.** `Calendar`,
+`ConfirmPopup` and `Stack` each existed twice, in `blocked/` and in `partial/` or
+`ready/`, because the bucket classifier only ever wrote and never cleaned, so a
+component moving between buckets kept its old file forever. One of the stale
+copies had mixin arguments leaked into its selector. Fixed upstream in `de51c3c`:
+writing a spec now removes that component's file from the sibling buckets and
+reports what it removed. 99 files for 99 components.
+
+**The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
+class neither repo's own suite can see. Every number either side publishes is a
+count of things *present*, so a thing that never arrived is invisible: the
+selector that vanished from an export was not mis-reported, it was absent, and
+absence cannot show up in a total. To catch it you need a count taken from
+outside the pipeline being measured, which is what the builder counting the
+exporter's output is. It asserts one spec per component and that every spec
+validates; the totals are printed rather than asserted, because they move
+legitimately with every upstream improvement. It skips when the other repo is not
+checked out, so this repo still passes alone.
 
 Fixtures now pin the real shipped Button, Heading and Container specs, so the
 exporter and the builder fail together rather than drifting apart.

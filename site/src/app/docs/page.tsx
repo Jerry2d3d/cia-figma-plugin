@@ -139,14 +139,10 @@ export default function DocsPage() {
                 <li>Button C should read Build 99 components. Click it, then wait.</li>
               </ol>
               <CopyRow label="Button B · the component specs folder" value={PATHS.spec} />
-              <div className={styles.internalNote}>
-                <Alert variant="warning" title="Three files in that folder are stale">
-                  Calendar, ConfirmPopup and Stack each exist twice, once in the blocked subfolder
-                  and once in partial or ready. The blocked copies are left over from a build that
-                  was known broken, and one of them has a mangled selector. Take the newer copy of
-                  each, or the panel will report three duplicate sets. Reported upstream.
-                </Alert>
-              </div>
+              <p className={styles.body}>
+                The folder should hold exactly 99 files. If Ctrl+A picks more, some are stale
+                duplicates from an older export, and the panel will report duplicate sets.
+              </p>
               <Alert variant="success" title="Expect">
                 Built 99 components, 233 variants and 891 bindings, about 51 gaps, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
