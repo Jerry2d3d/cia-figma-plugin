@@ -319,8 +319,24 @@ parts are all there and the top is what is missing. The tree-level fact is now
 stated once, and the per-part message distinguishes three situations that had been
 sharing two wordings. Saying the wrong one sends a reader to the wrong place.
 
-Final: **233 variants, 3967 bindings, 162 build gaps plus 156 relayed, 3 arriving
-empty, 174 tests.**
+**Variant-scoped part styling reached every variant** (`6cdd1bac`). Part blocks
+were never split by variant, so Divider's line got both the start and end spacing
+on every alignment, centred included. 53 declarations across 11 components. Found
+by chasing a wording point upstream, not by looking for it.
+
+Fixing that alone would have replaced one silent wrong with another. **Seven of
+the eleven vary a child by a prop while the root never changes**, so no variant
+block exists, no axis formed, and the styling would have applied to nothing.
+Divider spaces its line per alignment, Radio sizes its dot, Drawer places its
+panel by side. The prop is declared with its values and the styling names them, so
+the axis is stated, just not visible on the root. Part blocks now contribute axis
+discovery only, since a part styles a child and must not become root operations.
+
+  variants  233 -> 272
+  bindings 3955 -> 4326
+
+Final: **272 variants, 4326 bindings, 149 build gaps plus 156 relayed, 3 arriving
+empty, 176 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
