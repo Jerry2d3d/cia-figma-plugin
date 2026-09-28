@@ -183,7 +183,21 @@ target's name, but `.active` on `.navLink`, `.selected` on `.colorSwatch` and
 `.disabled` on `.switchWrapper` are all genuine and do not. `modifierOf` equalling
 `parent` is a structural fact rather than a guess about names.
 
-Final: **233 variants, 3686 bindings, 160 gaps, 5 arriving empty.**
+**Mutually exclusive class names** (`b2abdd82`). The 9 self-contradictory
+modifiers became `alternativeTo`: each branch of a conditional is its own node
+with the right parent, naming the others the same node can have. One frame is
+built per set, not per branch, because building both invents a sibling and
+building neither loses an element. No styling is taken from any member, since
+exactly one applies and nothing says which.
+
+A set is one element only when its **closure is complete**, every member naming
+every other. The first version of that check was wrong: it accepted
+`.runnerArmLeft` and `.runnerArmUp` as a pair while `.runnerArmUp` also named
+`.runnerArmRight`. DesignSandbox uses one class on two different lines, so the
+relation collects three classes that are two elements. Left and Right never name
+each other, which proves they are not the same node, so the group is refused.
+
+Final: **233 variants, 3686 bindings, 160 gaps, 5 arriving empty, 150 tests.**
 
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a
