@@ -37,11 +37,13 @@ carry raw text, buttons will be Button instances, and a big component like
 DataTable is cut into its top bar and action menu as components of their own.
 Build order follows from that: variables, Text, Button, then what uses them.
 
-Asked of figma-import-export, Jerry's decision: emit the 44 typography tokens cia
-computes into the theme file, so those bindings exist. No theme overrides the
-scale, so the values are the same in every mode. Nothing here changes when they
-land; a test that asserts the scale is one step per axis will fail, which is the
-signal.
+**The 44 derived typography tokens landed upstream within the hour**, exactly as
+listed: sizes in px, line heights and spacing as percentages. The test asserting
+one step per axis fired, which was its job, and now asserts consistency instead.
+Against the regenerated combined file, bindings go 4639 to 5226 and hardcoded
+typography values fall 354 to 76, with no change to this plugin. The pinned floor
+below is unchanged because it is measured against the single-theme boilerplate
+file, which has not been regenerated yet; when it is, the floor rises.
 
 What is left is not in this repo. Three components cannot be scanned into an
 element tree, a handful of gaps are genuine upstream asks, and the next real step

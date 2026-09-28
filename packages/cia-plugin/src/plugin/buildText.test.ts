@@ -204,7 +204,10 @@ describe('the Text component', () => {
     // body is step 3, which is `base`, the one size cia exports today.
     const body = textOf(find(components, 'body', 'no'));
     expect(body.bound.fontSize).toBe('font-size-base');
-    expect(body.bound.lineHeight).toBe('line-height-normal');
+    // Deliberately NOT bound: line-height-normal is cia's multiplier 1.5, and
+    // bound to a PERCENT node it reads as 1.5%. Only the numbered step binds.
+    expect(body.bound.lineHeight).toBeUndefined();
+    expect(result.unthemeable).toContain('line-height-4 (150%)');
     // heading-4 is the one preset whose weight, medium, cia exports.
     expect(textOf(find(components, 'heading-4', 'no')).bound.fontWeight).toBe('font-weight-medium');
     // heading-1 has none of them, so its values are set as numbers and said so.
@@ -275,5 +278,28 @@ describe('the Text component', () => {
 
     const styles = new Set(loadedFonts.map((font) => font.style));
     expect(styles).toEqual(new Set(['Bold', 'Semi Bold', 'Medium', 'Regular']));
+  });
+});
+
+describe('the line-height alias that holds a multiplier', () => {
+  it('does not bind line-height-normal, which is 1.5 and would read as 1.5%', async () => {
+    // The single-theme export today: cia's declared alias only, no derived step.
+    // The token file test caught this against the real combined file, where the
+    // alias sits at 1.5 beside line-height-4 at 150.
+    const { api, components } = createFakeApi();
+
+    await buildTextComponent({ collectionName: 'cia' }, api);
+
+    const body = textOf(find(components, 'body', 'no'));
+    expect(body.bound.lineHeight).toBeUndefined();
+    expect(body.lineHeight).toEqual({ value: 150, unit: 'PERCENT' });
+  });
+
+  it('binds the numbered step when it exists, and only that', async () => {
+    const { api, components } = createFakeApi(['line-height-4']);
+
+    await buildTextComponent({ collectionName: 'cia' }, api);
+
+    expect(textOf(find(components, 'body', 'no')).bound.lineHeight).toBe('line-height-4');
   });
 });

@@ -157,10 +157,10 @@ export default function DocsPage() {
                 edit its text in the right panel. heading-1 should be 30px bold, body 16px regular.
               </Alert>
               <p className={styles.body}>
-                The panel will list values set as plain numbers because the token file has no
-                variable for them yet. That is expected today: cia exports one font size, one weight
-                and one line height. They bind the day the theme file carries the rest, with no
-                change to the plugin.
+                If you exported the tokens fresh in Part 1, the panel should report every size,
+                weight and line height as bound, because the export now carries the whole type
+                scale. If it lists values set as plain numbers instead, the token file is from
+                before that landed: re-export and build Text again.
               </p>
             </div>
           </div>

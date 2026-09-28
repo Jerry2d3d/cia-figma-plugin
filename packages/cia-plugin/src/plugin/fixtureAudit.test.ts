@@ -22,13 +22,18 @@
 import fs from 'fs';
 import path from 'path';
 
-const SOURCE = path.join(__dirname, 'buildComponent.ts');
-const TESTS = path.join(__dirname, 'buildComponent.test.ts');
+// Every builder that writes Figma node fields, and every test that names them.
+// A builder missing from this list is audited by nobody, which is the hole the
+// audit exists to close, so adding a builder means adding it here.
+const SOURCES = ['buildComponent.ts', 'buildText.ts', 'buildPrompt.ts'].map((file) => path.join(__dirname, file));
+const TEST_FILES = ['buildComponent.test.ts', 'buildText.test.ts', 'buildPrompt.test.ts'].map((file) =>
+  path.join(__dirname, file),
+);
 const TOKENS =
   process.env.CIA_TOKENS ?? 'K:/repo/figma-import-export/output/variables/cia.variables.json';
 
-const source = fs.readFileSync(SOURCE, 'utf8');
-const tests = fs.readFileSync(TESTS, 'utf8');
+const source = SOURCES.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+const tests = TEST_FILES.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
 
 /**
  * Fields the builder assigns on a component, a frame or a text node, plus the
@@ -128,13 +133,53 @@ describeTokens('the test collection against what cia exports', () => {
     expect(invented).toEqual([]);
   });
 
-  it('still describes a typography contract of one step per axis', () => {
-    const typography = [...(realTokens as Set<string>)].filter((name) =>
-      /^(font-size|font-weight|line-height)-/.test(name),
-    );
-    // Not an assertion that this is correct, but that it is still TRUE. If cia
-    // ever grows its scale, this fails and the hypothetical tests that exist for
-    // exactly that day should be revisited.
-    expect(typography.sort()).toEqual(['font-size-base', 'font-weight-medium', 'line-height-normal']);
+  it('carries the whole type scale or none of it, never a partial one', () => {
+    // This used to assert one step per axis, which was the truth until
+    // 2026-09-28, when the exporter began emitting the tokens cia computes. It
+    // fired on the day, which was its job. What is true of ANY export now is
+    // consistency: a file with one derived size has all ten steps and every
+    // alias, because a partial scale would bind some headings and not others,
+    // which looks like a theme problem and is an export problem.
+    const names = realTokens as Set<string>;
+    const derived = [...names].filter((name) => /^font-size-(?:[1-9]|10)$/.test(name));
+    if (derived.length === 0) {
+      // A file from before the derived tokens, or a single-theme export not yet
+      // regenerated. Not wrong, just older; the dry run measures it as it is.
+      expect(names.has('font-size-base')).toBe(true);
+      return;
+    }
+    expect(derived).toHaveLength(10);
+    ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl'].forEach((alias) => {
+      expect(names.has(`font-size-${alias}`)).toBe(true);
+    });
+    ['light', 'normal', 'medium', 'semibold', 'bold', 'black'].forEach((weight) => {
+      expect(names.has(`font-weight-${weight}`)).toBe(true);
+    });
+    ['none', 'tight', 'snug', 'normal', 'relaxed', 'loose'].forEach((key) => {
+      expect(names.has(`line-height-${key}`)).toBe(true);
+    });
+  });
+
+  it('stores a line height as a percentage, since a bound multiplier would read as 1.5%', () => {
+    const payload = JSON.parse(fs.readFileSync(TOKENS, 'utf8')) as {
+      modes: string[];
+      variables: { name: string; valuesByMode: Record<string, number> }[];
+    };
+    // The DERIVED steps. The declared alias `line-height-normal` is cia's own
+    // multiplier, 1.5, and sits in the same file beside `line-height-4` at 150.
+    // This test first ran against exactly that file and caught it: bound to a
+    // text node whose unit is PERCENT, the alias reads as 1.5%. The builder now
+    // binds the numbered step only, and upstream has been asked to re-emit the
+    // alias as a percentage too, at which point the exclusion below can go.
+    const lineHeights = payload.variables.filter((variable) => /^line-height-[1-6]$/.test(variable.name));
+    if (lineHeights.length === 0) {
+      return; // a file from before the derived tokens
+    }
+    expect(lineHeights).toHaveLength(6);
+    lineHeights.forEach((variable) => {
+      const value = variable.valuesByMode[payload.modes[0]];
+      expect({ name: variable.name, value }).toEqual({ name: variable.name, value: expect.any(Number) });
+      expect(value).toBeGreaterThanOrEqual(100);
+    });
   });
 });

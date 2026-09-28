@@ -161,7 +161,11 @@ export async function buildTextComponent(
       // Line height and spacing are percentages, because a unitless multiplier
       // has no Figma unit and 1.25 is exactly 125%.
       text.lineHeight = { value: preset.lineHeightPercent, unit: 'PERCENT' };
-      const lineHeightVariable = lookup(`line-height-${preset.lineHeightStep}`, lineHeightAlias(preset.lineHeightStep));
+      // The numbered step ONLY, never its alias. cia declares `line-height-normal`
+      // as the multiplier 1.5 and the derived `line-height-4` as the percentage
+      // 150, and both sit in the same file. Bound to a node whose unit is PERCENT,
+      // the alias reads as 1.5%. A test on the token file pins this hazard.
+      const lineHeightVariable = byName.get(`line-height-${preset.lineHeightStep}`);
       if (lineHeightVariable) {
         text.setBoundVariable('lineHeight', lineHeightVariable);
         bindings += 1;
@@ -230,8 +234,3 @@ function sizeAlias(step: number): string {
   return `font-size-${aliases[step] ?? step}`;
 }
 
-/** cia's `$line-heights-aliases`. */
-function lineHeightAlias(step: number): string {
-  const aliases: Record<number, string> = { 1: 'none', 2: 'tight', 3: 'snug', 4: 'normal', 5: 'relaxed', 6: 'loose' };
-  return `line-height-${aliases[step] ?? step}`;
-}
