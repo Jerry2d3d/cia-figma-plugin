@@ -432,8 +432,26 @@ apart by value, as the `border` shorthand already is. The vertical variant is a
 `border-inline-start` and lands on the left edge, under an assumption stated
 rather than buried: horizontal writing, left to right.
 
+**The fixture audit, run on myself** (`250a7570`). Two findings, opposite shapes.
+
+The test collection was a **superset** of reality: it claimed `font-size-xs` and
+`font-weight-bold`, and cia exports neither. The entire typography contract is
+`font-size-base`, `font-weight-medium`, `line-height-normal`, one step per axis,
+which is the same fact as the 482 unsatisfied call sites read from the other end
+and much harder to argue with. Two tests were asserting a binding that can never
+happen. Defaults now mirror the export exactly, and a test wanting a token that
+does not exist yet passes it explicitly, so it says it is hypothetical.
+
+Six fields were being written to a fake that had never heard of them, four radius
+corners and two padding sides. JavaScript accepts the write, so a typo or a
+missing one could not have failed. All six were correct: the hole was in the
+checking, not the code. Verified non-vacuous by removing one corner's write.
+
+Both directions matter. The day before, the fake was missing a token reality has.
+A fake that differs from reality either way passes tests reality would fail.
+
 Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 193 tests.**
+empty, 196 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
