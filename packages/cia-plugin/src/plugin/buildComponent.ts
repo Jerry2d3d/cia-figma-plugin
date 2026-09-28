@@ -10,6 +10,7 @@ import {
   DimensionSpec,
   PartTreeNode,
   StyleBlock,
+  StyleBlockKind,
 } from '@/shared/componentSpec';
 
 export interface BuildGap {
@@ -1117,7 +1118,12 @@ function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): Compon
     // inside a `part` block styles a child element, so turning it into a variant
     // of the root would move styling onto the wrong node. Parts keep their
     // declarations and stay reported as not built, which is still true of them.
-    if (block.kind !== 'base' && block.kind !== 'variant') {
+    // A part block is split too, but into more PART blocks rather than variants.
+    // Divider's `.line` carries spacing tagged align=start and align=end, and
+    // without this both applied to every variant, so a centred divider got the
+    // styling of both edges. 53 declarations across 11 components are like that.
+    const variantKind: StyleBlockKind = block.kind === 'part' ? 'part' : 'variant';
+    if (block.kind !== 'base' && block.kind !== 'variant' && block.kind !== 'part') {
       rewritten.push(block);
       return;
     }
@@ -1131,8 +1137,10 @@ function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): Compon
       let target = split.get(key);
       if (!target) {
         target = {
-          selector: `${block.selector} [${key}]`,
-          kind: 'variant',
+          // A part keeps its own selector, so the element tree can still place it;
+          // the prop and value say which variant the styling belongs to.
+          selector: variantKind === 'part' ? block.selector : `${block.selector} [${key}]`,
+          kind: variantKind,
           prop: tag.prop,
           value: tag.value,
           ciaCalls: [],
@@ -1240,11 +1248,18 @@ interface VariantAxis {
  */
 function variantAxes(spec: ComponentSpec): VariantAxis[] {
   const variantBlocks = spec.styleBlocks.filter((block) => block.kind === 'variant');
+  // A part can be the ONLY evidence that an axis exists. Seven components vary a
+  // child element by a prop without the root changing at all: Divider spaces its
+  // line differently at each alignment, Radio sizes its dot. The prop is declared
+  // with its values and the styling names them, so the axis is stated rather than
+  // inferred; it just is not visible on the root. Used for discovery only, since
+  // a part block styles a child and must not become root operations.
+  const partVariantBlocks = spec.styleBlocks.filter((block) => block.kind === 'part' && block.prop);
   const axes: VariantAxis[] = [];
 
   spec.props.forEach((prop) => {
     const blocks = variantBlocks.filter((block) => block.prop === prop.name);
-    if (blocks.length === 0) {
+    if (blocks.length === 0 && !partVariantBlocks.some((block) => block.prop === prop.name)) {
       return;
     }
     const blocksByValue = new Map<string, StyleBlock[]>();
@@ -1276,6 +1291,8 @@ function defaultFirst(values: string[], declaredDefault?: string): string[] {
 interface VariantPlan {
   name: string;
   blocks: StyleBlock[];
+  /** Which value each axis takes, so variant-scoped part styling can be matched. */
+  assignment: { prop: string; value: string }[];
 }
 
 function cartesian(axes: VariantAxis[]): { prop: string; value: string }[][] {
@@ -1290,7 +1307,7 @@ function planVariants(spec: ComponentSpec, gaps: BuildGap[]): VariantPlan[] {
   const baseBlocks = spec.styleBlocks.filter((block) => block.kind === 'base');
   const axes = variantAxes(spec);
   if (axes.length === 0) {
-    return [{ name: spec.component, blocks: baseBlocks }];
+    return [{ name: spec.component, blocks: baseBlocks, assignment: [] }];
   }
 
   const total = axes.reduce((count, axis) => count * axis.values.length, 1);
@@ -1302,11 +1319,12 @@ function planVariants(spec: ComponentSpec, gaps: BuildGap[]): VariantPlan[] {
         `combinations, over the ${MAX_VARIANT_COMBINATIONS} a usable Figma component set can hold; ` +
         'built the base only. Split the axes into separate components, or narrow them upstream.',
     });
-    return [{ name: spec.component, blocks: baseBlocks }];
+    return [{ name: spec.component, blocks: baseBlocks, assignment: [] }];
   }
 
   return cartesian(axes).map((combination) => ({
     name: combination.map(({ prop, value }) => `${prop}=${value}`).join(', '),
+    assignment: combination,
     blocks: [
       ...baseBlocks,
       ...combination.flatMap(
@@ -1617,6 +1635,7 @@ async function buildTree(
   opsBySelector: Map<string, Op[]>,
   placeholder: string,
   textHome: string | null,
+  assignment: { prop: string; value: string }[],
 ): Promise<{ bindings: number; labelText?: TextNode; built: number }> {
   let bindings = 0;
   let built = 0;
@@ -1668,7 +1687,12 @@ async function buildTree(
         labelText = text;
       }
 
-      const ops = opsBySelector.get(node.selector) ?? [];
+      // The element's own styling, then whatever this variant adds to it, so a
+      // variant-scoped value wins over the shared one the way a later rule does.
+      const ops = [
+        ...(opsBySelector.get(node.selector) ?? []),
+        ...assignment.flatMap(({ prop, value }) => opsBySelector.get(`${node.selector}|${prop}=${value}`) ?? []),
+      ];
       // eslint-disable-next-line no-await-in-loop
       bindings += await applyOps(api, frame, text, isTextHome ? placeholder : layerName(node.selector), ops);
       // eslint-disable-next-line no-await-in-loop
@@ -2086,10 +2110,10 @@ export async function buildComponent(
         // an ancestor. Both apply, so they accumulate in source order rather than
         // the second replacing the first, which is the closest this gets to the
         // cascade without inventing specificity.
-        opsBySelector.set(block.selector, [
-          ...(opsBySelector.get(block.selector) ?? []),
-          ...resolver.resolveBlock(block),
-        ]);
+        // A part block carrying a prop and value styles that element only in that
+        // variant, so it is kept apart rather than applied to every one of them.
+        const key = block.prop ? `${block.selector}|${block.prop}=${block.value}` : block.selector;
+        opsBySelector.set(key, [...(opsBySelector.get(key) ?? []), ...resolver.resolveBlock(block)]);
         return;
       }
       unbuiltPartCalls += block.ciaCalls.filter((call) => call.state === 'default').length;
@@ -2189,7 +2213,7 @@ export async function buildComponent(
     const ops = plan.blocks.flatMap((block) => opsByBlock.get(block) ?? []);
     if (treeNodes) {
       // eslint-disable-next-line no-await-in-loop
-      const result = await buildTree(api, component, treeNodes, rootSelector, opsBySelector, placeholder, textHome);
+      const result = await buildTree(api, component, treeNodes, rootSelector, opsBySelector, placeholder, textHome, plan.assignment);
       bindings += result.bindings;
       text = text ?? result.labelText;
     }

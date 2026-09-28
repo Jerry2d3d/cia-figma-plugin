@@ -1776,7 +1776,7 @@ describe('declarations tagged with the prop value they belong to', () => {
     expect(byValue.get('flat')?.maxWidth).toBe(480);
   });
 
-  it('leaves a tagged declaration inside a part alone, because it styles a child', async () => {
+  it('makes an axis from it, but keeps the styling on the child rather than the root', async () => {
     const { api, components } = createFakeApi();
     const spec: ComponentSpec = {
       specVersion: 2,
@@ -1796,8 +1796,13 @@ describe('declarations tagged with the prop value they belong to', () => {
 
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
-    expect(result.variantNames).toHaveLength(1);
-    expect(labelOf(components[0]).fontSize).toBe(12);
+    // A part can be the only evidence an axis exists: seven components vary a
+    // child by a prop without the root changing at all. The prop is declared with
+    // its values and the styling names them, so the axis is stated.
+    expect(result.variantNames).toEqual(['size=sm', 'size=lg']);
+    // The root itself takes none of it. There is no tree here, so the child it
+    // belongs to is not built and the styling is reported rather than misplaced.
+    components.forEach((component) => expect(labelOf(component).fontSize).toBe(12));
     expect(result.skipped.some((s) => s.reason.includes('part skipped'))).toBe(true);
   });
 
@@ -2734,5 +2739,56 @@ describe('an element tree with no top at all', () => {
     const { result } = await buildComponent(mutual(), { collectionName: 'boilerplate' }, api);
 
     expect(result.component).toBe('Mutualish');
+  });
+});
+
+describe('part styling that belongs to one variant', () => {
+  const dividerish = (): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Dividerish',
+    props: [{ name: 'align', optional: true, type: 'enum', values: ['center', 'start', 'end'] }],
+    tree: [
+      { selector: '.divider', parent: null, tag: 'div', declaredIn: 'Dividerish' },
+      { selector: '.line', parent: '.divider', tag: 'span', declaredIn: 'Dividerish' },
+    ],
+    styleBlocks: [
+      { selector: '.divider', kind: 'base', ciaCalls: [] },
+      {
+        selector: '.line',
+        kind: 'part',
+        ciaCalls: [
+          // Divider's real shape: the line is spaced differently at each edge, and
+          // not at all in the middle.
+          { fn: 'space', args: ['lg'], property: 'gap', state: 'default', variant: { prop: 'align', value: 'start' } },
+          { fn: 'space', args: ['sm'], property: 'gap', state: 'default', variant: { prop: 'align', value: 'end' } },
+          { fn: 'color', args: ['border-subtle'], property: 'background-color', state: 'default' },
+        ],
+      },
+    ],
+  });
+
+  it('applies it to that variant only, not to every one of them', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(dividerish(), { collectionName: 'boilerplate' }, api);
+
+    const lineIn = (variant: string) =>
+      frameNamed(components.find((component) => component.name.includes(`align=${variant}`))!, 'line');
+    expect(lineIn('start')?.bound.itemSpacing).toBe('space-lg');
+    expect(lineIn('end')?.bound.itemSpacing).toBe('space-sm');
+    // The centred one gets neither, which is the case that was wrong: both edges'
+    // spacing used to land on every variant, last one winning.
+    expect(lineIn('center')?.bound.itemSpacing).toBeUndefined();
+  });
+
+  it('still gives every variant the part styling that is not variant-scoped', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(dividerish(), { collectionName: 'boilerplate' }, api);
+
+    components.forEach((component) => {
+      const line = frameNamed(component, 'line');
+      expect(line?.fills).toHaveLength(1);
+    });
   });
 });
