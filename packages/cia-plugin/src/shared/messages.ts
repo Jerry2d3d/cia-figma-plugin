@@ -1,12 +1,14 @@
 import { SyncResult } from '@/plugin/syncTokens';
 import { BuildResult } from '@/plugin/buildComponent';
 import { PromptBuildResult } from '@/plugin/buildPrompt';
+import { TextBuildResult } from '@/plugin/buildText';
 
 export type UiToPluginMessage =
   | { type: 'sync-tokens'; contract: unknown }
   | { type: 'list-collections' }
   | { type: 'build-components'; specs: { name: string; json: unknown }[]; collection: string }
   | { type: 'build-prompt' }
+  | { type: 'build-text'; collection: string }
   | { type: 'mark-frame'; frameType: string };
 
 export interface VariableMapSummary {
@@ -30,7 +32,9 @@ export type PluginToUiMessage =
   /** Anything that threw where nothing else caught it. Always surfaced. */
   | { type: 'plugin-error'; action: string; message: string }
   | { type: 'frame-result'; marked: { name: string; previousName: string; type: string }[]; errors: string[] }
-  | { type: 'prompt-error'; message: string };
+  | { type: 'prompt-error'; message: string }
+  | { type: 'text-result'; result: TextBuildResult; duplicate: boolean }
+  | { type: 'text-error'; message: string };
 
 export function postToPlugin(message: UiToPluginMessage): void {
   parent.postMessage({ pluginMessage: message }, '*');

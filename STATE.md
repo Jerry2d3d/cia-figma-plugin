@@ -28,6 +28,21 @@ theme's tokens, and a collection carrying several holds the union, so a real run
 does better. They are pinned in `site/src/content/measured.ts` and enforced by
 `libraryDryRun.test.ts`, so the runbook cannot drift from them silently.
 
+**The Text library component exists** (2026-09-28). One variant per cia type
+preset, display down to overline, each with wrap on and off, the text as a
+property, size, weight, line height and spacing bound where a variable exists and
+set as a number where it does not. It is the first library piece and the shape
+Jerry chose for everything: components will place a Text instance rather than
+carry raw text, buttons will be Button instances, and a big component like
+DataTable is cut into its top bar and action menu as components of their own.
+Build order follows from that: variables, Text, Button, then what uses them.
+
+Asked of figma-import-export, Jerry's decision: emit the 44 typography tokens cia
+computes into the theme file, so those bindings exist. No theme overrides the
+scale, so the values are the same in every mode. Nothing here changes when they
+land; a test that asserts the scale is one step per axis will fail, which is the
+signal.
+
 What is left is not in this repo. Three components cannot be scanned into an
 element tree, a handful of gaps are genuine upstream asks, and the next real step
 is a person composing a screen in Figma.

@@ -103,6 +103,32 @@ diff tool.
 `rule` and `target` as text properties, each variant stating what its scope
 governs.
 
+**Text component** (2026-09-28): the first library primitive. One variant per
+cia type preset, display down to overline, each with and without wrapping, the
+text as a property. Size, weight, line height and spacing bind where the
+collection has a variable and are set as numbers where it does not. Built from
+cia's presets with cia's values, so heading-1 is 30px bold rather than whatever a
+hand demo used.
+
+**Decided 2026-09-28: composition, in dependency order.** Every component will
+place a Text instance where it has text and a Button instance where it has a
+button, rather than building its own. A big component is cut into components of
+its own parts: DataTable's top bar with its heading, search and buttons is one
+component, its action menu another, and DataTable is those placed together. So
+the build order is variables, Text, Button, then everything that uses them, and
+Figma's 64-variant cap is met by cutting rather than truncating. Not built yet;
+the element tree already knows the subtrees.
+
+**Decided 2026-09-28: a page per component, read instead of the source.**
+BoilerPlate will render each component into a page from the compiled component,
+showing every flag state, with `data-component` on each root and each rendered
+instance labelled with its props, and the text as placeholders. figma-import-
+export reads those pages, HTML plus compiled CSS, rather than SCSS and JSX. That
+removes every mirrored Sass map from this side, brings in the three components a
+source scan cannot follow because the page has already made the runtime choices,
+and makes composition visible because Modal's page contains real Buttons. Icons
+are skipped in the first pass. Shape being settled with the other two sessions.
+
 ## Decided 2026-09-27: screens, navigation and rules each have one home
 
 Three separate things a Figma file has to say about a screen, and one

@@ -6,6 +6,8 @@ import { PromptBuildResult } from '@/plugin/buildPrompt';
 import { TokenSyncPanel, TokenSyncStatus } from '@/ui/TokenSyncPanel';
 import { ComponentBuildPanel, ComponentBuildStatus } from '@/ui/ComponentBuildPanel';
 import { PromptPanel, PromptStatus } from '@/ui/PromptPanel';
+import { TextPanel, TextStatus } from '@/ui/TextPanel';
+import { TextBuildResult } from '@/plugin/buildText';
 import { FramePanel, FrameStatus } from '@/ui/FramePanel';
 import { BuildStamp } from '@/ui/BuildStamp';
 
@@ -14,6 +16,7 @@ export function App() {
   const [syncStatus, setSyncStatus] = useState<TokenSyncStatus>({ kind: 'idle' });
   const [buildStatus, setBuildStatus] = useState<ComponentBuildStatus>({ kind: 'idle' });
   const [promptStatus, setPromptStatus] = useState<PromptStatus>({ kind: 'idle' });
+  const [textStatus, setTextStatus] = useState<TextStatus>({ kind: 'idle' });
   const [frameStatus, setFrameStatus] = useState<FrameStatus>({ kind: 'idle' });
   const [fatal, setFatal] = useState<{ action: string; message: string } | null>(null);
 
@@ -58,11 +61,22 @@ export function App() {
         case 'prompt-error':
           setPromptStatus({ kind: 'error', message: message.message });
           break;
+        case 'text-result':
+          setTextStatus({
+            kind: 'result',
+            result: message.result as TextBuildResult,
+            duplicate: message.duplicate,
+          });
+          break;
+        case 'text-error':
+          setTextStatus({ kind: 'error', message: message.message });
+          break;
         case 'plugin-error':
           setFatal({ action: message.action, message: message.message });
           // Clear any panel left mid-flight, so nothing sits on "Building…".
           setBuildStatus({ kind: 'idle' });
           setPromptStatus({ kind: 'idle' });
+          setTextStatus({ kind: 'idle' });
           break;
         case 'frame-result':
           setFrameStatus({ kind: 'result', marked: message.marked, errors: message.errors });
@@ -83,6 +97,7 @@ export function App() {
         </p>
       )}
       <TokenSyncPanel status={syncStatus} onStatusChange={setSyncStatus} />
+      <TextPanel collections={collections} status={textStatus} onStatusChange={setTextStatus} />
       <ComponentBuildPanel collections={collections} status={buildStatus} onStatusChange={setBuildStatus} />
       <PromptPanel status={promptStatus} onStatusChange={setPromptStatus} />
       <FramePanel status={frameStatus} onStatusChange={setFrameStatus} />

@@ -5,6 +5,7 @@ import { syncTokenContract } from '@/plugin/syncTokens';
 import { BuildApi, BuildResult, buildComponent } from '@/plugin/buildComponent';
 import { layoutInGrid, originBelow } from '@/plugin/layoutNodes';
 import { PROMPT_COMPONENT_NAME, PromptApi, buildPromptComponent } from '@/plugin/buildPrompt';
+import { TEXT_COMPONENT_NAME, buildTextComponent } from '@/plugin/buildText';
 import { VariableMapApi, writeVariableMap } from '@/plugin/variableMap';
 import { MarkableNode, markFrame } from '@/plugin/frameType';
 
@@ -134,6 +135,22 @@ async function handleBuildPrompt(): Promise<void> {
 }
 
 /**
+ * Builds the Text library component against a collection, so its sizes,
+ * weights and line heights bind to Variables where they exist. Same duplicate
+ * rule as every other build: a second copy is reported, never deleted.
+ */
+async function handleBuildText(collection: string): Promise<void> {
+  try {
+    const duplicate = existingComponentNames().has(TEXT_COMPONENT_NAME);
+    const { result, node } = await buildTextComponent({ collectionName: collection }, buildApi);
+    reveal(node);
+    postToUi({ type: 'text-result', result, duplicate });
+  } catch (error) {
+    postToUi({ type: 'text-error', message: (error as Error).message });
+  }
+}
+
+/**
  * Marks the selected frames. Several at once is the common case when a person
  * has just drawn three modals, and a selection holding something unmarkable
  * reports that node rather than refusing the whole batch.
@@ -185,6 +202,9 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
         break;
       case 'build-prompt':
         await handleBuildPrompt();
+        break;
+      case 'build-text':
+        await handleBuildText(message.collection);
         break;
       case 'mark-frame':
         handleMarkFrame(message.frameType);

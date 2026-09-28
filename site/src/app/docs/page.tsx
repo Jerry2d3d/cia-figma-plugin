@@ -30,7 +30,7 @@ export default function DocsPage() {
         <section>
           <h2 className={styles.h2}>The plugin panel</h2>
           <p className={styles.body}>
-            Four sections, and two buttons both say <strong>Choose File</strong>. Every step below
+            Five sections, and two buttons both say <strong>Choose File</strong>. Every step below
             says which one.
           </p>
           <div className={styles.tableWrap}>
@@ -67,6 +67,11 @@ export default function DocsPage() {
                   <td>Button E</td>
                   <td>Mark selected, under Frames</td>
                   <td>a frame selected on the canvas</td>
+                </tr>
+                <tr>
+                  <td>Button F</td>
+                  <td>Add Text component, under Text</td>
+                  <td>nothing, just click it</td>
                 </tr>
               </tbody>
             </table>
@@ -138,6 +143,31 @@ export default function DocsPage() {
           <div className={styles.stepGroup}>
             <div className={styles.stepHead}>
               <span className={styles.stepTag}>Part 2</span>
+              <h3 className={styles.stepTitle}>The Text component</h3>
+              <span className={styles.stepTime}>1 min</span>
+            </div>
+            <div className={styles.stepBody}>
+              <p className={styles.body}>
+                Check the Collection dropdown under Text says cia, then Button F. This is the first
+                library piece, and it comes before the components because they will place it.
+              </p>
+              <Alert variant="success" title="Expect">
+                One set named <strong>Text</strong> with 18 variants: nine presets from display down
+                to overline, each with wrap on and off. Drag one onto the canvas, pick a preset, and
+                edit its text in the right panel. heading-1 should be 30px bold, body 16px regular.
+              </Alert>
+              <p className={styles.body}>
+                The panel will list values set as plain numbers because the token file has no
+                variable for them yet. That is expected today: cia exports one font size, one weight
+                and one line height. They bind the day the theme file carries the rest, with no
+                change to the plugin.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.stepGroup}>
+            <div className={styles.stepHead}>
+              <span className={styles.stepTag}>Part 3</span>
               <h3 className={styles.stepTitle}>The whole component library</h3>
               <span className={styles.stepTime}>10 min</span>
             </div>
@@ -179,7 +209,7 @@ export default function DocsPage() {
 
           <div className={styles.stepGroup}>
             <div className={styles.stepHead}>
-              <span className={styles.stepTag}>Part 3</span>
+              <span className={styles.stepTag}>Part 4</span>
               <h3 className={styles.stepTitle}>The Prompt component</h3>
               <span className={styles.stepTime}>2 min</span>
             </div>
@@ -193,7 +223,7 @@ export default function DocsPage() {
 
           <div className={styles.stepGroup}>
             <div className={styles.stepHead}>
-              <span className={styles.stepTag}>Part 4</span>
+              <span className={styles.stepTag}>Part 5</span>
               <h3 className={styles.stepTitle}>A two-screen design</h3>
               <span className={styles.stepTime}>12 min</span>
             </div>
@@ -238,7 +268,7 @@ export default function DocsPage() {
 
           <div className={styles.stepGroup}>
             <div className={styles.stepHead}>
-              <span className={styles.stepTag}>Part 5</span>
+              <span className={styles.stepTag}>Part 6</span>
               <h3 className={styles.stepTitle}>The theme switch</h3>
               <span className={styles.stepTime}>2 min</span>
             </div>
