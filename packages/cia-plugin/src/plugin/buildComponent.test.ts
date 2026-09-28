@@ -2867,3 +2867,62 @@ describe('a local custom property that takes several values', () => {
     expect(result.bindings + result.skipped.length).toBeGreaterThan(0);
   });
 });
+
+describe('a local overridden for a theme', () => {
+  const themed = (from: { fn: string | null; args: string[]; literal?: string }): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Themeish',
+    props: [],
+    styleBlocks: [
+      {
+        selector: '.root',
+        kind: 'base',
+        ciaCalls: [],
+        consumes: [
+          {
+            property: 'background-color',
+            localToken: '--bg',
+            state: 'default',
+            from: { fn: 'color', args: ['surface-default'] },
+            fromByVariant: [
+              { qualifier: 'default', variant: null, from: { fn: 'color', args: ['surface-default'] } },
+              { qualifier: 'theme=dark', variant: null, from },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  it('binds the unqualified token and says why the dark one cannot follow', async () => {
+    const { api, components } = createFakeApi();
+
+    // 27 of the library's 30 theme overrides are this shape: a DIFFERENT token in
+    // dark, and `surface-default` and `surface-subtle` have different dark values.
+    const { result } = await buildComponent(
+      themed({ fn: 'color', args: ['surface-subtle'] }),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(boundColor(components[0].fills[0])).toBe('surface-default');
+    const reported = result.skipped.find((skip) => skip.reason.includes('theme=dark'));
+    // The precise reason, because this looks like the case Figma handles best.
+    expect(reported?.reason).toContain('points at one variable whose value the mode chooses');
+    expect(reported?.reason).toContain('cannot point at another variable in another mode');
+  });
+
+  it('gives a literal override the general reason, since no token is involved', async () => {
+    const { api } = createFakeApi();
+
+    // Drawer's backdrop is the one literal: rgba(0,0,0,0.65) for dark.
+    const { result } = await buildComponent(
+      themed({ fn: null, args: [], literal: 'rgba(0, 0, 0, 0.65)' }),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const reported = result.skipped.find((skip) => skip.reason.includes('theme=dark'));
+    expect(reported?.reason).toContain('no declared prop names that qualifier');
+  });
+});

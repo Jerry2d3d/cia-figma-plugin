@@ -5,6 +5,7 @@ import {
   ComponentSpec,
   ConsumedFrom,
   ConsumedToken,
+  ConsumedVariant,
   DeclarationParts,
   DeclarationVariant,
   DimensionSpec,
@@ -1138,6 +1139,36 @@ function isSpacingCall(call: CiaCall): boolean {
  * cannot be expressed as one value on one node. An internal data attribute is a
  * state nothing outside the component can set.
  */
+/**
+ * Why one qualified value of a local was not built. Three different reasons, and
+ * the theme one is worth stating exactly, because it looks like the case Figma
+ * handles best and is the one case it cannot handle at all.
+ *
+ * A theme here IS a Figma mode, so a per-theme VALUE of one token needs nothing:
+ * the mode supplies it. But 27 of the 30 theme overrides in the library name a
+ * DIFFERENT token in dark, `surface-default` becoming `surface-subtle`, and those
+ * are different variables whose dark values differ. A Figma binding names one
+ * variable and the mode picks its value; it cannot pick a different variable per
+ * mode. So binding the unqualified token gives the light colour in every theme.
+ */
+function describeUnbuiltQualifier(consumed: ConsumedToken, entry: ConsumedVariant): string {
+  const at = `${consumed.localToken} at ${entry.qualifier}`;
+  if (entry.variant) {
+    return (
+      `${at} not built: it is already scoped to ${consumed.variant?.prop}=${consumed.variant?.value}, ` +
+      'so it belongs to two axes at once'
+    );
+  }
+  if (/^theme=/.test(entry.qualifier) && entry.from?.fn) {
+    return (
+      `${at} not built: it names a different token from the unqualified value, and a Figma binding ` +
+      'points at one variable whose value the mode chooses, so it cannot point at another variable ' +
+      'in another mode. The unqualified token is bound and this theme keeps its colour'
+    );
+  }
+  return `${at} not built: no declared prop names that qualifier, so there is no variant to put it on`;
+}
+
 function expandQualified(block: StyleBlock, reports: BuildSkip[]): ConsumedToken[] {
   return (block.consumes ?? []).flatMap((consumed) => {
     const values = consumed.fromByVariant;
@@ -1153,11 +1184,7 @@ function expandQualified(block: StyleBlock, reports: BuildSkip[]): ConsumedToken
       }
       reports.push({
         where: block.selector,
-        reason: entry.variant
-          ? `${consumed.localToken} at ${entry.qualifier} not built: it is already scoped to ` +
-            `${consumed.variant?.prop}=${consumed.variant?.value}, so it belongs to two axes at once`
-          : `${consumed.localToken} at ${entry.qualifier} not built: no declared prop names that qualifier, ` +
-            'so there is no variant to put it on',
+        reason: describeUnbuiltQualifier(consumed, entry),
       });
       return [];
     });
