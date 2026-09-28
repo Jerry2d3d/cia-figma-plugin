@@ -211,16 +211,36 @@ The most useful is one this builder cannot discover: CustomizeModal's
 one node per class, so the builder puts it in one position and had nothing to say
 about the other two. 10 parts across 6 components.
 
-**An open contract question, deliberately not answered.** The tree says a part
-exists, never how many times it is rendered, so nine `.section` blocks are one
-node. Right for binding a token, wrong for building a screen. figma-import-export
-offered to design a multiplicity field rather than guess its shape. The answer
-given back: not needed for a component library, where one instance of each part is
-the correct structure and repetition is content. What IS wanted is `parent` as a
-list for the 10 multi-parent parts, which is a different and smaller ask.
+**Multiplicity was asked for and declined; positions were asked for and shipped.**
+The tree says a part exists, never how many times it is rendered, so nine
+`.section` blocks are one node. figma-import-export offered to design a
+multiplicity field. The answer given back: not needed, because a component library
+wants one instance of each part and repetition is content a designer adds by
+duplicating. What was wanted instead was every *position*, which is a different
+thing: `.helperText` inside `.section` and inside `.footer` are two elements, not
+two copies of one. That shipped as `parents` and the builder now places a node
+once per position (`c2bf0e7e`).
 
-Final: **233 variants, 3686 bindings, 160 build gaps plus 149 relayed, 5 arriving
-empty, 153 tests.**
+Three readings had to change with it:
+
+- A node is only a **root** if every one of its positions is a root position.
+  Skeleton's `.skeleton` is inside `.lines` and also stands alone, so it is a
+  reused child, not a second root. Two phantom roots gone with no stitching.
+- **Reachability replaced acyclicity** in the validator. A class may name ITSELF
+  as a position, because markup nests recursively and DesignSandbox really puts a
+  `.demoRow` label inside a `.demoRow` div, so the old walk-to-root check would
+  have rejected real data. What is checked now is that at least one path reaches a
+  root, since a node with none could never be placed.
+- A stated position is **realised once along any one path**. That is what makes
+  the self-position terminable without dropping it: refusing it loses a position
+  the spec states, allowing it freely descends forever.
+
+One correction worth recording, because a fixture was pinned on the wrong value:
+`.helperText` has two positions, `.section` and `.footer`, not three. The third
+came from a scanner bug and was never a fact about the source.
+
+Final: **233 variants, 3717 bindings, 160 build gaps plus 146 relayed, 3 arriving
+empty, 160 tests.**
 
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a

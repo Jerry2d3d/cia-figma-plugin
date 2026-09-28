@@ -144,7 +144,7 @@ export default function DocsPage() {
                 duplicates from an older export, and the panel will report duplicate sets.
               </p>
               <Alert variant="success" title="Expect">
-                Built 99 components, 233 variants and 3686 bindings, about 160 build gaps plus 149 the spec reports, and a collapsed
+                Built 99 components, 233 variants and 3717 bindings, about 160 build gaps plus 146 the spec reports, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>
@@ -154,7 +154,7 @@ export default function DocsPage() {
               <p className={styles.body}>
                 Components now arrive with their inner parts as nested frames, not just a styled
                 outer box. Open Checkbox or Dropdown in the layers panel and you should see named
-                children. Five still arrive empty, because their JSX could not be scanned, and the
+                children. Three still arrive empty, because their JSX could not be scanned, and the
                 panel says which.
               </p>
               <div className={styles.internalNote}>
