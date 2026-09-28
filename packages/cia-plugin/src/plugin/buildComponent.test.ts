@@ -2186,26 +2186,6 @@ describe('a conditional class, which is not an element', () => {
     expect(result.gaps.some((gap) => gap.reason.includes('claiming no parent'))).toBe(false);
   });
 
-  it('says a class that names its own element is a choice nothing resolves', async () => {
-    const { api, components } = createFakeApi();
-
-    const { result } = await buildComponent(
-      modSpec([
-        { selector: '.root', parent: null, tag: 'div' },
-        // Input's real shape: `className={icon ? styles.a : styles.b}` on a real
-        // button, so both alternatives report `modifierOf` as the container.
-        { selector: '.rootMuted', parent: '.root', tag: 'button', modifierOf: '.root' },
-      ]),
-      { collectionName: 'boilerplate' },
-      api,
-    );
-
-    expect(frameNamed(components[0], 'rootMuted')).toBeUndefined();
-    const reported = result.skipped.find((s) => s.where === '.rootMuted');
-    expect(reported?.reason).toContain('is a real child of .root');
-    expect(reported?.reason).toContain('which is the default to build');
-  });
-
   it('still builds an ordinary child that has no conditional class', async () => {
     const { api, components } = createFakeApi();
 
@@ -2219,5 +2199,105 @@ describe('a conditional class, which is not an element', () => {
     );
 
     expect(frameNamed(components[0], 'rootMuted')).toBeDefined();
+  });
+});
+
+describe('classes that are mutually exclusive names for one element', () => {
+  const altSpec = (tree: { selector: string; parent: string | null; tag: string; alternativeTo?: string[] }[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Altish',
+    props: [],
+    tree,
+    styleBlocks: [
+      { selector: '.root', kind: 'base', ciaCalls: [{ fn: 'color', args: ['surface-default'], property: 'background-color', state: 'default' }] },
+      { selector: '.iconIn', kind: 'part', ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }] },
+      { selector: '.iconOut', kind: 'part', ciaCalls: [{ fn: 'color', args: ['brand-primary'], property: 'color', state: 'default' }] },
+    ],
+  });
+
+  it('builds one element for the pair, not one per branch', async () => {
+    const { api, components } = createFakeApi();
+
+    // Input's real shape: `className={icon ? styles.iconOut : styles.iconIn}` on
+    // one button, which puts the button in the tree twice.
+    const { result } = await buildComponent(
+      altSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.iconOut', parent: '.root', tag: 'button', alternativeTo: ['.iconIn'] },
+        { selector: '.iconIn', parent: '.root', tag: 'button', alternativeTo: ['.iconOut'] },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    // The first in tree order stands for the group; the other is not a sibling.
+    expect(frameNamed(components[0], 'iconOut')).toBeDefined();
+    expect(frameNamed(components[0], 'iconIn')).toBeUndefined();
+    const reported = result.skipped.find((s) => s.where === '.iconOut' && s.reason.includes('mutually exclusive'));
+    expect(reported?.reason).toContain('.iconOut and .iconIn');
+    expect(reported?.reason).toContain('nothing says which is the default');
+  });
+
+  it('takes no styling from either branch, because exactly one applies', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      altSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.iconOut', parent: '.root', tag: 'button', alternativeTo: ['.iconIn'] },
+        { selector: '.iconIn', parent: '.root', tag: 'button', alternativeTo: ['.iconOut'] },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    const icon = frameNamed(components[0], 'iconOut');
+    // Neither colour is applied: picking one would invent a default.
+    expect(labelOf(icon!).fills).toHaveLength(0);
+    // Both are counted as styling this version did not build.
+    expect(result.unbuiltPartCalls).toBe(2);
+  });
+
+  it('refuses to collapse a set whose members do not all name each other', async () => {
+    const { api, components } = createFakeApi();
+    const spec = altSpec([
+      { selector: '.root', parent: null, tag: 'div' },
+      // DesignSandbox's real shape: `.up` is used on two different lines, paired
+      // with `.iconIn` on one and `.iconOut` on the other. Three classes, two
+      // elements, and `.iconIn` and `.iconOut` never name each other.
+      { selector: '.iconIn', parent: '.root', tag: 'line', alternativeTo: ['.up'] },
+      { selector: '.up', parent: '.root', tag: 'line', alternativeTo: ['.iconIn', '.iconOut'] },
+      { selector: '.iconOut', parent: '.root', tag: 'line', alternativeTo: ['.up'] },
+    ]);
+    spec.styleBlocks.push({ selector: '.up', kind: 'part', ciaCalls: [] });
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // None of the three is built: one frame would be too few, three too many, and
+    // the spec cannot say how many elements there are.
+    expect(frameNamed(components[0], 'iconIn')).toBeUndefined();
+    expect(frameNamed(components[0], 'up')).toBeUndefined();
+    expect(frameNamed(components[0], 'iconOut')).toBeUndefined();
+    expect(
+      result.skipped.some((s) => s.reason.includes('used on more than one element')),
+    ).toBe(true);
+  });
+});
+
+describe('Input, its info button is one element under two names', () => {
+  it('builds one button rather than two siblings, and says why it is unstyled', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(inputSpec, { collectionName: 'boilerplate' }, api);
+
+    // `className={icon ? styles.infoIconOutside : styles.infoIcon}` on one button.
+    const outside = frameNamed(components[0], 'infoIconOutside');
+    const inside = frameNamed(components[0], 'infoIcon');
+    expect([outside, inside].filter(Boolean)).toHaveLength(1);
+    expect(
+      result.skipped.some(
+        (s) => s.reason.includes('mutually exclusive names for it') && s.reason.includes('infoIcon'),
+      ),
+    ).toBe(true);
   });
 });

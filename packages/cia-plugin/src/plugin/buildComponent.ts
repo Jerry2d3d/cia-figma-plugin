@@ -1403,20 +1403,84 @@ function reportModifiers(tree: PartTreeNode[], skipped: BuildSkip[]): void {
     if (!node.modifierOf) {
       return;
     }
-    if (node.modifierOf === node.parent) {
-      skipped.push({
-        where: node.selector,
-        reason:
-          `not built: this <${node.tag}> is a real child of ${node.parent}, but its class is one of ` +
-          'several a condition chooses between, so nothing says which is the default to build',
-      });
-      return;
-    }
     skipped.push({
       where: node.selector,
       reason: `not built: a conditional class on ${node.modifierOf}, which is a state of that element rather than a child of it`,
     });
   });
+}
+
+/**
+ * Groups nodes that are mutually exclusive names for one element.
+ *
+ * `className={icon ? styles.infoIconOutside : styles.infoIcon}` puts one
+ * `<button>` in the tree twice, once per branch, and the two nodes name each
+ * other. One frame should be built for the pair, not two: building both invents a
+ * sibling that never exists, and building neither loses an element that always
+ * does.
+ *
+ * A set is one element only when every member names every other. DesignSandbox
+ * shows why that test is needed: `.runnerArmUp` is used on two different lines,
+ * paired with `.runnerArmLeft` on one and `.runnerArmRight` on the other, so
+ * following the relation collects three classes that are two elements. Left and
+ * Right do not name each other, which is proof they are not the same node, so the
+ * group is refused rather than collapsed into one frame.
+ *
+ * The first member in tree order stands for the group. That is not a claim about
+ * which class applies: no styling is taken from any of them, because exactly one
+ * applies and nothing says which.
+ */
+function groupAlternatives(tree: PartTreeNode[]): {
+  representative: Map<string, string>;
+  shared: PartTreeNode[];
+} {
+  const bySelector = new Map(tree.map((node) => [node.selector, node]));
+  const representative = new Map<string, string>();
+  const shared: PartTreeNode[] = [];
+  const seen = new Set<string>();
+
+  tree.forEach((node) => {
+    const alternatives = node.alternativeTo;
+    if (!alternatives || seen.has(node.selector)) {
+      return;
+    }
+    // Follow the relation to its closure first. Checking only this node's own
+    // list would accept `.runnerArmLeft` and `.runnerArmUp` as a pair while
+    // `.runnerArmUp` also names `.runnerArmRight`, which is the whole problem.
+    const members: string[] = [];
+    const queue = [node.selector, ...alternatives];
+    while (queue.length > 0) {
+      const next = queue.shift() as string;
+      if (members.includes(next)) {
+        continue;
+      }
+      members.push(next);
+      queue.push(...(bySelector.get(next)?.alternativeTo ?? []));
+    }
+    // One element only if the closure is complete: every member names every
+    // other. A member with an alternative outside the set proves the set spans
+    // more than one element.
+    const isOneElement = members.every((member) => {
+      const named = new Set([member, ...(bySelector.get(member)?.alternativeTo ?? [])]);
+      return members.every((candidate) => named.has(candidate));
+    });
+    if (!isOneElement) {
+      members.forEach((member) => {
+        const found = bySelector.get(member);
+        if (found && !seen.has(member)) {
+          seen.add(member);
+          shared.push(found);
+        }
+      });
+      return;
+    }
+    members.forEach((member) => {
+      seen.add(member);
+      representative.set(member, node.selector);
+    });
+  });
+
+  return { representative, shared };
 }
 
 /**
@@ -1798,8 +1862,38 @@ export async function buildComponent(
   // has no known position, and putting it somewhere plausible is the guess this
   // whole contract exists to avoid.
   const placeable = tree && rootSelector ? subtreeOf(tree, rootSelector) : new Set<string>();
+  // A set of mutually exclusive class names is one element, so only the member
+  // standing for the group keeps its place; the others are folded onto it.
+  const { representative, shared } = tree
+    ? groupAlternatives(tree)
+    : { representative: new Map<string, string>(), shared: [] as PartTreeNode[] };
+  representative.forEach((stands, member) => {
+    if (member !== stands) {
+      placeable.delete(member);
+    }
+  });
+  shared.forEach((node) => placeable.delete(node.selector));
   if (tree) {
     reportModifiers(tree, resolver.skipped);
+    new Set(representative.values()).forEach((stands) => {
+      const members = [...representative.entries()]
+        .filter(([, value]) => value === stands)
+        .map(([member]) => member);
+      resolver.skipped.push({
+        where: stands,
+        reason:
+          `built as one element with no styling: ${members.join(' and ')} are mutually exclusive names for it, ` +
+          'exactly one applies at a time, and nothing says which is the default',
+      });
+    });
+    shared.forEach((node) => {
+      resolver.skipped.push({
+        where: node.selector,
+        reason:
+          `not built: ${node.selector} and its alternatives do not all name each other, so this class is used on more ` +
+          'than one element and the spec cannot say how many there are',
+      });
+    });
   }
   if (orphanRoots.length > 0) {
     resolver.gaps.push({
@@ -1815,6 +1909,12 @@ export async function buildComponent(
   let unbuiltPartCalls = 0;
   built.styleBlocks.forEach((block) => {
     if (block.kind === 'part') {
+      // One of the alternatives applies and nothing says which, so none of their
+      // styling is taken. The element is built; how it looks is not stated.
+      if (representative.has(block.selector)) {
+        unbuiltPartCalls += block.ciaCalls.filter((call) => call.state === 'default').length;
+        return;
+      }
       if (placeable.has(block.selector)) {
         // Two blocks can name one element: its own rule, and a rule nested inside
         // an ancestor. Both apply, so they accumulate in source order rather than

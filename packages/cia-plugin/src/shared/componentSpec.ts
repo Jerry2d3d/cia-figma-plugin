@@ -170,6 +170,21 @@ export interface PartTreeNode {
    * position of its own and nothing is built for it.
    */
   modifierOf?: string;
+  /**
+   * The other classes that are mutually exclusive names for this same node,
+   * when the whole class comes from a condition: `className={icon ?
+   * styles.infoIconOutside : styles.infoIcon}` on one `<button>`. Exactly one
+   * applies at a time and the source does not say which, so there is no default.
+   *
+   * Never present alongside `modifierOf`: there is no element being modified,
+   * because the branches ARE the element. Added upstream 2026-09-28, replacing
+   * nine nodes that had claimed to modify their own parent.
+   *
+   * The relation is symmetric but a set of them is not always one element. One
+   * class can be used on two different elements, and then it lists the
+   * alternatives of both, so the set spans more nodes than exist.
+   */
+  alternativeTo?: string[];
 }
 
 export interface ComponentProp {
@@ -284,6 +299,18 @@ function validateTree(value: unknown, errors: string[]): void {
     if (node.modifierOf === node.selector) {
       errors.push(`${where}.modifierOf names itself, so it modifies nothing`);
     }
+    if (node.alternativeTo !== undefined) {
+      if (!isStringArray(node.alternativeTo) || node.alternativeTo.length === 0) {
+        errors.push(`${where}.alternativeTo must be a non-empty array of strings`);
+      } else if (node.alternativeTo.includes(node.selector as string)) {
+        errors.push(`${where}.alternativeTo names itself, so it is not an alternative to anything`);
+      }
+      // The branches of a conditional ARE the element, so there is nothing for
+      // them to modify. Carrying both would describe two different shapes at once.
+      if (node.modifierOf !== undefined) {
+        errors.push(`${where} carries both modifierOf and alternativeTo, which describe different shapes`);
+      }
+    }
     if (selectors.has(node.selector)) {
       errors.push(`${where}.selector "${node.selector}" appears twice in the tree`);
       return;
@@ -301,6 +328,29 @@ function validateTree(value: unknown, errors: string[]): void {
     if (parent !== null && !selectors.has(parent)) {
       errors.push(`tree node "${selector}" names parent "${parent}", which is not in the tree`);
     }
+  });
+
+  // Being alternatives is symmetric, so both nodes must say so. A one-sided claim
+  // is the two directions of one fact disagreeing, which is the bug that made
+  // nine nodes describe themselves as modifiers of their own parent. Asserting it
+  // here is cheap and it is exactly the check that caught it upstream.
+  const alternativesOf = new Map<string, string[]>();
+  value.forEach((entry) => {
+    const node = entry as Record<string, unknown>;
+    if (typeof node.selector === 'string' && isStringArray(node.alternativeTo)) {
+      alternativesOf.set(node.selector, node.alternativeTo);
+    }
+  });
+  alternativesOf.forEach((alternatives, selector) => {
+    alternatives.forEach((other) => {
+      if (!selectors.has(other)) {
+        errors.push(`tree node "${selector}" names alternative "${other}", which is not in the tree`);
+        return;
+      }
+      if (!(alternativesOf.get(other) ?? []).includes(selector)) {
+        errors.push(`tree node "${selector}" says it is an alternative to "${other}", but "${other}" does not say so back`);
+      }
+    });
   });
 
   // Walk each node to its root; anything that does not arrive is in a cycle.

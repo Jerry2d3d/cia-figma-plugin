@@ -1224,12 +1224,18 @@
     {
       "selector": ".infoIconOutside",
       "parent": ".inputContainer",
-      "tag": "button"
+      "tag": "button",
+      "alternativeTo": [
+        ".infoIcon"
+      ]
     },
     {
       "selector": ".infoIcon",
       "parent": ".inputContainer",
-      "tag": "button"
+      "tag": "button",
+      "alternativeTo": [
+        ".infoIconOutside"
+      ]
     },
     {
       "selector": ".tooltip",
