@@ -140,7 +140,7 @@ export default function DocsPage() {
               </ol>
               <CopyRow label="Button B · the component specs folder" value={PATHS.spec} />
               <Alert variant="success" title="Expect">
-                Built 99 components, 202 variants and 1111 bindings, about 70 gaps, and a collapsed
+                Built 99 components, 233 variants and 1142 bindings, about 61 gaps, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>

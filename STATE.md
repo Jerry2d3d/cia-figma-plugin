@@ -52,24 +52,47 @@ standing. Now all three resolve and last-wins would render every small checkbox
 large. The builder prefers the candidate that has a token and reports every
 candidate, saying the missing thing is the variant axis, not the values.
 
-**Measured over all 99 shipped specs, before and after:**
+**Variants from tagged declarations (`275ca5fc`).** The exporter now tags each
+declaration with the prop value it came from when it sat in a nested selector, so
+`&[data-size="sm"]` inside a root rule is finally distinguishable from the base.
+That retired the ambiguity above: Checkbox's three sizes became three variants of
+a `size` axis. 8 components gained an axis. Done as a spec rewrite before
+anything reads the spec, so axis discovery and op caching needed no changes.
 
-|                      | before | after |
-|----------------------|--------|-------|
-| gaps                 | 131    | 70    |
-| bindings             | 1120   | 1111  |
-| applied-unthemeable  | 0      | 92    |
-| empty frames         | 21     | 21    |
+Two cases are deliberately not split. A tagged declaration inside a `part` styles
+a child, so making it a variant of the root would put styling on the wrong node.
+A declaration tagged with one prop inside a block that is already a variant of
+another belongs to two axes at once, which one block cannot express, so it is
+reported. No cases of the second exist today.
+
+**Measured over all 99 shipped specs:**
+
+|                      | 09-26 | after typography | after variants |
+|----------------------|-------|------------------|----------------|
+| variants             | 202   | 202              | 233            |
+| bindings             | 1120  | 1111             | 1142           |
+| gaps                 | 131   | 70               | 61             |
+| applied-unthemeable  | 0     | 92               | 92             |
+| empty frames         | 21    | 21               | 21             |
+
+Components with zero gaps: `ready` 5 of 9, `partial` 44 of 69, `blocked` 6 of 21.
 
 The nine lost bindings are correct: Button and ToggleButton variants whose own
 size has no token used to keep the base binding and silently render at the base
 size. Trading a binding for the right size is the trade this whole change makes.
 
-**None of the 70 remaining gaps is a builder fault.** In the `ready` bucket all
-eight are upstream: five are `space-2xs`, one is `font-size-2xs`, one is Stack's
-`space($gap)` (an unresolved mixin parameter), one is LightDarkToggle's
-`onChange` typed as an enum with values `light`/`dark`, which is a callback the
-exporter read as a variant axis.
+**None of the 61 remaining gaps is a builder fault.** In the `ready` bucket the
+remaining ones are upstream: `space-2xs` (five), `font-size-2xs` (one) and Stack's
+`space($gap)`, an unresolved mixin parameter the exporter chose to leave alone
+because there is one occurrence. LightDarkToggle's `onChange`, which was typed as
+an enum because the union came off the callback's parameter, is fixed upstream.
+
+**Five font-size folds remain and none is a variant fold.** In every case a
+nested *descendant* selector was folded into its parent: `h3` and `p` inside
+`.startCard`, `.label` and `.helperText` inside `.inputWrapper[data-size="large"]`.
+Those sizes belong to child elements, so arguably none belongs to the root frame.
+The next upstream ask is the same trick the variant tag just pulled off, applied
+to parts: tag a declaration with the descendant it came from.
 
 Fixtures now pin the real shipped Button, Heading and Container specs, so the
 exporter and the builder fail together rather than drifting apart.
