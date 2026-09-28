@@ -140,15 +140,25 @@ export default function DocsPage() {
               </ol>
               <CopyRow label="Button B · the component specs folder" value={PATHS.spec} />
               <Alert variant="success" title="Expect">
-                Built 99 components, around 202 variants and 1146 bindings, a gap list, and a
-                collapsed list of things not built. The component sets lay out in a grid rather than
-                a pile.
+                Built 99 components, 202 variants and 1111 bindings, about 70 gaps, and a collapsed
+                list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>
-                Some components will look empty. That is known and not a fault of the build: their
+                Headings should come out at six different sizes, largest to smallest. If all six look
+                the same, the build ran against an older plugin. Container should show five widths.
+              </p>
+              <p className={styles.body}>
+                21 components will look empty. That is known and not a fault of the build: their
                 styling lives in parts, which this version does not build yet. It is the largest
                 piece of work left on either side.
               </p>
+              <div className={styles.internalNote}>
+                <Alert variant="warning" title="Sizes are right but not themeable">
+                  92 typography values are applied as plain numbers rather than bound, because cia
+                  exports no Variable for them. They render correctly and they will not change when
+                  you switch theme. That is the single biggest upstream ask on the token side.
+                </Alert>
+              </div>
             </div>
           </div>
 

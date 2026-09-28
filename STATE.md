@@ -1,7 +1,78 @@
-# Where we are — 2026-09-26
+# Where we are — 2026-09-27
 
 A pick-up-from-cold note. Read this, then `ROADMAP.md` in this repo, then
 `K:\repo\figma-import-export\ROADMAP.md`.
+
+## TYPOGRAPHY AND SIZES NOW BUILD (2026-09-27, latest)
+
+Four commits: `9a4a038a`, `17ac709a`, `41034157`, `fec57675`.
+
+cia's `type(heading-1)` expands in Sass before any CSS exists, so a spec records
+only the preset name, and that was reported as a gap. Five of Heading's six
+variants carry nothing else, so every level built at the same size: Heading sat
+in the `ready` folder and was broken by outcome. `$_type-scale`, `$font-sizes`,
+`$line-heights` and `$letter-spacings` are now mirrored in `buildComponent.ts`
+next to `FONT_TYPE_PRESETS`, which already mirrored `$_font-types`. Heading
+builds six sizes, 36px down to 14px.
+
+**Three things called unrepresentable were not.**
+
+- A font size with no exported Variable. cia exports only `font-size-base`, so
+  everything else was a gap and the text stayed at Figma's default. The scale is
+  fixed, so the value is exact. 354 gaps became applied values.
+- A line height. A unitless multiplier fits no Figma FLOAT, which is why it
+  cannot be *bound*, but Figma accepts PERCENT and 1.5 is exactly 150%. 49 calls
+  now apply.
+- A font weight. Figma derives `fontWeight` from `fontName.style` and will not
+  let you set it directly, so a missing token never cost the weight, only the
+  binding. Reporting it as a gap claimed the text had lost its weight.
+
+All three now report as skips saying the value was applied but **cannot follow a
+theme**. That is the accurate claim and it is the real upstream ask: 92 values
+are correct in Figma and hardcoded, so every heading in every theme is the same
+size until the numbered typography tokens exist.
+
+**Widths and heights.** figma-import-export added a `dimensions` array
+(`eda398b`), 485 declarations, 76 on blocks this version builds. Container was
+blocked entirely on it and now builds its five maxWidth variants. Figma applies
+`minWidth`/`maxWidth` only to auto-layout frames, which every component now is,
+because of the next item.
+
+**The 100x100 frame.** A component whose spec has no `flex()` call kept Figma's
+default size, which clipped a 30px heading. It now hugs its label. Side effect
+worth knowing: declared padding is now visible, because Figma ignores padding on
+a frame with no layout. Components that looked like they had no padding had it
+all along.
+
+**One ambiguity that used to resolve by luck.** Checkbox's base block sets
+`font-size` three times, because its `[data-size]` rules are mutually exclusive
+variants the exporter folded into one block. Previously an unbindable size
+produced no operation, so whichever value had a token was the only one left
+standing. Now all three resolve and last-wins would render every small checkbox
+large. The builder prefers the candidate that has a token and reports every
+candidate, saying the missing thing is the variant axis, not the values.
+
+**Measured over all 99 shipped specs, before and after:**
+
+|                      | before | after |
+|----------------------|--------|-------|
+| gaps                 | 131    | 70    |
+| bindings             | 1120   | 1111  |
+| applied-unthemeable  | 0      | 92    |
+| empty frames         | 21     | 21    |
+
+The nine lost bindings are correct: Button and ToggleButton variants whose own
+size has no token used to keep the base binding and silently render at the base
+size. Trading a binding for the right size is the trade this whole change makes.
+
+**None of the 70 remaining gaps is a builder fault.** In the `ready` bucket all
+eight are upstream: five are `space-2xs`, one is `font-size-2xs`, one is Stack's
+`space($gap)` (an unresolved mixin parameter), one is LightDarkToggle's
+`onChange` typed as an enum with values `light`/`dark`, which is a callback the
+exporter read as a variant axis.
+
+Fixtures now pin the real shipped Button, Heading and Container specs, so the
+exporter and the builder fail together rather than drifting apart.
 
 ## THEMING: ONE LIBRARY, FIVE THEMES (2026-09-27)
 

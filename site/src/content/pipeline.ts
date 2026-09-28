@@ -213,13 +213,13 @@ export const NEXT_STEPS: NextStep[] = [
     owner: 'A decision, not a task',
     title: 'Decide whether layout primitives belong in the library',
     detail:
-      'Flex declares four independent axes, which multiply out to 600 combinations. Nobody picks "Flex that is row, space-between, stretch, gap-md" from a list of 600: those are props a developer sets, not variants a designer picks. Grid and Stack are the same shape of thing. Container is the genuine edge case, since its five widths are a deliberate design choice.',
+      'Flex declares four independent axes, which multiply out to 600 combinations. Nobody picks "Flex that is row, space-between, stretch, gap-md" from a list of 600: those are props a developer sets, not variants a designer picks. Grid and Stack are the same shape of thing. Container was the genuine edge case, since its five widths are a deliberate design choice, and it now builds: the exporter records plain widths and heights, so 640px through 1280px arrive as real Figma bounds.',
   },
   {
     owner: 'A person, in Figma',
     title: 'Import the whole library',
     detail:
-      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 202 components and 1146 live bindings, with nothing rejected.',
+      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 202 components and 1111 live bindings, with nothing rejected. 70 gaps remain, and none of them is a builder fault: most are two tokens cia does not export, space-2xs and font-size-2xs.',
   },
   {
     owner: 'Both',
