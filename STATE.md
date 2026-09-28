@@ -416,8 +416,24 @@ That is the strongest version of the contract point: a wrong sentence in a
 contract does not only mislead a reader, it can stop the thing it describes from
 ever being implemented.
 
-Final: **282 variants, 4622 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 189 tests.**
+**Divider draws its line now** (`a016ed9f`). Upstream's border pattern had no CSS
+logical properties in it, so 19 declarations across 10 components were dropped
+whole. Divider is the case worth remembering, and it is a shape neither side had
+seen: its thickness never came through `borders` at all. Its line is
+`border-block-start: var(--thickness) solid var(--colour)`, so it arrives as a
+CONSUMPTION, and it had been resolving perfectly to 1px and `border-default` all
+along. **Every value was right. Only the property naming where the value goes was
+unusable**, so the component whose whole job is a line drew nothing while every
+count of resolved values said it was fine.
+
+A consumption's `physicalProperties` is therefore wired here, not only the borders
+path. Thickness and colour arrive as two consumptions on one property and are told
+apart by value, as the `border` shorthand already is. The vertical variant is a
+`border-inline-start` and lands on the left edge, under an assumption stated
+rather than buried: horizontal writing, left to right.
+
+Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
+empty, 193 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
