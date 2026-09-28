@@ -2686,3 +2686,53 @@ describe('when the declaration name matches more than one top', () => {
     expect(reported?.reason).toContain('does not choose between them');
   });
 });
+
+describe('an element tree with no top at all', () => {
+  const mutual = (): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Mutualish',
+    props: [],
+    // Two declarations that render each other, so every node is contained by
+    // another and no walk reaches a top. Upstream built this as a fixture after
+    // finding its ordering rule assumed an outside position always exists.
+    tree: [
+      { selector: '.branch', parent: '.leaf', tag: 'ul', declaredIn: 'Branch' },
+      { selector: '.leaf', parent: '.branch', tag: 'li', declaredIn: 'Leaf' },
+    ],
+    styleBlocks: [
+      { selector: '.branch', kind: 'base', ciaCalls: [] },
+      { selector: '.leaf', kind: 'part', ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }] },
+    ],
+  });
+
+  it('builds flat and says the tree has no top, rather than blaming the parts', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(mutual(), { collectionName: 'boilerplate' }, api);
+
+    expect(result.builtFrom).toBeUndefined();
+    expect(frameNamed(components[0], 'leaf')).toBeUndefined();
+    const reported = result.gaps.find((gap) => gap.reason.includes('no top'));
+    expect(reported?.reason).toContain('2 node(s) and no top');
+    expect(reported?.reason).toContain('render each other');
+  });
+
+  it('does not tell a part it is missing from a tree it is in', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(mutual(), { collectionName: 'boilerplate' }, api);
+
+    const part = result.skipped.find((skip) => skip.where === '.leaf');
+    // `.leaf` IS in the tree. Saying otherwise sends a reader to the wrong place.
+    expect(part?.reason).toBe('part skipped: the element tree has no top, so no part of it could be placed');
+  });
+
+  it('terminates rather than looping, which is the whole hazard here', async () => {
+    const { api } = createFakeApi();
+
+    // If any walk followed one position without a visited set, this would hang.
+    const { result } = await buildComponent(mutual(), { collectionName: 'boilerplate' }, api);
+
+    expect(result.component).toBe('Mutualish');
+  });
+});

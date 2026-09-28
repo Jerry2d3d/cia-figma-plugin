@@ -2036,6 +2036,19 @@ export async function buildComponent(
       });
     });
   }
+  // A tree can exist and still have no top, when declarations render each other
+  // and every position leads back inside the node's own subtree. Without this the
+  // only trace was every part reporting that it is "not in the element tree",
+  // which is false: the parts are all there, and it is the top that is missing.
+  if (tree && !rootSelector) {
+    resolver.gaps.push({
+      where: 'contract',
+      reason:
+        `the element tree has ${tree.length} node(s) and no top: every one of them is contained by ` +
+        'another, so there is nothing to build from and the component is built flat. Two declarations ' +
+        'that render each other produce this',
+    });
+  }
   if (orphanRoots.length > 0 && tree) {
     // Ten of the fourteen are one file declaring several things that render JSX,
     // not one component rendering several branches, so saying "could not be
@@ -2082,9 +2095,15 @@ export async function buildComponent(
       unbuiltPartCalls += block.ciaCalls.filter((call) => call.state === 'default').length;
       resolver.skipped.push({
         where: block.selector,
-        reason: tree
-          ? 'part skipped: it is not in the component element tree, so there is no node to style'
-          : 'part skipped: this component has no element tree, so v1 builds the root frame and its label only',
+        // Three different reasons, and saying the wrong one sends a reader to the
+        // wrong place. A part outside the built subtree is a real statement about
+        // that part; a tree with no top is a statement about the tree, and the
+        // part is not at fault at all.
+        reason: !tree
+          ? 'part skipped: this component has no element tree, so v1 builds the root frame and its label only'
+          : rootSelector
+            ? 'part skipped: it is not in the component element tree, so there is no node to style'
+            : 'part skipped: the element tree has no top, so no part of it could be placed',
       });
       return;
     }
