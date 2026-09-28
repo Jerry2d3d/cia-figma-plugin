@@ -695,7 +695,7 @@ describe('buildComponent', () => {
     expect(result.skipped.map((skip) => skip.reason)).toEqual([
       'type(display) applied as 36px: cia exports no "font-size-8" variable, so this size cannot follow a theme',
       'type(display) applied as 125%: a unitless multiplier has no Figma Variable type, so this line height cannot follow a theme',
-      'z(tooltip) skipped: z-index has no Figma equivalent',
+      'z(tooltip) not applied: Figma stacks siblings by their order in the layer list rather than by a number, and this version places every element in source order without reordering',
       'line-height(normal) applied as 150%: a unitless multiplier has no Figma Variable type, so this line height cannot follow a theme',
     ]);
   });
@@ -1194,7 +1194,7 @@ describe('the other two shapes a local value arrives in', () => {
 
     // The producer already reports the ambiguity in the spec's own gaps.
     expect(result.gaps).toEqual([]);
-    expect(result.skipped[0].reason).toContain('could not resolve to one value');
+    expect(result.skipped[0].reason).toContain('could not read at all');
   });
 
   it('ignores a non-default state, like every other non-default styling', async () => {

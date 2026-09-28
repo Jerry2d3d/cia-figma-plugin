@@ -605,7 +605,11 @@ class Resolver {
     if (!from) {
       this.skipped.push({
         where,
-        reason: `${consumed.property} comes from ${consumed.localToken}, which the spec could not resolve to one value`,
+        // Says only what is true now. A local taking several values IS resolved,
+        // and each value is built onto its own variant; this fires for the 14
+        // the producer genuinely could not read, which is a different thing and
+        // used to share the wording with them.
+        reason: `${consumed.property} comes from ${consumed.localToken}, whose value the spec could not read at all`,
       });
       return [];
     }
@@ -883,8 +887,21 @@ class Resolver {
         return [];
       case 'transition':
       case 'animate':
-      case 'z':
         this.skipped.push({ where, reason: `${signature} skipped: ${call.property} has no Figma equivalent` });
+        return [];
+      // Figma HAS a stacking order: it is the order of siblings in the layer
+      // list, where later sits on top. So saying z-index has no equivalent was a
+      // wrong conclusion rather than a missing feature. It is not built because
+      // this version places one element per node in source order and never
+      // reorders them, and an ordering is a fact about a whole set of siblings
+      // rather than about the element declaring it.
+      case 'z':
+        this.skipped.push({
+          where,
+          reason:
+            `${signature} not applied: Figma stacks siblings by their order in the layer list rather than ` +
+            'by a number, and this version places every element in source order without reordering',
+        });
         return [];
       // Compound mixins that emit several declarations at once. The parts this
       // builder can use arrive separately: `border` widths come through the
