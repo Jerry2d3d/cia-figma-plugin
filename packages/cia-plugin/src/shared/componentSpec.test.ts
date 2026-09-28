@@ -122,7 +122,7 @@ describe('the element tree', () => {
     }
   });
 
-  it('rejects a parent cycle rather than walking it forever', () => {
+  it('rejects a node with no path to a root, which nothing could place', () => {
     const result = validateComponentSpec(
       withTree([
         { selector: '.a', parent: '.b', tag: 'div' },
@@ -131,7 +131,7 @@ describe('the element tree', () => {
     );
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((error) => error.includes('parent cycle'))).toBe(true);
+      expect(result.errors.some((error) => error.includes('no path to a root'))).toBe(true);
     }
   });
 });
@@ -162,6 +162,66 @@ describe('a conditional class in the tree', () => {
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors.some((error) => error.includes('modifies nothing'))).toBe(true);
+    }
+  });
+});
+
+describe('a class rendered in several places', () => {
+  const withTree = (tree: unknown) => ({
+    specVersion: 2,
+    component: 'Manyish',
+    props: [],
+    styleBlocks: [],
+    tree,
+  });
+
+  it('accepts every position, including a null one for a render branch root', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.lines', parent: '.root', tag: 'div' },
+        // Skeleton's real shape: inside .lines, and also standing alone.
+        { selector: '.skeleton', parent: '.lines', parents: ['.lines', null], tag: 'div' },
+      ]),
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('accepts a class that names itself, because markup nests recursively', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.root', parent: null, tag: 'div' },
+        // DesignSandbox really puts a .demoRow label inside a .demoRow div.
+        { selector: '.demoRow', parent: '.root', parents: ['.root', '.demoRow'], tag: 'div' },
+      ]),
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects a first position that disagrees with parent', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.a', parent: '.root', tag: 'div' },
+        { selector: '.b', parent: '.root', parents: ['.a', '.root'], tag: 'div' },
+      ]),
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors.some((error) => error.includes('does not match parents[0]'))).toBe(true);
+    }
+  });
+
+  it('rejects a later position that is not in the tree', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.a', parent: '.root', parents: ['.root', '.missing'], tag: 'div' },
+      ]),
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors.some((error) => error.includes('"​.missing"') || error.includes('.missing'))).toBe(true);
     }
   });
 });

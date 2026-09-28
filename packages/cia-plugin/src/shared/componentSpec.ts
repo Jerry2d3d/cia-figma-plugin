@@ -156,8 +156,25 @@ export interface StyleBlock {
  */
 export interface PartTreeNode {
   selector: string;
-  /** Null for the root node. */
+  /**
+   * The first position, kept for readers that predate `parents`. When `parents`
+   * is present this is its first entry and carries no extra information.
+   */
   parent: string | null;
+  /**
+   * Every position this class is rendered in, present only when there is more
+   * than one. `.helperText` sits inside both `.section` and `.footer`, which are
+   * two real elements rather than one.
+   *
+   * A null entry is a render branch's own root rather than a child of anything.
+   * A position can also be the class ITSELF where markup nests recursively, so a
+   * reader walking this must not recurse blindly.
+   *
+   * The whole fact lives in one field on purpose. A separate "also under" list
+   * would have to be joined with `parent` to be true, and a reader that forgot
+   * the join would get an answer that was wrong and looked finished.
+   */
+  parents?: (string | null)[];
   tag: string;
   /**
    * Set when this class is applied conditionally, naming the class it modifies.
@@ -295,7 +312,7 @@ function validateTree(value: unknown, errors: string[]): void {
     return;
   }
   const selectors = new Set<string>();
-  const parentOf = new Map<string, string | null>();
+  const parentOf = new Map<string, (string | null)[]>();
 
   value.forEach((entry, index) => {
     const where = `tree[${index}]`;
@@ -310,6 +327,22 @@ function validateTree(value: unknown, errors: string[]): void {
     }
     if (node.parent !== null && (typeof node.parent !== 'string' || node.parent.length === 0)) {
       errors.push(`${where}.parent must be a non-empty string or null`);
+    }
+    if (node.parents !== undefined) {
+      if (!Array.isArray(node.parents) || node.parents.length === 0) {
+        errors.push(`${where}.parents must be a non-empty array when present`);
+      } else {
+        node.parents.forEach((position, at) => {
+          if (position !== null && (typeof position !== 'string' || position.length === 0)) {
+            errors.push(`${where}.parents[${at}] must be a non-empty string or null`);
+          }
+        });
+        // `parent` is documented as the first of them, so a disagreement means one
+        // of the two is stale and a reader cannot tell which.
+        if (node.parents[0] !== node.parent) {
+          errors.push(`${where}.parent does not match parents[0], so the two disagree about the first position`);
+        }
+      }
     }
     if (typeof node.tag !== 'string' || node.tag.length === 0) {
       errors.push(`${where}.tag must be a non-empty string`);
@@ -337,7 +370,12 @@ function validateTree(value: unknown, errors: string[]): void {
       return;
     }
     selectors.add(node.selector);
-    parentOf.set(node.selector, (node.parent as string | null) ?? null);
+    // Every position, not just the first: a class rendered in two places has two
+    // real parents, and checking only one would let a stale second slip through.
+    const positions = Array.isArray(node.parents)
+      ? (node.parents as (string | null)[])
+      : [(node.parent as string | null) ?? null];
+    parentOf.set(node.selector, positions);
   });
 
   // Several roots is not rejected here. 18 of 99 components arrive that way, and
@@ -345,10 +383,12 @@ function validateTree(value: unknown, errors: string[]): void {
   // subtree, or a conditional modifier class was read as a second element. Either
   // way the data is well formed and the builder reports the ambiguity, because
   // refusing the whole tree would lose the parts it did place correctly.
-  parentOf.forEach((parent, selector) => {
-    if (parent !== null && !selectors.has(parent)) {
-      errors.push(`tree node "${selector}" names parent "${parent}", which is not in the tree`);
-    }
+  parentOf.forEach((positions, selector) => {
+    positions.forEach((parent) => {
+      if (parent !== null && !selectors.has(parent)) {
+        errors.push(`tree node "${selector}" names parent "${parent}", which is not in the tree`);
+      }
+    });
   });
 
   // Being alternatives is symmetric, so both nodes must say so. A one-sided claim
@@ -374,17 +414,33 @@ function validateTree(value: unknown, errors: string[]): void {
     });
   });
 
-  // Walk each node to its root; anything that does not arrive is in a cycle.
-  parentOf.forEach((_parent, selector) => {
-    const seen = new Set<string>([selector]);
-    let current = parentOf.get(selector) ?? null;
-    while (current !== null && selectors.has(current)) {
+  // Every node must have at least one path up to a root, or nothing could ever
+  // build it. This is reachability rather than acyclicity: a node listing ITSELF
+  // as a position is legitimate, because markup nests recursively and
+  // DesignSandbox really does put a `.demoRow` label inside a `.demoRow` div. A
+  // self-loop is only fatal when it is the only way up.
+  parentOf.forEach((_positions, selector) => {
+    const seen = new Set<string>();
+    const queue = [selector];
+    let grounded = false;
+    while (queue.length > 0 && !grounded) {
+      const current = queue.shift() as string;
       if (seen.has(current)) {
-        errors.push(`tree node "${selector}" is in a parent cycle through "${current}"`);
-        return;
+        continue;
       }
       seen.add(current);
-      current = parentOf.get(current) ?? null;
+      (parentOf.get(current) ?? []).forEach((parent) => {
+        if (parent === null) {
+          grounded = true;
+          return;
+        }
+        if (selectors.has(parent)) {
+          queue.push(parent);
+        }
+      });
+    }
+    if (!grounded) {
+      errors.push(`tree node "${selector}" has no path to a root, so nothing could place it`);
     }
   });
 }

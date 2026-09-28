@@ -1324,12 +1324,12 @@
     },
     {
       "selector": ".subtitle",
-      "parent": ".title",
+      "parent": ".header",
       "tag": "p"
     },
     {
       "selector": ".error",
-      "parent": ".subtitle",
+      "parent": ".header",
       "tag": "p"
     },
     {
@@ -1370,12 +1370,12 @@
     },
     {
       "selector": ".buttonGroup",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "div"
     },
     {
       "selector": ".colorPicker",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "div"
     },
     {
@@ -1386,16 +1386,24 @@
     {
       "selector": ".hexInput",
       "parent": ".colorPicker",
-      "tag": "Input"
+      "tag": "Input",
+      "parents": [
+        ".colorPicker",
+        ".bgColorField"
+      ]
     },
     {
       "selector": ".colorError",
-      "parent": ".label",
-      "tag": "p"
+      "parent": ".section",
+      "tag": "p",
+      "parents": [
+        ".section",
+        ".bgColorField"
+      ]
     },
     {
       "selector": ".colorPresets",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "div"
     },
     {
@@ -1411,27 +1419,31 @@
     },
     {
       "selector": ".bgColorField",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "div"
     },
     {
       "selector": ".helperText",
-      "parent": ".label",
-      "tag": "p"
+      "parent": ".section",
+      "tag": "p",
+      "parents": [
+        ".section",
+        ".footer"
+      ]
     },
     {
       "selector": ".fileInput",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "input"
     },
     {
       "selector": ".uploadingIndicator",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "p"
     },
     {
       "selector": ".textInputWrapper",
-      "parent": ".label",
+      "parent": ".section",
       "tag": "div"
     },
     {
@@ -1441,7 +1453,7 @@
     },
     {
       "selector": ".inputContainer",
-      "parent": ".inputLabel",
+      "parent": ".textInputWrapper",
       "tag": "div"
     },
     {
@@ -1474,17 +1486,17 @@
     {
       "kind": "part-rendered-in-several-places",
       "selector": ".hexInput",
-      "reason": "rendered under .colorPicker and also under .bgColorField; the tree keeps one node per class, so it names the first position only and how many of this part exist is not stated"
+      "reason": "rendered in 2 distinct positions (under .colorPicker, .bgColorField), all of them listed in this node's `parents`; `parent` names the first only, and how many copies exist in each position is not stated"
     },
     {
       "kind": "part-rendered-in-several-places",
       "selector": ".colorError",
-      "reason": "rendered under .label and also under .bgColorField; the tree keeps one node per class, so it names the first position only and how many of this part exist is not stated"
+      "reason": "rendered in 2 distinct positions (under .section, .bgColorField), all of them listed in this node's `parents`; `parent` names the first only, and how many copies exist in each position is not stated"
     },
     {
       "kind": "part-rendered-in-several-places",
       "selector": ".helperText",
-      "reason": "rendered under .label and also under .section, .footer; the tree keeps one node per class, so it names the first position only and how many of this part exist is not stated"
+      "reason": "rendered in 2 distinct positions (under .section, .footer), all of them listed in this node's `parents`; `parent` names the first only, and how many copies exist in each position is not stated"
     }
   ]
 }

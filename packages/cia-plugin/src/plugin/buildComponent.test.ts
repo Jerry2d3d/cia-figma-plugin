@@ -2372,3 +2372,85 @@ describe('CustomizeModal, whose parts are rendered in several places', () => {
     expect(helper?.origin).toBe('spec');
   });
 });
+
+describe('a part rendered in several places', () => {
+  it('builds one frame per position, not one for the first only', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Manyish',
+      props: [],
+      tree: [
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.section', parent: '.root', tag: 'div' },
+        { selector: '.footer', parent: '.root', tag: 'div' },
+        // CustomizeModal's real shape.
+        { selector: '.helperText', parent: '.section', parents: ['.section', '.footer'], tag: 'p' },
+      ],
+      styleBlocks: [
+        { selector: '.root', kind: 'base', ciaCalls: [] },
+        {
+          selector: '.helperText',
+          kind: 'part',
+          ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const section = frameNamed(components[0], 'section');
+    const footer = frameNamed(components[0], 'footer');
+    // One inside each, and both carry the part's styling.
+    expect(frameNamed(section!, 'helperText')).toBeDefined();
+    expect(frameNamed(footer!, 'helperText')).toBeDefined();
+    expect(labelOf(frameNamed(footer!, 'helperText')!).fills).toHaveLength(1);
+  });
+
+  it('builds one level of a class nested inside itself, then stops', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Recursish',
+      props: [],
+      tree: [
+        { selector: '.root', parent: null, tag: 'div' },
+        // DesignSandbox's real shape: a .demoRow label inside a .demoRow div.
+        { selector: '.demoRow', parent: '.root', parents: ['.root', '.demoRow'], tag: 'div' },
+      ],
+      styleBlocks: [{ selector: '.root', kind: 'base', ciaCalls: [] }],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const outer = frameNamed(components[0], 'demoRow');
+    expect(outer).toBeDefined();
+    const inner = frameNamed(outer!, 'demoRow');
+    expect(inner).toBeDefined();
+    // And no third level: the chain guard stops it rather than recursing forever.
+    expect(frameNamed(inner!, 'demoRow')).toBeUndefined();
+  });
+
+  it('treats a node that is only sometimes a root as a child, not a second root', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Skeletish',
+      props: [],
+      tree: [
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.lines', parent: '.root', tag: 'div' },
+        // Skeleton's real shape: inside .lines, and also standing alone.
+        { selector: '.skeleton', parent: '.lines', parents: ['.lines', null], tag: 'div' },
+      ],
+      styleBlocks: [{ selector: '.root', kind: 'base', ciaCalls: [] }],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // It is built where it is contained, and its standalone position is not
+    // invented as a child of the component root.
+    expect(frameNamed(frameNamed(components[0], 'lines')!, 'skeleton')).toBeDefined();
+    expect(result.gaps.some((gap) => gap.reason.includes('claiming no parent'))).toBe(false);
+  });
+});

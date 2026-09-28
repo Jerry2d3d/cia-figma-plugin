@@ -1354,8 +1354,14 @@ function chooseRoot(
   // A modifier with no parent is not a root: it is a second name for an element
   // that is already in the tree. Counting it as one is what made 5 of the 18
   // multi-root components look ambiguous when they were not.
+  // A node is only a root if EVERY position it is rendered in is a root position.
+  // Skeleton's `.skeleton` sits inside `.lines` and also stands alone, so it is a
+  // child that happens to be reused, not a second root competing with the first.
   const roots = tree
-    .filter((node) => node.parent === null && !node.modifierOf)
+    .filter(
+      (node) =>
+        !node.modifierOf && positionsOf(node).every((position) => position === null),
+    )
     .map((node) => node.selector);
   if (roots.length === 0) {
     return { rootSelector: null, orphanRoots: [] };
@@ -1378,10 +1384,12 @@ function subtreeOf(tree: PartTreeNode[], rootSelector: string): Set<string> {
   while (grew) {
     grew = false;
     tree.forEach((node) => {
-      if (node.modifierOf || node.parent === null) {
+      if (node.modifierOf || inside.has(node.selector)) {
         return;
       }
-      if (inside.has(node.parent) && !inside.has(node.selector)) {
+      // Reachable through any of its positions. A node rendered both inside this
+      // subtree and as its own render-branch root belongs here for the first.
+      if (positionsOf(node).some((position) => position !== null && inside.has(position))) {
         inside.add(node.selector);
         grew = true;
       }
@@ -1509,6 +1517,11 @@ function groupAlternatives(tree: PartTreeNode[]): {
  * background colour would be invisible. Naming it after its selector also makes
  * the structure readable on the canvas.
  */
+/** Every position a node is rendered in. One entry unless the class is reused. */
+function positionsOf(node: PartTreeNode): (string | null)[] {
+  return node.parents ?? [node.parent];
+}
+
 async function buildTree(
   api: BuildApi,
   root: ComponentNode,
@@ -1518,45 +1531,65 @@ async function buildTree(
   placeholder: string,
   textHome: string | null,
 ): Promise<{ bindings: number; labelText?: TextNode; built: number }> {
-  const frameBySelector = new Map<string, StyledFrame>();
-  if (rootSelector) {
-    frameBySelector.set(rootSelector, root);
-  }
   let bindings = 0;
   let built = 0;
   let labelText: TextNode | undefined;
+  if (!rootSelector) {
+    return { bindings, labelText, built };
+  }
 
-  // The producer emits parents before children, but a spec is external input, so
-  // the order is earned rather than assumed: repeat until nothing more can be
-  // placed, which also terminates on a tree whose shape this cannot walk.
-  const pending = tree.filter((node) => node.parent !== null);
-  while (pending.length > 0) {
-    const placeable = pending.filter((node) => frameBySelector.has(node.parent as string));
-    if (placeable.length === 0) {
-      break;
-    }
-    for (const node of placeable) {
-      pending.splice(pending.indexOf(node), 1);
-      const parent = frameBySelector.get(node.parent as string) as StyledFrame;
+  /**
+   * Places every child of one element, then recurses. A node is built once per
+   * position it is rendered in, because `.helperText` inside `.section` and
+   * `.helperText` inside `.footer` are two real elements, and building one was
+   * leaving the structure knowably incomplete.
+   *
+   * `chain` is the ancestors already open, and a selector is never re-entered
+   * while it is in that chain. A class can name ITSELF as a position, which is
+   * real recursive markup rather than bad data: DesignSandbox puts a `.demoRow`
+   * label inside a `.demoRow` div. So one level of nesting is built and the walk
+   * stops, instead of descending forever.
+   */
+  const place = async (parentSelector: string, parentFrame: StyledFrame, chain: string[]) => {
+    for (const node of tree) {
+      const positions = positionsOf(node);
+      if (!positions.includes(parentSelector)) {
+        continue;
+      }
+      // A stated position is realised once along any one path. A class that names
+      // itself may therefore appear twice in a chain, as the container and as the
+      // copy inside it, which is what the source says and no more. Refusing it
+      // outright would drop a position the spec states; allowing it freely would
+      // descend forever.
+      const allowed = positions.includes(node.selector) ? 2 : 1;
+      if (chain.filter((ancestor) => ancestor === node.selector).length >= allowed) {
+        continue;
+      }
       const frame = api.createFrame();
       frame.name = layerName(node.selector);
-      parent.appendChild(frame);
-      frameBySelector.set(node.selector, frame);
+      parentFrame.appendChild(frame);
       built += 1;
 
       const text = api.createText();
       const isTextHome = node.selector === textHome;
       text.name = isTextHome ? 'label' : layerName(node.selector);
       frame.appendChild(text);
-      if (isTextHome) {
+      // The first copy carries the component text. A class rendered in two places
+      // must not claim the label twice, or the property would point at one of them
+      // arbitrarily.
+      if (isTextHome && !labelText) {
         labelText = text;
       }
 
       const ops = opsBySelector.get(node.selector) ?? [];
       // eslint-disable-next-line no-await-in-loop
       bindings += await applyOps(api, frame, text, isTextHome ? placeholder : layerName(node.selector), ops);
+      // eslint-disable-next-line no-await-in-loop
+      await place(node.selector, frame, [...chain, node.selector]);
     }
-  }
+  };
+
+  await place(rootSelector, root, [rootSelector]);
 
   return { bindings, labelText, built };
 }
