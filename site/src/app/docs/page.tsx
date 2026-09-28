@@ -144,7 +144,7 @@ export default function DocsPage() {
                 duplicates from an older export, and the panel will report duplicate sets.
               </p>
               <Alert variant="success" title="Expect">
-                Built 99 components, 233 variants and 891 bindings, about 51 gaps, and a collapsed
+                Built 99 components, 233 variants and 3731 bindings, about 165 gaps, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>
@@ -152,9 +152,10 @@ export default function DocsPage() {
                 the same, the build ran against an older plugin. Container should show five widths.
               </p>
               <p className={styles.body}>
-                25 components will look empty. That is known and not a fault of the build: their
-                styling lives in parts, which this version does not build yet. It is the largest
-                piece of work left on either side.
+                Components now arrive with their inner parts as nested frames, not just a styled
+                outer box. Open Checkbox or Dropdown in the layers panel and you should see named
+                children. Five still arrive empty, because their JSX could not be scanned, and the
+                panel says which.
               </p>
               <div className={styles.internalNote}>
                 <Alert variant="warning" title="Sizes are right but not themeable">

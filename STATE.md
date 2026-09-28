@@ -122,6 +122,47 @@ copies had mixin arguments leaked into its selector. Fixed upstream in `de51c3c`
 writing a spec now removes that component's file from the sibling buckets and
 reports what it removed. 99 files for 99 components.
 
+## THE ELEMENT TREE IS BUILT (`c6602bed`, latest)
+
+figma-import-export ships the tree read from each component's JSX: every node
+with its parent and its JSX tag, for 93 of 99. That was the last missing piece.
+Until now a part's styling was resolved, reported and thrown away, because there
+was no node to put it on.
+
+Every node is built as a nested frame, and each part block's styling lands on the
+node it names. Unstyled nodes are built too, because a designer has to be able to
+see and switch off the parts, and an unstyled node is still a real element.
+
+| | before | after |
+|--------------|------|------|
+| bindings     | 891  | 3731 |
+| arrive empty | 25   | 5    |
+| gaps         | 51   | 165  |
+
+**Twenty of the twenty-five empty components now build their parts.** That is the
+number a person can see on the canvas.
+
+The gaps tripling is the same shape as everything else this week: those gaps
+existed all along and nothing counted them. 466 part blocks are resolved for the
+first time, so their missing tokens are visible instead of being skipped before
+anything looked. 53 of them are one absent token, `space-2xs`.
+
+Each built frame carries a text child, which is not decoration: an auto-layout
+frame with no children collapses to nothing in Figma, so a part with only a
+background would be invisible. The component's own text moves into the node that
+renders it, matched against the same prop names the text prop is already found by.
+
+**18 of 99 arrive with several nodes claiming no parent, and it is never a real
+forest.** Checkbox's `.label` and `.checkboxContainer` are genuinely descendants
+of `.checkboxRow` and the scan could not join them. Switch's `.disabled` and
+Text's `.textMuted` are conditional classes on an element that already has one,
+so they are not separate elements at all. The base style block names the root
+independently of the tree, so it settles which root is real; the others are
+reported and left unbuilt, because attaching them would invent containment for
+Checkbox and invent an element for Text.
+
+`radius-raw` is now bound, like `space-raw` already was. Worth 108 bindings.
+
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a
 count of things *present*, so a thing that never arrived is invisible: the

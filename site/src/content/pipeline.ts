@@ -22,7 +22,13 @@ export const STATUS: StatusItem[] = [
     title: 'All 99 components build',
     level: 'working',
     detail:
-      '233 components and 891 live bindings across the whole library, 32 of them with real variants. Up from one component with variants two days ago.',
+      '233 components and 3731 live bindings across the whole library, 32 of them with real variants. Up from one component with variants two days ago.',
+  },
+  {
+    title: 'Components build their inner parts',
+    level: 'working',
+    detail:
+      'A component arrives as a nested tree of named frames rather than one styled box, so the styling of its label, icon and rows lands on the right element. Twenty of the twenty-five that used to arrive empty now build; five still cannot be scanned.',
   },
   {
     title: 'Typography builds at the right size',
@@ -225,7 +231,7 @@ export const NEXT_STEPS: NextStep[] = [
     owner: 'A person, in Figma',
     title: 'Import the whole library',
     detail:
-      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 233 components and 891 live bindings, with nothing rejected. 51 gaps remain, and none of them is a builder fault: most are two tokens cia does not export, space-2xs and font-size-2xs.',
+      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 233 components and 3731 live bindings, with nothing rejected. 165 gaps remain, and none of them is a builder fault: most are two tokens cia does not export, space-2xs and font-size-2xs.',
   },
   {
     owner: 'Both',
