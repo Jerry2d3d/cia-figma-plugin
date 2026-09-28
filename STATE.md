@@ -308,8 +308,19 @@ forever. It never reached this side for two reasons now covered by tests: every
 position is followed rather than only the first, so an outer one listed second is
 still found, and each node is visited once, so a cycle is crossed not fallen into.
 
+**A tree with no top** (`8c233f6c`). Two declarations that render each other leave
+every node contained by another, so no walk reaches a top. Zero components are
+shaped that way, which is why it was worth checking: the guarantee that a walk
+terminates was a property of today's data rather than of the contract.
+
+This side already survived it and built flat, which is right. But the only trace
+was every part reporting it is "not in the element tree", which is false: the
+parts are all there and the top is what is missing. The tree-level fact is now
+stated once, and the per-part message distinguishes three situations that had been
+sharing two wordings. Saying the wrong one sends a reader to the wrong place.
+
 Final: **233 variants, 3967 bindings, 162 build gaps plus 156 relayed, 3 arriving
-empty, 171 tests.**
+empty, 174 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
