@@ -388,6 +388,17 @@ class Resolver {
   ): Variable | undefined {
     const variable = this.variablesByName.get(name);
     if (!variable) {
+      // A `$` in the token name means the argument was a Sass variable the
+      // exporter could not resolve, usually a mixin parameter. Reporting that as
+      // a missing token sends someone looking for a `space-$gap` token that was
+      // never meant to exist, so the two are worded differently.
+      if (name.includes('$')) {
+        this.gaps.push({
+          where,
+          reason: `${purpose} passes the unresolved Sass variable "${name.slice(name.indexOf('$'))}", so there is no token name to look up`,
+        });
+        return undefined;
+      }
       this.gaps.push({ where, reason: `no variable named "${name}" in the collection (needed for ${purpose})` });
       return undefined;
     }

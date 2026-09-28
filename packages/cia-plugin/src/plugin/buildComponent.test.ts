@@ -1556,3 +1556,29 @@ describe('Container, from the real spec', () => {
     expect(bound.get('full')).toBeNull();
   });
 });
+
+describe('an argument the exporter could not resolve', () => {
+  it('says it is an unresolved Sass variable, not a missing token', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Stackish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.stack',
+          kind: 'base',
+          // Stack really ships this: `space($gap)` inside a mixin.
+          ciaCalls: [{ fn: 'space', args: ['$gap'], property: 'gap', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps).toHaveLength(1);
+    expect(result.gaps[0].reason).toContain('unresolved Sass variable "$gap"');
+    // Nobody should go looking for a token by this name.
+    expect(result.gaps[0].reason).not.toContain('no variable named');
+  });
+});
