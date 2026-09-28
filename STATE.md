@@ -239,8 +239,27 @@ One correction worth recording, because a fixture was pinned on the wrong value:
 `.helperText` has two positions, `.section` and `.footer`, not three. The third
 came from a scanner bug and was never a fact about the source.
 
-Final: **233 variants, 3717 bindings, 160 build gaps plus 146 relayed, 3 arriving
-empty, 160 tests.**
+**Ten of the fourteen multi-root trees are several components in one file**
+(`456b2df7`). One `.tsx` usually declares several things that render JSX, and the
+tree covers the whole file, so `Menu.tsx` produces MenuList, Menu and ContextMenu
+together. `declaredIn` now names each node's declaration. The report saying the
+scan "could not connect them" was asserting a cause wrong more often than right.
+
+Selection is unchanged: the base style block names the root element and is the
+only evidence independent of the JSX scan. Which of the other declarations are
+separate components and which are parts of this one is left open, because a second
+declaration often IS a part of the first (ScrollTop's `DEFAULT_ICON` is markup
+ScrollTop renders) and the file name does not always match a declaration name.
+
+**The root rule needed a caveat.** "Only a root if every position is a root
+position" was right for Skeleton, wrong for Menu. `.menuPopup` has a root position
+and its other position is `.contextTarget` from a DIFFERENT declaration, so
+nothing in Menu's own markup contains it and there it really is the top. The test
+is now whether a containing position shares the node's declaration, which
+separates that from Skeleton's reused child and from ColorPicker's `.swatch`.
+
+Final: **233 variants, 3713 bindings, 160 build gaps plus 156 relayed, 3 arriving
+empty, 163 tests.**
 
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a
