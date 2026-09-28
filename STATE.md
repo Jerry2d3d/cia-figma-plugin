@@ -163,6 +163,28 @@ Checkbox and invent an element for Text.
 
 `radius-raw` is now bound, like `space-raw` already was. Worth 108 bindings.
 
+**A conditional class is not an element** (`1d4d3784`). The exporter now marks one
+with `modifierOf`, and 27 such nodes were being built as frames. None is now,
+which removed 45 bindings sitting on invented elements. Five of the 18 phantom
+roots were this, so that count is 13.
+
+They split into two kinds:
+
+- 18 modify another element. `.itemOpen` is `.item` while open, so there is nothing
+  to build and it is reported like any other non-default state.
+- 9 name their OWN element, where `modifierOf` equals `parent`. The class was the
+  element's only class, chosen by a ternary, so the scanner had no unconditional
+  class to attach it to and fell back to the container. Input's info button and
+  MultiStepForm's slide direction, both confirmed in source. An element genuinely
+  exists but nothing says which alternative is default, so none is invented.
+
+A naming heuristic was tried and **rejected**: a real modifier usually extends its
+target's name, but `.active` on `.navLink`, `.selected` on `.colorSwatch` and
+`.disabled` on `.switchWrapper` are all genuine and do not. `modifierOf` equalling
+`parent` is a structural fact rather than a guess about names.
+
+Final: **233 variants, 3686 bindings, 160 gaps, 5 arriving empty.**
+
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a
 count of things *present*, so a thing that never arrived is invisible: the
