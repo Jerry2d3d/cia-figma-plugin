@@ -2136,3 +2136,88 @@ describe('the component element tree', () => {
     expect(result.skipped.some((s) => s.reason.includes('has no element tree'))).toBe(true);
   });
 });
+
+describe('a conditional class, which is not an element', () => {
+  const modSpec = (tree: { selector: string; parent: string | null; tag: string; modifierOf?: string }[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Modish',
+    props: [],
+    tree,
+    styleBlocks: [
+      { selector: '.root', kind: 'base', ciaCalls: [{ fn: 'color', args: ['surface-default'], property: 'background-color', state: 'default' }] },
+      { selector: '.rootMuted', kind: 'part', ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }] },
+    ],
+  });
+
+  it('builds no node for a modifier, because it is a state of another element', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      modSpec([
+        { selector: '.root', parent: null, tag: 'p' },
+        // Text's real shape: one tag, two class names, the second conditional.
+        { selector: '.rootMuted', parent: null, tag: 'p', modifierOf: '.root' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(frameNamed(components[0], 'rootMuted')).toBeUndefined();
+    expect(
+      result.skipped.some(
+        (s) => s.where === '.rootMuted' && s.reason.includes('a state of that element rather than a child'),
+      ),
+    ).toBe(true);
+  });
+
+  it('does not count a parentless modifier as a second root', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(
+      modSpec([
+        { selector: '.root', parent: null, tag: 'p' },
+        { selector: '.rootMuted', parent: null, tag: 'p', modifierOf: '.root' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    // Counting it as a root is what made 5 of 18 components look ambiguous.
+    expect(result.gaps.some((gap) => gap.reason.includes('claiming no parent'))).toBe(false);
+  });
+
+  it('says a class that names its own element is a choice nothing resolves', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(
+      modSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        // Input's real shape: `className={icon ? styles.a : styles.b}` on a real
+        // button, so both alternatives report `modifierOf` as the container.
+        { selector: '.rootMuted', parent: '.root', tag: 'button', modifierOf: '.root' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(frameNamed(components[0], 'rootMuted')).toBeUndefined();
+    const reported = result.skipped.find((s) => s.where === '.rootMuted');
+    expect(reported?.reason).toContain('is a real child of .root');
+    expect(reported?.reason).toContain('which is the default to build');
+  });
+
+  it('still builds an ordinary child that has no conditional class', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(
+      modSpec([
+        { selector: '.root', parent: null, tag: 'div' },
+        { selector: '.rootMuted', parent: '.root', tag: 'span' },
+      ]),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(frameNamed(components[0], 'rootMuted')).toBeDefined();
+  });
+});

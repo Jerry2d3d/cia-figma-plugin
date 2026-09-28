@@ -159,6 +159,17 @@ export interface PartTreeNode {
   /** Null for the root node. */
   parent: string | null;
   tag: string;
+  /**
+   * Set when this class is applied conditionally, naming the class it modifies.
+   * `.textMuted` is not an element: Text renders one tag carrying `.text` and,
+   * when muted, `.textMuted` as well, so the two selectors are one node under two
+   * names. Added upstream 2026-09-28, which took nodes wrongly claiming to be
+   * roots from 18 to 13.
+   *
+   * A modifier is a state of its target rather than a child of it, so it has no
+   * position of its own and nothing is built for it.
+   */
+  modifierOf?: string;
 }
 
 export interface ComponentProp {
@@ -266,6 +277,12 @@ function validateTree(value: unknown, errors: string[]): void {
     }
     if (typeof node.tag !== 'string' || node.tag.length === 0) {
       errors.push(`${where}.tag must be a non-empty string`);
+    }
+    if (node.modifierOf !== undefined && (typeof node.modifierOf !== 'string' || node.modifierOf.length === 0)) {
+      errors.push(`${where}.modifierOf must be a non-empty string when present`);
+    }
+    if (node.modifierOf === node.selector) {
+      errors.push(`${where}.modifierOf names itself, so it modifies nothing`);
     }
     if (selectors.has(node.selector)) {
       errors.push(`${where}.selector "${node.selector}" appears twice in the tree`);

@@ -1344,7 +1344,12 @@ function chooseRoot(
   tree: PartTreeNode[],
   baseSelectors: string[],
 ): { rootSelector: string | null; orphanRoots: string[] } {
-  const roots = tree.filter((node) => node.parent === null).map((node) => node.selector);
+  // A modifier with no parent is not a root: it is a second name for an element
+  // that is already in the tree. Counting it as one is what made 5 of the 18
+  // multi-root components look ambiguous when they were not.
+  const roots = tree
+    .filter((node) => node.parent === null && !node.modifierOf)
+    .map((node) => node.selector);
   if (roots.length === 0) {
     return { rootSelector: null, orphanRoots: [] };
   }
@@ -1356,20 +1361,62 @@ function chooseRoot(
   return { rootSelector: chosen, orphanRoots: roots.filter((selector) => selector !== chosen) };
 }
 
-/** Every node in the subtree under one root, including the root itself. */
+/**
+ * Every node in the subtree under one root, including the root itself, excluding
+ * anything that is a modifier rather than an element.
+ */
 function subtreeOf(tree: PartTreeNode[], rootSelector: string): Set<string> {
   const inside = new Set<string>([rootSelector]);
   let grew = true;
   while (grew) {
     grew = false;
     tree.forEach((node) => {
-      if (node.parent !== null && inside.has(node.parent) && !inside.has(node.selector)) {
+      if (node.modifierOf || node.parent === null) {
+        return;
+      }
+      if (inside.has(node.parent) && !inside.has(node.selector)) {
         inside.add(node.selector);
         grew = true;
       }
     });
   }
   return inside;
+}
+
+/**
+ * Says what each conditional class is, which is two different things.
+ *
+ * Most name a state of another element: `.itemOpen` is `.item` while open, and
+ * v1 builds the default state only, so there is nothing to build and the styling
+ * is reported the way every other non-default state is.
+ *
+ * Nine name their own element instead. When `modifierOf` equals `parent` the
+ * class was the element's ONLY class, chosen by a ternary, so the scanner had no
+ * unconditional class to attach it to and fell back to the container. Input's
+ * info button is `className={icon ? styles.infoIconOutside : styles.infoIcon}`
+ * on a real `<button>`, and MultiStepForm's slide direction is the same shape on
+ * a real `<div>`. Those are elements, but nothing says which of the alternatives
+ * is the default one, so a node is not invented for either. Both are reported.
+ */
+function reportModifiers(tree: PartTreeNode[], skipped: BuildSkip[]): void {
+  tree.forEach((node) => {
+    if (!node.modifierOf) {
+      return;
+    }
+    if (node.modifierOf === node.parent) {
+      skipped.push({
+        where: node.selector,
+        reason:
+          `not built: this <${node.tag}> is a real child of ${node.parent}, but its class is one of ` +
+          'several a condition chooses between, so nothing says which is the default to build',
+      });
+      return;
+    }
+    skipped.push({
+      where: node.selector,
+      reason: `not built: a conditional class on ${node.modifierOf}, which is a state of that element rather than a child of it`,
+    });
+  });
 }
 
 /**
@@ -1751,6 +1798,9 @@ export async function buildComponent(
   // has no known position, and putting it somewhere plausible is the guess this
   // whole contract exists to avoid.
   const placeable = tree && rootSelector ? subtreeOf(tree, rootSelector) : new Set<string>();
+  if (tree) {
+    reportModifiers(tree, resolver.skipped);
+  }
   if (orphanRoots.length > 0) {
     resolver.gaps.push({
       where: 'contract',

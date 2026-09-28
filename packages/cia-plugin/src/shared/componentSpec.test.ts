@@ -135,3 +135,33 @@ describe('the element tree', () => {
     }
   });
 });
+
+describe('a conditional class in the tree', () => {
+  const withTree = (tree: unknown) => ({
+    specVersion: 2,
+    component: 'Modish',
+    props: [],
+    styleBlocks: [],
+    tree,
+  });
+
+  it('accepts a modifier that names another node', () => {
+    const result = validateComponentSpec(
+      withTree([
+        { selector: '.text', parent: null, tag: 'p' },
+        { selector: '.textMuted', parent: null, tag: 'p', modifierOf: '.text' },
+      ]),
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects a modifier that names itself, which modifies nothing', () => {
+    const result = validateComponentSpec(
+      withTree([{ selector: '.text', parent: null, tag: 'p', modifierOf: '.text' }]),
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors.some((error) => error.includes('modifies nothing'))).toBe(true);
+    }
+  });
+});
