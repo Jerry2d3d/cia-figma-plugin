@@ -372,8 +372,34 @@ usually means the semantic token is not carrying its own dark value well enough.
 If `surface-default` were right in dark, Checkbox would not reach for
 `surface-subtle`. That is token design, not a token gap.
 
+## THE COLD READ OF EVERY MESSAGE (`db09d5d4`, `69427ba5`)
+
+Read all 41 reason strings this builder can emit, as a set, rather than one at a
+time while writing them. figma-import-export's distinction is what made it worth
+doing: an audit catches wording that points a reader at the wrong **place** while
+missing wording that leads them to the wrong **conclusion**, and only the first is
+obvious. Three messages asserted impossibility that had stopped being true.
+
+**`width: 100%` was refused because "a component set on the canvas has no
+parent".** True when written, false since the element tree landed: 34 of these sit
+on a CHILD, which has a parent, and filling it is what Figma's FILL sizing is.
+Now built. Applied after every frame has its layout, because Figma throws on a
+sizing mode whose parent is not yet auto-layout and a root gets its layout after
+its children. The fake now refuses it the same way, so that ordering fails here.
+The root's own 100% is still not applied and is now SAID rather than dropped:
+removing a wrong reason must not leave an absence.
+
+**"z-index has no Figma equivalent" is false.** Figma stacks siblings by layer
+order, which Jerry pointed out weeks ago. The real reason is narrower: this
+version places elements in source order and never reorders, and an ordering is a
+fact about a set of siblings rather than the element declaring it.
+
+**"the spec could not resolve to one value"** was true of all 99 such
+consumptions until upstream resolved them, and is now true of 14. Left alone it
+would have told a reader the upstream fix had not landed.
+
 Final: **282 variants, 4610 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 180 tests.**
+empty, 184 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
