@@ -282,8 +282,46 @@ everything looks right. Textarea had correct variants, bindings and parts, all
 describing the wrong element. Verified non-vacuous by reverting the fix, which
 fails naming Textarea exactly.
 
+**Which element a component is built from is now ranked evidence** (`8f0516b8`),
+and the report names the one that decided. Popup was the single case with nothing
+to go on: two public declarations, two tops, no base block. It took whichever came
+first and reported that the base block had named it, which was a false claim in
+the report rather than only a weak choice.
+
+  1. the base style block naming a top directly
+  2. the top containing the element the base block styles
+  3. the declaration whose name matches the component
+  4. first in the file, which is not evidence and is labelled as such
+
+The declaration name sits third because a file name does not always match a
+declaration. Measured before using it: agrees with the base block in all 22
+components where both exist, disagrees in none, and is independent of both the
+stylesheet and the containment scan.
+
 Final: **233 variants, 3967 bindings, 162 build gaps plus 156 relayed, 3 arriving
-empty, 165 tests.**
+empty, 168 tests.**
+
+## WHY THE WHOLE-SET CHECKS KEPT WORKING
+
+Seven bugs across both repos were found by a property that must hold over all 99
+components, and none was visible in any single output. The reason is narrower than
+"invariants are good": every one was **a fact attributed to the wrong owner, or a
+fact silently absent**. Neither shows up in an output that is internally
+consistent, because a single component always looks fine. The wrongness lives in
+the relationship between it and something else.
+
+Textarea is the clearest instance. It built correct variants, correct bindings and
+correct parts, all describing its toolbar instead of the text area. There is no
+count of the described thing that could have been wrong.
+
+Two habits came out of it, both worth keeping:
+
+- **Check that an invariant can fail.** The containment check was verified by
+  reverting the fix and watching it name Textarea. One that has never been seen to
+  fail is a claim about the code rather than a check on it.
+- **Report counts with their source attached.** Every correction that landed
+  between the two repos landed because the claim carried a file and a line. The
+  count alone would have been believed, in both directions.
 
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a
