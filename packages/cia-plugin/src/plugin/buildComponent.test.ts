@@ -2617,3 +2617,72 @@ describe('a file with two public components and no base block', () => {
     expect(reported?.reason).toContain('first in the file, with nothing to choose on');
   });
 });
+
+describe('walking up to the top from the styled element', () => {
+  it('terminates when a position points back into the element own subtree', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Loopish',
+      props: [],
+      tree: [
+        { selector: '.popup', parent: null, tag: 'div', declaredIn: 'Loopish' },
+        // Menu's real shape while the positions were mis-ordered upstream: the
+        // menu sits inside a submenu popup, which sits inside an item, which sits
+        // inside the menu. Following one position blindly never reaches a top.
+        { selector: '.menu', parent: '.submenuPopup', parents: ['.submenuPopup', '.popup'], tag: 'ul', declaredIn: 'MenuList' },
+        { selector: '.item', parent: '.menu', tag: 'li', declaredIn: 'MenuList' },
+        { selector: '.submenuPopup', parent: '.item', tag: 'div', declaredIn: 'MenuList' },
+      ],
+      styleBlocks: [{ selector: '.menu', kind: 'base', ciaCalls: [] }],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // Every position is followed, not just the first, and each node is visited
+    // once, so the cycle is crossed rather than fallen into.
+    expect(result.builtFrom).toBe('.popup');
+  });
+
+  it('follows every position, so an inner one listed first does not hide the outer', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Orderish',
+      props: [],
+      tree: [
+        { selector: '.outer', parent: null, tag: 'div', declaredIn: 'Orderish' },
+        { selector: '.mid', parent: '.outer', tag: 'div', declaredIn: 'Orderish' },
+        { selector: '.leaf', parent: '.mid', parents: ['.mid', '.outer'], tag: 'span', declaredIn: 'Orderish' },
+      ],
+      styleBlocks: [{ selector: '.leaf', kind: 'base', ciaCalls: [] }],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(frameNamed(components[0], 'mid')).toBeDefined();
+    expect(frameNamed(components[0], 'leaf')).toBeDefined();
+  });
+});
+
+describe('when the declaration name matches more than one top', () => {
+  it('says the name did not choose, rather than letting file order wear its authority', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Twoish',
+      props: [],
+      tree: [
+        { selector: '.first', parent: null, tag: 'div', declaredIn: 'Twoish' },
+        { selector: '.second', parent: null, tag: 'div', declaredIn: 'Twoish' },
+      ],
+      styleBlocks: [{ selector: '.first', kind: 'part', ciaCalls: [] }],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const reported = result.gaps.find((gap) => gap.reason.includes('tops ('));
+    expect(reported?.reason).toContain('2 tops are declared in Twoish');
+    expect(reported?.reason).toContain('does not choose between them');
+  });
+});

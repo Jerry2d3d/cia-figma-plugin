@@ -1413,9 +1413,26 @@ function chooseRoot(
   if (byBaseAbove) {
     return { rootSelector: byBaseAbove, orphanRoots: roots.filter((s) => s !== byBaseAbove), chosenBy: 'the element the base style block styles' };
   }
-  const byName = roots.find((selector) => bySelector.get(selector)?.declaredIn === componentName);
-  if (byName) {
-    return { rootSelector: byName, orphanRoots: roots.filter((s) => s !== byName), chosenBy: `the declaration named ${componentName}` };
+  // Only when it picks out exactly one. A declaration can contain two tops, and a
+  // signal that matches both has not chosen: taking the first would be file order
+  // wearing the name's authority, which is the failure this whole ranking exists
+  // to avoid. No component in the library is shaped that way today, because a top
+  // contained by something in its own declaration is not a top, but the guard
+  // costs nothing and the alternative is silent.
+  const byName = roots.filter((selector) => bySelector.get(selector)?.declaredIn === componentName);
+  if (byName.length === 1) {
+    return {
+      rootSelector: byName[0],
+      orphanRoots: roots.filter((selector) => selector !== byName[0]),
+      chosenBy: `the declaration named ${componentName}`,
+    };
+  }
+  if (byName.length > 1) {
+    return {
+      rootSelector: byName[0],
+      orphanRoots: roots.filter((selector) => selector !== byName[0]),
+      chosenBy: `first in the file: ${byName.length} tops are declared in ${componentName}, so the name does not choose between them`,
+    };
   }
   return { rootSelector: roots[0], orphanRoots: roots.slice(1), chosenBy: 'first in the file, with nothing to choose on' };
 }
