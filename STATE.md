@@ -258,8 +258,32 @@ nothing in Menu's own markup contains it and there it really is the top. The tes
 is now whether a containing position shares the node's declaration, which
 separates that from Skeleton's reused child and from ColorPicker's `.swatch`.
 
-Final: **233 variants, 3713 bindings, 160 build gaps plus 156 relayed, 3 arriving
-empty, 163 tests.**
+**The base block names the styled element, not always the top** (`a7e4015d`).
+figma-import-export read Menu.tsx and settled the question flagged above: MenuList
+is internal and Menu renders it inside its own popup, so the declarations are
+joined and `.menu` sits inside `.menuPopup`. The base block and the manifest name
+never disagreed; they only looked like it while containment was being discarded.
+
+That exposed an assumption here. Root selection matched the base block against the
+TOPS and fell back to the first top. Eight components have a base block that is in
+the tree but not a top, and seven worked only because they had a single top. Now
+the walk goes up from the styled element:
+
+- Menu: `.menu` inside `.menuPopup`, right by luck before, first of two tops.
+- Textarea: `.textarea` inside `.textareaWrapper`, and it had been **wrong**,
+  building from `.toolbar`, a sibling.
+
+Bindings 3713 to 3967. Multi-root trees 14 to 10, none of it from stitching.
+
+**A third whole-set invariant** (`b8e3e7d9`): the component must be built from
+something that contains its base block's element, and `builtFrom` is now reported
+so that is checkable at all. This is the one choice here that can be wrong while
+everything looks right. Textarea had correct variants, bindings and parts, all
+describing the wrong element. Verified non-vacuous by reverting the fix, which
+fails naming Textarea exactly.
+
+Final: **233 variants, 3967 bindings, 162 build gaps plus 156 relayed, 3 arriving
+empty, 165 tests.**
 
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a

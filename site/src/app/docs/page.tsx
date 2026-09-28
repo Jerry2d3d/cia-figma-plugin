@@ -144,7 +144,7 @@ export default function DocsPage() {
                 duplicates from an older export, and the panel will report duplicate sets.
               </p>
               <Alert variant="success" title="Expect">
-                Built 99 components, 233 variants and 3713 bindings, about 160 build gaps plus 156 the spec reports, and a collapsed
+                Built 99 components, 233 variants and 3967 bindings, about 162 build gaps plus 156 the spec reports, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>

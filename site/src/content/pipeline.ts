@@ -22,7 +22,7 @@ export const STATUS: StatusItem[] = [
     title: 'All 99 components build',
     level: 'working',
     detail:
-      '233 components and 3713 live bindings across the whole library, 32 of them with real variants. Up from one component with variants two days ago.',
+      '233 components and 3967 live bindings across the whole library, 32 of them with real variants. Up from one component with variants two days ago.',
   },
   {
     title: 'Components build their inner parts',
