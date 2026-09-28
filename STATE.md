@@ -298,8 +298,18 @@ declaration. Measured before using it: agrees with the base block in all 22
 components where both exist, disagrees in none, and is independent of both the
 stylesheet and the containment scan.
 
+A signal that matches two tops has **not** chosen, and says so (`857f2f57`). No
+component is shaped that way today, because a top contained by something in its
+own declaration is not a top, but the guard is in rather than waiting for the case.
+
+The walk up to a top is also pinned as terminating. Upstream briefly had Menu's
+`.menu` listing its INNER position first, so following `parent` alone looped
+forever. It never reached this side for two reasons now covered by tests: every
+position is followed rather than only the first, so an outer one listed second is
+still found, and each node is visited once, so a cycle is crossed not fallen into.
+
 Final: **233 variants, 3967 bindings, 162 build gaps plus 156 relayed, 3 arriving
-empty, 168 tests.**
+empty, 171 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
