@@ -6,6 +6,7 @@ import containerSpecJson from '@/__fixtures__/Container.component-spec.json';
 import checkboxSpecJson from '@/__fixtures__/Checkbox.component-spec.json';
 import inputSpecJson from '@/__fixtures__/Input.component-spec.json';
 import customizeModalSpecJson from '@/__fixtures__/CustomizeModal.component-spec.json';
+import dividerSpecJson from '@/__fixtures__/Divider.component-spec.json';
 
 const buttonSpec = buttonSpecJson as ComponentSpec;
 const headingSpec = headingSpecJson as ComponentSpec;
@@ -13,6 +14,7 @@ const containerSpec = containerSpecJson as ComponentSpec;
 const checkboxSpec = checkboxSpecJson as ComponentSpec;
 const inputSpec = inputSpecJson as ComponentSpec;
 const customizeModalSpec = customizeModalSpecJson as ComponentSpec;
+const dividerSpec = dividerSpecJson as ComponentSpec;
 
 class FakeVariable {
   constructor(
@@ -319,6 +321,8 @@ const BOILERPLATE_COLORS = [
   'action-secondary-hover',
   'border-emphasis',
   'border-subtle',
+  // Real, and the one Divider draws its line with.
+  'border-default',
   'surface-subtle',
   'brand-primary',
 ];
@@ -3135,5 +3139,88 @@ describe('the border mixin, whose arguments have defaults', () => {
 
     expect(components[0].strokes).toHaveLength(0);
     expect(result.skipped.some((skip) => skip.reason.includes('does not say which colour it draws'))).toBe(true);
+  });
+});
+
+describe('Divider, whose whole job is to draw a line', () => {
+  it('draws it, now that a logical border names the edge it lands on', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(dividerSpec, { collectionName: 'boilerplate' }, api);
+
+    // `border-block-start: var(--thickness) solid var(--colour)` resolved to 1px
+    // and border-default all along. Only the property naming WHERE it goes was
+    // unusable, so the component reported no line while every value was correct.
+    const horizontal = components.find((component) => component.name.includes('orientation=horizontal'));
+    expect(horizontal?.strokeTopWeight).toBe(1);
+    expect(boundColor(horizontal!.strokes[0])).toBe('border-default');
+    expect(result.gaps.some((gap) => gap.reason.includes('border-block-start'))).toBe(false);
+  });
+
+  it('puts the line on the left edge when it is vertical, not the top', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(dividerSpec, { collectionName: 'boilerplate' }, api);
+
+    // The vertical variant's rule is `border-inline-start`, which maps to left
+    // under the stated assumption of left-to-right writing.
+    const vertical = components.find((component) => component.name.includes('orientation=vertical'));
+    expect(vertical?.strokeLeftWeight).toBe(1);
+  });
+});
+
+describe('a logical border reached through a local', () => {
+  const logical = (physical: string, from: { fn: string | null; args: string[]; literal?: string }): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Logicalish',
+    props: [],
+    styleBlocks: [
+      {
+        selector: '.root',
+        kind: 'base',
+        ciaCalls: [],
+        consumes: [
+          {
+            property: 'border-block-start',
+            localToken: '--thickness',
+            state: 'default',
+            physicalProperties: [physical],
+            from,
+          },
+        ],
+      },
+    ],
+  });
+
+  it('tells the thickness from the colour by its value, as the shorthand already does', async () => {
+    const { api, components } = createFakeApi();
+
+    const width = await buildComponent(
+      logical('border-top-width', { fn: null, args: [], literal: '2px' }),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+    expect(components[0].strokeTopWeight).toBe(2);
+    expect(width.result.gaps).toEqual([]);
+
+    const second = createFakeApi();
+    await buildComponent(
+      logical('border-top-width', { fn: 'color', args: ['border-subtle'] }),
+      { collectionName: 'boilerplate' },
+      second.api,
+    );
+    expect(boundColor(second.components[0].strokes[0])).toBe('border-subtle');
+  });
+
+  it('says so when the thickness is not a px width, rather than dropping it', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(
+      logical('border-top-width', { fn: null, args: [], literal: '0.1em' }),
+      { collectionName: 'boilerplate' },
+      api,
+    );
+
+    expect(result.skipped.some((skip) => skip.reason.includes('which is not a px width'))).toBe(true);
   });
 });

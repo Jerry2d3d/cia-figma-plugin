@@ -1,0 +1,329 @@
+{
+  "specVersion": 2,
+  "component": "Divider",
+  "props": [
+    {
+      "name": "orientation",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "horizontal",
+        "vertical"
+      ],
+      "default": "horizontal"
+    },
+    {
+      "name": "variant",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "solid",
+        "dashed",
+        "dotted"
+      ],
+      "default": "solid"
+    },
+    {
+      "name": "align",
+      "optional": true,
+      "type": "enum",
+      "values": [
+        "start",
+        "center",
+        "end"
+      ],
+      "default": "center"
+    },
+    {
+      "name": "children",
+      "optional": true,
+      "type": "React.ReactNode",
+      "values": null
+    },
+    {
+      "name": "className",
+      "optional": true,
+      "type": "string",
+      "values": null
+    }
+  ],
+  "styleBlocks": [
+    {
+      "selector": ".root",
+      "kind": "base",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "property": "--divider-color",
+          "state": "default"
+        },
+        {
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "property": "--divider-gap",
+          "state": "default"
+        },
+        {
+          "fn": "flex",
+          "args": [
+            "$align: center",
+            "$gap: sm"
+          ],
+          "property": "layout",
+          "state": "default"
+        }
+      ],
+      "borders": [
+        {
+          "property": "border-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default"
+        },
+        {
+          "property": "border-top-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default",
+          "logicalProperty": "border-block-start",
+          "variant": {
+            "prop": "orientation",
+            "value": "vertical"
+          }
+        },
+        {
+          "property": "border-top-width",
+          "width": "0px",
+          "style": "none",
+          "state": "default",
+          "logicalProperty": "border-block-start"
+        }
+      ],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "border-block-start",
+          "localToken": "--divider-thickness",
+          "state": "default",
+          "physicalProperties": [
+            "border-top-width"
+          ],
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "1px"
+          }
+        },
+        {
+          "property": "border-block-start",
+          "localToken": "--divider-color",
+          "state": "default",
+          "physicalProperties": [
+            "border-top-width"
+          ],
+          "from": {
+            "fn": "color",
+            "args": [
+              "border-default"
+            ]
+          }
+        },
+        {
+          "property": "border-inline-start",
+          "localToken": "--divider-thickness",
+          "state": "default",
+          "physicalProperties": [
+            "border-left-width"
+          ],
+          "variant": {
+            "prop": "orientation",
+            "value": "vertical"
+          },
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "1px"
+          }
+        },
+        {
+          "property": "border-inline-start",
+          "localToken": "--divider-color",
+          "state": "default",
+          "physicalProperties": [
+            "border-left-width"
+          ],
+          "variant": {
+            "prop": "orientation",
+            "value": "vertical"
+          },
+          "from": {
+            "fn": "color",
+            "args": [
+              "border-default"
+            ]
+          }
+        }
+      ],
+      "defines": [
+        {
+          "localToken": "--divider-color",
+          "fn": "color",
+          "args": [
+            "border-default"
+          ],
+          "literal": null,
+          "state": "default"
+        },
+        {
+          "localToken": "--divider-thickness",
+          "fn": null,
+          "args": [],
+          "literal": "1px",
+          "state": "default"
+        },
+        {
+          "localToken": "--divider-gap",
+          "fn": "space",
+          "args": [
+            "sm"
+          ],
+          "literal": null,
+          "state": "default"
+        }
+      ]
+    },
+    {
+      "selector": ".line",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "flex-basis",
+          "state": "default",
+          "variant": {
+            "prop": "align",
+            "value": "start"
+          }
+        },
+        {
+          "fn": "space",
+          "args": [
+            "lg"
+          ],
+          "property": "flex-basis",
+          "state": "default",
+          "variant": {
+            "prop": "align",
+            "value": "end"
+          }
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [
+        {
+          "property": "border-block-start",
+          "localToken": "--divider-thickness",
+          "state": "default",
+          "physicalProperties": [
+            "border-top-width"
+          ],
+          "from": {
+            "fn": null,
+            "args": [],
+            "literal": "1px"
+          }
+        },
+        {
+          "property": "border-block-start",
+          "localToken": "--divider-color",
+          "state": "default",
+          "physicalProperties": [
+            "border-top-width"
+          ],
+          "from": {
+            "fn": "color",
+            "args": [
+              "border-default"
+            ]
+          }
+        }
+      ],
+      "defines": []
+    },
+    {
+      "selector": ".label",
+      "kind": "part",
+      "ciaCalls": [
+        {
+          "fn": "font",
+          "args": [
+            "medium",
+            "sm"
+          ],
+          "property": "typography",
+          "state": "default"
+        },
+        {
+          "fn": "color",
+          "args": [
+            "text-secondary"
+          ],
+          "property": "color",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": "@media (prefers-contrast: more)",
+      "kind": "other",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "border-emphasis"
+          ],
+          "property": "--divider-color",
+          "state": "default",
+          "parts": [
+            ".root"
+          ]
+        }
+      ],
+      "borders": [],
+      "dimensions": [],
+      "consumes": [],
+      "defines": []
+    }
+  ],
+  "tree": [
+    {
+      "selector": ".root",
+      "parent": null,
+      "tag": "div"
+    },
+    {
+      "selector": ".line",
+      "parent": ".root",
+      "tag": "span"
+    },
+    {
+      "selector": ".label",
+      "parent": ".root",
+      "tag": "span"
+    }
+  ],
+  "gaps": []
+}

@@ -632,6 +632,31 @@ class Resolver {
       return [];
     }
 
+    // A CSS logical border reaches Figma as one or two physical edges. Divider's
+    // line is `border-block-start: var(--thickness) solid var(--colour)`, which
+    // resolved perfectly to 1px and `border-default` all along; only the property
+    // naming WHERE the value goes was unusable, so the component whose whole job
+    // is a line drew nothing. The pair is told apart by its value, the same way
+    // the `border` shorthand already is: a colour paints the stroke, a length
+    // sets that edge's weight.
+    const edges = (consumed.physicalProperties ?? [])
+      .map((property) => BORDER_SIDES[property])
+      .filter((side): side is BorderSide => Boolean(side));
+    if (edges.length > 0) {
+      if (from.fn) {
+        return this.resolvePaint(from.args[0], { fn: from.fn, args: from.args, property: 'border-color', state: 'default' }, where, `${consumed.localToken} on ${consumed.property}`);
+      }
+      const weight = from.literal ? pixelWidth(from.literal) : undefined;
+      if (weight === undefined) {
+        this.skipped.push({
+          where,
+          reason: `${consumed.property} is "${from.literal}" from ${consumed.localToken}, which is not a px width`,
+        });
+        return [];
+      }
+      return edges.map((side) => ({ kind: 'strokeWeight' as const, weight, side }));
+    }
+
     if (from.fn) {
       return this.resolveCall(
         { fn: from.fn, args: from.args, property: consumed.property, state: 'default' },

@@ -69,6 +69,13 @@ export interface BorderSpec {
   width: string;
   /** Null when the width was declared longhand, with no style alongside it. */
   style: string | null;
+  /**
+   * The CSS logical property this was mapped from, when it was one.
+   * `border-block-start` becomes `border-top-width` under an assumption the
+   * producer states rather than buries: horizontal writing mode, left to right.
+   * Kept so the mapping is auditable if anything is ever rendered right-to-left.
+   */
+  logicalProperty?: string;
   state: CiaCallState;
   variant?: DeclarationVariant;
   parts?: DeclarationParts;
@@ -138,6 +145,14 @@ export interface ConsumedToken {
    * than nothing. Absent on older specs and on locals defined once.
    */
   fromByVariant?: ConsumedVariant[];
+  /**
+   * Where a logical property lands physically. `border-block` names two edges,
+   * so this is a list. Divider's line is a `border-block-start` reached through
+   * a local, which resolved perfectly to 1px and `border-default` while the
+   * property naming WHERE that value goes was unusable — so a reader wiring only
+   * the `borders` array misses the one component whose whole job is a line.
+   */
+  physicalProperties?: string[];
 }
 
 /**
@@ -614,6 +629,9 @@ function validateConsumed(entry: unknown, where: string, errors: string[]): void
   }
   validateVariantTag(c.variant, where, errors);
   validatePartsPath(c.parts, where, errors);
+  if (c.physicalProperties !== undefined && (!isStringArray(c.physicalProperties) || c.physicalProperties.length === 0)) {
+    errors.push(`${where}.physicalProperties must be a non-empty array of strings when present`);
+  }
   if (c.fromByVariant !== undefined) {
     if (!Array.isArray(c.fromByVariant) || c.fromByVariant.length === 0) {
       errors.push(`${where}.fromByVariant must be a non-empty array when present`);
@@ -677,6 +695,9 @@ function validateBorder(border: unknown, where: string, errors: string[]): void 
   }
   if (typeof b.state !== 'string' || !CALL_STATES.includes(b.state as CiaCallState)) {
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
+  }
+  if (b.logicalProperty !== undefined && (typeof b.logicalProperty !== "string" || b.logicalProperty.length === 0)) {
+    errors.push(`${where}.logicalProperty must be a non-empty string when present`);
   }
   validateVariantTag(b.variant, where, errors);
   validatePartsPath(b.parts, where, errors);
