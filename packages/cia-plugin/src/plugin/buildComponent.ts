@@ -70,6 +70,21 @@ export const DEFAULT_STROKE_WEIGHT = 1;
  */
 export const MAX_VARIANT_COMBINATIONS = 64;
 
+/** `12px` or `0.25rem` -> a pixel number. Undefined for anything else. */
+function remOrPxToPixels(value: string): number | undefined {
+  const match = /^(-?[\d.]+)(px|rem)$/.exec(value.trim());
+  if (!match) {
+    const bare = Number(value.trim());
+    return Number.isFinite(bare) ? bare : undefined;
+  }
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) {
+    return undefined;
+  }
+  // cia's own export converts rem at 16px, so this matches what the tokens say.
+  return match[2] === 'rem' ? amount * 16 : amount;
+}
+
 /** `border-width: 2px` -> 2. Returns undefined for anything not in px. */
 function pixelWidth(value: string): number | undefined {
   const match = /^(-?[\d.]+)px$/.exec(value.trim());
@@ -190,9 +205,9 @@ type Op =
   | { kind: 'fill'; variable: Variable }
   | { kind: 'textFill'; variable: Variable }
   | { kind: 'stroke'; variable: Variable }
-  | { kind: 'radius'; variable: Variable }
-  | { kind: 'padding'; vertical?: Variable; horizontal?: Variable }
-  | { kind: 'gap'; variable: Variable }
+  | { kind: 'radius'; value: Variable | number }
+  | { kind: 'padding'; vertical?: Variable | number; horizontal?: Variable | number }
+  | { kind: 'gap'; value: Variable | number }
   | {
       kind: 'layout';
       direction: 'HORIZONTAL' | 'VERTICAL';
@@ -386,6 +401,10 @@ class Resolver {
         return [{ kind: 'strokeWeight', weight }];
       }
     }
+    const pixels = remOrPxToPixels(literal);
+    if (pixels !== undefined) {
+      return this.spacingOps(pixels, consumed.property, where, `${consumed.localToken} (${literal})`);
+    }
     this.skipped.push({
       where,
       reason: `${consumed.property} is the literal "${literal}" from ${consumed.localToken}, which is not a token and has no Figma equivalent`,
@@ -464,7 +483,20 @@ class Resolver {
         return this.resolvePaint(`brand-${call.args[0]}`, call, where, signature);
       case 'radius': {
         const variable = this.lookup(`radius-${call.args[0]}`, 'FLOAT', where, `${signature} as border-radius`);
-        return variable ? [{ kind: 'radius', variable }] : [];
+        return variable ? [{ kind: 'radius', value: variable }] : [];
+      }
+      // `grid($n, $base: 0.25rem)` is arithmetic rather than a token: it
+      // returns n x 4px. There is nothing to bind, but the number is exact and
+      // stated, so it is applied as a literal rather than reported as
+      // unsupported.
+      case 'grid': {
+        const steps = Number(call.args[0]);
+        const base = call.args[1] ? remOrPxToPixels(call.args[1]) : 4;
+        if (!Number.isFinite(steps) || base === undefined) {
+          this.gaps.push({ where, reason: `${signature} is not a number this can compute` });
+          return [];
+        }
+        return this.spacingOps(steps * base, call.property, where, signature);
       }
       case 'pad-asym': {
         // cia: `pad-asym($y: 2, $x: 4)` is vertical first, then horizontal.
@@ -478,7 +510,7 @@ class Resolver {
           return [];
         }
         if (call.property === 'gap') {
-          return [{ kind: 'gap', variable }];
+          return [{ kind: 'gap', value: variable }];
         }
         this.skipped.push({ where, reason: `${signature} sets ${call.property}, which has no Figma equivalent` });
         return [];
@@ -567,6 +599,24 @@ class Resolver {
       return [{ kind: 'stroke', variable }];
     }
     this.skipped.push({ where, reason: `${signature} sets ${call.property}, which has no Figma equivalent` });
+    return [];
+  }
+
+  /** Applies a plain pixel number to whichever spacing field the CSS names. */
+  private spacingOps(pixels: number, property: string | null, where: string, signature: string): Op[] {
+    if (property === 'gap') {
+      return [{ kind: 'gap', value: pixels }];
+    }
+    if (property === 'padding') {
+      return [{ kind: 'padding', vertical: pixels, horizontal: pixels }];
+    }
+    if (property === 'border-radius') {
+      return [{ kind: 'radius', value: pixels }];
+    }
+    this.skipped.push({
+      where,
+      reason: `${signature} is ${pixels}px on ${property}, which has no Figma equivalent`,
+    });
     return [];
   }
 
@@ -764,6 +814,21 @@ async function applyOps(
     bindings += 1;
   };
 
+  /**
+   * A spacing value is either a token, which is bound so it follows the theme,
+   * or a plain number, which is written directly. cia computes some spacing
+   * arithmetically (`grid(2)` is 8px) and some components state a literal, and
+   * both are real values with no token behind them. Only a binding counts
+   * towards the binding total, since a literal is not bound to anything.
+   */
+  const setSpacing = (field: VariableBindableNodeField, value: Variable | number) => {
+    if (typeof value === 'number') {
+      (component as unknown as Record<string, number>)[field] = value;
+      return;
+    }
+    bindNode(field, value);
+  };
+
   bindText('fontSize', lastOp(ops, 'fontSize')?.variable);
   bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
 
@@ -794,23 +859,23 @@ async function applyOps(
         bindings += 1;
         break;
       case 'radius':
-        bindNode('topLeftRadius', op.variable);
-        bindNode('topRightRadius', op.variable);
-        bindNode('bottomLeftRadius', op.variable);
-        bindNode('bottomRightRadius', op.variable);
+        setSpacing('topLeftRadius', op.value);
+        setSpacing('topRightRadius', op.value);
+        setSpacing('bottomLeftRadius', op.value);
+        setSpacing('bottomRightRadius', op.value);
         break;
       case 'padding':
-        if (op.vertical) {
-          bindNode('paddingTop', op.vertical);
-          bindNode('paddingBottom', op.vertical);
+        if (op.vertical !== undefined) {
+          setSpacing('paddingTop', op.vertical);
+          setSpacing('paddingBottom', op.vertical);
         }
-        if (op.horizontal) {
-          bindNode('paddingLeft', op.horizontal);
-          bindNode('paddingRight', op.horizontal);
+        if (op.horizontal !== undefined) {
+          setSpacing('paddingLeft', op.horizontal);
+          setSpacing('paddingRight', op.horizontal);
         }
         break;
       case 'gap':
-        bindNode('itemSpacing', op.variable);
+        setSpacing('itemSpacing', op.value);
         break;
       case 'layout':
         component.layoutMode = op.direction;
@@ -819,7 +884,7 @@ async function applyOps(
         component.primaryAxisAlignItems = op.justify;
         component.counterAxisAlignItems = op.align;
         if (op.gap) {
-          bindNode('itemSpacing', op.gap);
+          setSpacing('itemSpacing', op.gap);
         }
         break;
       default:

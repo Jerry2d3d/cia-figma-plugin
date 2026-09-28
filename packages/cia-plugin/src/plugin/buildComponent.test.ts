@@ -53,6 +53,12 @@ const FIGMA_DEFAULT_FILL: SolidPaint = { type: 'SOLID', color: { r: 1, g: 1, b: 
 class FakeComponent extends FakeProperties {
   name = '';
 
+  itemSpacing = 0;
+
+  paddingTop = 0;
+
+  paddingLeft = 0;
+
   fills: SolidPaint[] = [FIGMA_DEFAULT_FILL];
 
   strokes: SolidPaint[] = [];
@@ -1096,5 +1102,89 @@ describe('border and border-color write the same stroke', () => {
 
     expect(result.skipped).toEqual([]);
     expect(result.gaps).toEqual([]);
+  });
+});
+
+describe('spacing with no token behind it', () => {
+  it('computes grid(n) rather than calling it unsupported', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Gridish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.thing',
+          kind: 'base',
+          // cia: grid($n, $base: 0.25rem) returns n x 4px. Arithmetic, not a token.
+          ciaCalls: [
+            { fn: 'grid', args: ['2'], property: 'gap', state: 'default' },
+            { fn: 'grid', args: ['1.5'], property: 'padding', state: 'default' },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].itemSpacing).toBe(8);
+    expect(components[0].paddingTop).toBe(6);
+    expect(result.gaps).toEqual([]);
+    // A literal is not a binding: it follows no theme and is not counted as one.
+    expect(result.bindings).toBe(0);
+  });
+
+  it('keeps a literal padding reached through a local property', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Textareaish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.textarea',
+          kind: 'base',
+          ciaCalls: [],
+          // Textarea's real shape: padding stated as a literal, not a token.
+          consumes: [
+            {
+              property: 'padding',
+              localToken: '--textarea-padding-y',
+              state: 'default',
+              from: { fn: null, args: [], literal: '12px' },
+            },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].paddingTop).toBe(12);
+    expect(components[0].paddingLeft).toBe(12);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('still says so when a computed value lands somewhere Figma has nothing for', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Marginish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.thing',
+          kind: 'base',
+          ciaCalls: [{ fn: 'grid', args: ['1'], property: 'margin-left', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps).toEqual([]);
+    expect(result.skipped[0].reason).toBe(
+      'grid(1) is 4px on margin-left, which has no Figma equivalent',
+    );
   });
 });
