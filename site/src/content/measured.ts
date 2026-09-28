@@ -29,29 +29,6 @@ export interface MeasuredLibrary {
   arriveEmpty: number;
 }
 
-/**
- * What the token file the runbook points at actually contains. This is the FIRST
- * thing a tester does, so a wrong number here is the one that makes them think
- * the whole thing is broken before they reach anything else.
- */
-export interface MeasuredTokens {
-  /** Variables in the combined export. */
-  variables: number;
-  /** Modes in it, which is two per theme. */
-  modes: number;
-  /** Themes it combines. Eight exist as separate files; this is how many are in. */
-  themes: number;
-  /** Values the export could not represent, all of them CSS keywords. */
-  gaps: number;
-}
-
-export const MEASURED_TOKENS: MeasuredTokens = {
-  variables: 131,
-  modes: 4,
-  themes: 2,
-  gaps: 57,
-};
-
 export const MEASURED: MeasuredLibrary = {
   specs: 99,
   variants: 282,
@@ -60,3 +37,25 @@ export const MEASURED: MeasuredLibrary = {
   specGaps: 58,
   arriveEmpty: 3,
 };
+
+/**
+ * The token file is deliberately NOT given expected totals, and the reason is a
+ * mistake worth not repeating.
+ *
+ * `output/` in the other repo is local scratch, so the file sitting there is
+ * whichever export somebody last ran. Reading it and publishing its totals looked
+ * like measuring; it was sampling. The runbook had said 133 variables and 10
+ * modes, which was correct for the five-theme export it was written against, and
+ * lowering it to match a two-theme file on disk would have been pinning the
+ * ground to the last footprint on it.
+ *
+ * So the runbook carries the COMMAND instead, and the test checks what is true of
+ * any export rather than of one: a mode per theme and scheme, and every gap
+ * carrying a reason. A tester who runs the command gets whatever that theme set
+ * produces, and nothing here has to be right about a number nobody measured.
+ */
+export const TOKEN_EXPORT = {
+  /** The themes Jerry chose. Up to five fit in one collection. */
+  themes: ['sketchbook', 'boilerplate', 'terminal', 'glass', 'press'],
+  tool: 'figma_export_tokens',
+} as const;

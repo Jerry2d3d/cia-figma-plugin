@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Alert } from '@bp/components/Alert';
 import { CopyRow } from '@/components/CopyRow';
 import { PATHS } from '@/content/pipeline';
-import { MEASURED, MEASURED_TOKENS } from '@/content/measured';
+import { MEASURED, TOKEN_EXPORT } from '@/content/measured';
 import styles from '@/components/content.module.scss';
 
 export const metadata: Metadata = {
@@ -111,17 +111,23 @@ export default function DocsPage() {
               <span className={styles.stepTime}>3 min</span>
             </div>
             <div className={styles.stepBody}>
-              <p className={styles.body}>Button A, then the file below.</p>
+              <p className={styles.body}>
+                Generate the file first, because the one already on disk is whatever export was run
+                last. Ask figma-import-export for <code>{TOKEN_EXPORT.tool}</code> with these{' '}
+                {TOKEN_EXPORT.themes.length} themes: {TOKEN_EXPORT.themes.join(', ')}. Then Button A
+                and the file below.
+              </p>
               <CopyRow label="Button A · the themes file" value={PATHS.tokens} />
               <Alert variant="success" title="Expect">
-                Collection <strong>cia</strong>, {MEASURED_TOKENS.variables} created,{' '}
-                {MEASURED_TOKENS.modes - 1} modes added, {MEASURED_TOKENS.gaps} gaps, and a line saying
-                the variable map was saved. One fewer mode than you might count is right: a new
-                collection arrives with one already, which gets renamed rather than left behind. The
-                gaps are all CSS keywords like <code>none</code>, which no Figma Variable can hold.
+                Collection <strong>cia</strong>, two modes per theme so{' '}
+                {TOKEN_EXPORT.themes.length * 2} in total, a gap list, and a line saying the variable
+                map was saved. One fewer mode is <em>added</em> than you count, because a new
+                collection arrives with one already and it gets renamed rather than left behind. The
+                gaps are all CSS keywords like <code>none</code>, which no Figma Variable can hold,
+                so a few dozen of them is right rather than a failure.
               </Alert>
               <p className={styles.body}>
-                Open Figma&apos;s Variables panel and confirm ten mode columns. Find{' '}
+                Open Figma&apos;s Variables panel and confirm one column per mode. Find{' '}
                 <code>btn-radius</code>: most columns should show the name <code>radius-md</code>{' '}
                 rather than a number, because it points at that variable instead of copying it.
                 Terminal shows 0 and press shows 2, which are real overrides.
@@ -241,8 +247,8 @@ export default function DocsPage() {
                 Select the Login frame, find the variable modes control in the right panel, and
                 change it from <code>sketchbook Light</code> to <code>terminal Dark</code>. The whole
                 screen should re-theme. Nothing is rebuilt and nothing is relinked. Try all{' '}
-                {MEASURED_TOKENS.modes} modes in the dropdown. Only the themes in the file you loaded
-                appear there, so if you want the other six, the combined export has to include them.
+                {TOKEN_EXPORT.themes.length * 2} modes in the dropdown. Only the themes you exported appear
+                there, so if you want others, re-run the export naming them.
               </p>
             </div>
           </div>

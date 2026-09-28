@@ -3,7 +3,7 @@
  * single edit rather than a hunt through five pages.
  */
 
-import { MEASURED, MEASURED_TOKENS } from '@/content/measured';
+import { MEASURED, TOKEN_EXPORT } from '@/content/measured';
 
 export type StatusLevel = 'working' | 'blocked' | 'pending';
 
@@ -18,7 +18,7 @@ export const STATUS: StatusItem[] = [
     title: 'Tokens into Figma',
     level: 'working',
     detail:
-      `${MEASURED_TOKENS.variables} variables in one collection, with a Light and a Dark mode for each of the ${MEASURED_TOKENS.themes} themes it combines. Colours, numbers and font stacks all land correctly.`,
+      `One collection holding up to five themes at once, with a Light and a Dark mode each. Colours, numbers and font stacks all land correctly; the exact count depends on which themes the export names.`,
   },
   {
     title: 'All 99 components build',
@@ -60,7 +60,7 @@ export const STATUS: StatusItem[] = [
     title: 'Many themes, one library',
     level: 'working',
     detail:
-      `Every component binds once to a single collection. Switching a frame to another theme re-themes it instantly, with no rebuild, and two themes can sit side by side. Eight themes are exported; the combined file currently carries ${MEASURED_TOKENS.themes}.`,
+      `Every component binds once to a single collection. Switching a frame to another theme re-themes it instantly, with no rebuild, and two themes can sit side by side. Eight themes exist; ${TOKEN_EXPORT.themes.length} fit in one collection and the export names which.`,
   },
   {
     title: 'The screen read-back',
