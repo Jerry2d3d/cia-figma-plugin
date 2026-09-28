@@ -36,11 +36,16 @@ export interface MeasuredLibrary {
  * excluded it showed 73 gaps that were the theme selection rather than a missing
  * token. A collection holding boilerplate and others can only do better, since it
  * carries the union, so these are the floor for a real run rather than a target.
+ *
+ * Re-measured 2026-09-28 after the exporter began emitting the tokens cia
+ * computes (font sizes, weights, line heights as percentages): bindings rose
+ * from 4935 to 5522 with nothing else moving, which is the 44 typography
+ * tokens being bound instead of set as numbers.
  */
 export const MEASURED: MeasuredLibrary = {
   specs: 99,
   variants: 282,
-  bindings: 4935,
+  bindings: 5522,
   buildGaps: 79,
   specGaps: 58,
   arriveEmpty: 3,

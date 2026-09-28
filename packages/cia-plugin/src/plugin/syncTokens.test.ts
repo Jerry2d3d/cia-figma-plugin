@@ -1,5 +1,5 @@
 import { syncTokenContract, VariablesApi } from '@/plugin/syncTokens';
-import { TokenContract } from '@/shared/tokenContract';
+import { TokenContract, normaliseAliases } from '@/shared/tokenContract';
 
 const FIGMA_DEFAULTS: Record<string, unknown> = {
   COLOR: { r: 0, g: 0, b: 0, a: 1 },
@@ -413,5 +413,42 @@ describe('alias values', () => {
       'alias to "radius-md" in mode "boilerplate Light" forms a loop — value skipped',
       'alias to "btn-radius" in mode "boilerplate Light" forms a loop — value skipped',
     ]);
+  });
+});
+
+describe('a variable that says to bind another instead', () => {
+  // The shape the exporter writes since ce0727c: cia's multiplier kept as
+  // declared for the round trip, and a pointer to the percentage to bind.
+  const contract: TokenContract = {
+    specVersion: '1.0.0',
+    collection: 'cia',
+    modes: ['Light', 'Dark'],
+    variables: [
+      { name: 'line-height-normal', type: 'FLOAT', valuesByMode: { Light: 1.5, Dark: 1.5 }, bindAs: 'line-height-4' },
+      { name: 'line-height-4', type: 'FLOAT', valuesByMode: { Light: 150, Dark: 150 } },
+    ],
+  };
+
+  it('lands in Figma as an alias, so binding either name gives the percentage', () => {
+    const { api, variables } = createFakeApi();
+
+    const result = syncTokenContract(normaliseAliases(contract).contract, api);
+
+    const normal = variables.find((v) => v.name === 'line-height-normal')!;
+    const step = variables.find((v) => v.name === 'line-height-4')!;
+    expect(Object.values(normal.values)).toEqual([
+      { type: 'VARIABLE_ALIAS', id: step.id },
+      { type: 'VARIABLE_ALIAS', id: step.id },
+    ]);
+    expect(Object.values(step.values)).toEqual([150, 150]);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('would have written the multiplier without the normalise step, which is the hazard', () => {
+    const { api, variables } = createFakeApi();
+
+    syncTokenContract(contract, api);
+
+    expect(Object.values(variables.find((v) => v.name === 'line-height-normal')!.values)).toEqual([1.5, 1.5]);
   });
 });

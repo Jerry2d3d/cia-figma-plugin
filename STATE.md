@@ -17,11 +17,11 @@ The whole library builds, against `boilerplate.variables.json`:
 |---|---|
 | specs | 99 |
 | components produced | 282 |
-| bindings | 4935 |
+| bindings | 5522 |
 | gaps this builder found | 79 |
 | gaps the spec reports | 58 |
 | arriving empty | 3 |
-| tests | 204 |
+| tests | 228 |
 
 Those figures are a **floor**, not a target. They are measured against one
 theme's tokens, and a collection carrying several holds the union, so a real run
@@ -41,9 +41,19 @@ Build order follows from that: variables, Text, Button, then what uses them.
 listed: sizes in px, line heights and spacing as percentages. The test asserting
 one step per axis fired, which was its job, and now asserts consistency instead.
 Against the regenerated combined file, bindings go 4639 to 5226 and hardcoded
-typography values fall 354 to 76, with no change to this plugin. The pinned floor
-below is unchanged because it is measured against the single-theme boilerplate
-file, which has not been regenerated yet; when it is, the floor rises.
+typography values fall 354 to 76, with no change to this plugin. The boilerplate
+file has since been regenerated too (170 variables), and the pinned floor above
+is re-measured against it: bindings 4935 to 5522, nothing else moving.
+
+**The file also says which variable to bind instead.** cia's `line-height-normal`
+is the multiplier 1.5, which the exporter must write back unchanged and which no
+text node can bind (on a PERCENT node it reads as 1.5%). So the exporter keeps
+1.5 and marks it `bindAs: "line-height-4"`; a size alias like `font-size-lg` is
+marked `sameAs: "font-size-4"`. The sync turns either into a Figma alias of its
+target in every mode, reusing the alias machinery that already existed, so
+binding either name resolves to one value and they cannot drift. A target that
+is not in the collection is left as declared and reported. Builders never see
+the field; the Text component binds the numbered step regardless.
 
 What is left is not in this repo. Three components cannot be scanned into an
 element tree, a handful of gaps are genuine upstream asks, and the next real step

@@ -45,6 +45,26 @@ export interface TokenVariable {
   name: string;
   type: TokenVariableType;
   valuesByMode: Record<string, TokenVariableValue>;
+  /**
+   * The CSS unit the value was declared in, so an import can restore it. A
+   * declared `1rem` arrives as value 16 with unit `rem`: the value is stored in
+   * px so Figma spacing reads naturally, and the unit records what to write back.
+   * So a font size holding 30 with unit rem is the convention, not a mistake.
+   */
+  unit?: string;
+  /**
+   * The variable a builder should bind INSTEAD of this one. cia declares
+   * `line-height-normal` as the multiplier 1.5, which a round trip must write
+   * back unchanged, and no Figma text node can bind: on a node whose unit is
+   * PERCENT it reads as 1.5%. The derived `line-height-4` holds 150 and is what
+   * to bind. The sync honours this by making this variable an alias of that one,
+   * so binding either name resolves to the same value and they cannot drift.
+   */
+  bindAs?: string;
+  /** The numbered step this alias duplicates: `font-size-lg` is `font-size-4`. Same treatment as `bindAs`. */
+  sameAs?: string;
+  /** The cia Sass map a derived token was computed from, e.g. `$font-sizes-scale`. */
+  derivedFrom?: string;
 }
 
 export interface TokenContract {
@@ -102,6 +122,21 @@ export function validateTokenContract(input: unknown): TokenContractValidation {
       if (typeof v.type !== 'string' || !SUPPORTED_TYPES.includes(v.type as TokenVariableType)) {
         errors.push(`variables[${index}].type must be one of ${SUPPORTED_TYPES.join(', ')}`);
       }
+      (['unit', 'bindAs', 'sameAs', 'derivedFrom'] as const).forEach((field) => {
+        if (v[field] !== undefined && typeof v[field] !== 'string') {
+          errors.push(`variables[${index}].${field} must be a string when present`);
+        }
+      });
+      // Both say "bind that one instead", so both is two answers to one question.
+      if (typeof v.bindAs === 'string' && typeof v.sameAs === 'string') {
+        errors.push(`variables[${index}] carries both bindAs and sameAs, which name two different things to bind`);
+      }
+      if (v.bindAs === '' || v.sameAs === '') {
+        errors.push(`variables[${index}] names an empty variable to bind as`);
+      }
+      if (v.bindAs === v.name || v.sameAs === v.name) {
+        errors.push(`variables[${index}] says to bind itself instead of itself`);
+      }
       if (typeof v.valuesByMode !== 'object' || v.valuesByMode === null) {
         errors.push(`variables[${index}].valuesByMode must be an object`);
       } else {
@@ -128,4 +163,49 @@ export function validateTokenContract(input: unknown): TokenContractValidation {
     return { valid: false, errors };
   }
   return { valid: true, contract: value as unknown as TokenContract };
+}
+
+/**
+ * Turns `bindAs` and `sameAs` into what the sync already understands: an alias
+ * value in every mode. Run after validation and before sync.
+ *
+ * The producer keeps a declared value as cia wrote it, because its import
+ * writes declared variables back into the theme and `--line-height-normal: 150`
+ * would put a percentage where a multiplier belongs. So the file says "bind that
+ * one instead" on the variable, and this makes it so in Figma: the variable
+ * becomes a Figma alias of its target, binding either name resolves to the same
+ * value, and the two can never drift. A target that is not in the collection is
+ * left alone and reported, never guessed at, which the sync's own alias check
+ * then says again at the point of writing.
+ */
+export function normaliseAliases(contract: TokenContract): { contract: TokenContract; notes: string[] } {
+  const names = new Set(contract.variables.map((variable) => variable.name));
+  const notes: string[] = [];
+
+  const variables = contract.variables.map((variable) => {
+    const target = variable.bindAs ?? variable.sameAs;
+    if (!target) {
+      return variable;
+    }
+    if (!names.has(target)) {
+      notes.push(`"${variable.name}" says to bind "${target}" instead, which is not in this collection; kept its own value`);
+      return variable;
+    }
+    const valuesByMode: Record<string, TokenVariableValue> = {};
+    contract.modes.forEach((mode) => {
+      valuesByMode[mode] = { aliasOf: target };
+    });
+    return { ...variable, valuesByMode };
+  });
+
+  // An alias needs the version that admits one, and the rewrite may have
+  // introduced the first. The declared version is the MINIMUM to read the file
+  // as sent, and this is not the file as sent, so it moves up rather than lying.
+  const specVersion = variables.some((variable) =>
+    Object.values(variable.valuesByMode).some(isAliasValue),
+  )
+    ? TOKEN_CONTRACT_ALIAS_VERSION
+    : contract.specVersion;
+
+  return { contract: { ...contract, specVersion, variables }, notes };
 }

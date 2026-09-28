@@ -1,5 +1,5 @@
 import { UiToPluginMessage, postToUi } from '@/shared/messages';
-import { validateTokenContract } from '@/shared/tokenContract';
+import { normaliseAliases, validateTokenContract } from '@/shared/tokenContract';
 import { validateComponentSpec } from '@/shared/componentSpec';
 import { syncTokenContract } from '@/plugin/syncTokens';
 import { BuildApi, BuildResult, buildComponent } from '@/plugin/buildComponent';
@@ -66,7 +66,15 @@ async function handleSyncTokens(contract: unknown): Promise<void> {
     return;
   }
   try {
-    const result = syncTokenContract(validation.contract, figma.variables);
+    // A variable the file says to bind "as" another becomes a Figma alias of it,
+    // so binding either name resolves to one value and they cannot drift. The
+    // producer keeps the declared value for its own round trip; this is where
+    // the pointer is made real.
+    const normalised = normaliseAliases(validation.contract);
+    const result = syncTokenContract(normalised.contract, figma.variables);
+    normalised.notes.forEach((reason) => {
+      result.gaps.push({ variable: reason.split('"')[1] ?? 'contract', reason });
+    });
     // Figma's REST API reports a bound field as a variable id, and only an
     // Enterprise plan can resolve ids to names. Writing the map here is what
     // lets the screen read-back report `space-md` instead of an opaque id.
