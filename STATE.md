@@ -197,7 +197,30 @@ every other. The first version of that check was wrong: it accepted
 relation collects three classes that are two elements. Left and Right never name
 each other, which proves they are not the same node, so the group is refused.
 
-Final: **233 variants, 3686 bindings, 160 gaps, 5 arriving empty, 150 tests.**
+**The spec's own findings were being dropped** (`16e3bce9`). The producer reports
+what it could not resolve about the source and this plugin had no field for it.
+149 findings across the 99 specs, and the panel never mentioned one. Same failure
+as everything else this week: a count only covers what it was built to count.
+
+They are relayed untouched and marked `origin: 'spec'`, shown as a separate
+collapsed list, because a builder gap is fixed here and a spec gap is fixed in the
+component or the design system. Gaps 160 to 309, and all 149 were already true.
+
+The most useful is one this builder cannot discover: CustomizeModal's
+`.helperText` is rendered under `.label`, `.section` and `.footer`. The tree keeps
+one node per class, so the builder puts it in one position and had nothing to say
+about the other two. 10 parts across 6 components.
+
+**An open contract question, deliberately not answered.** The tree says a part
+exists, never how many times it is rendered, so nine `.section` blocks are one
+node. Right for binding a token, wrong for building a screen. figma-import-export
+offered to design a multiplicity field rather than guess its shape. The answer
+given back: not needed for a component library, where one instance of each part is
+the correct structure and repetition is content. What IS wanted is `parent` as a
+list for the 10 multi-parent parts, which is a different and smaller ask.
+
+Final: **233 variants, 3686 bindings, 160 build gaps plus 149 relayed, 5 arriving
+empty, 153 tests.**
 
 **The dry run is now permanent** (`libraryDryRun.test.ts`), because of a failure
 class neither repo's own suite can see. Every number either side publishes is a
