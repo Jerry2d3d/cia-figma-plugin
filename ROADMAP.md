@@ -127,7 +127,36 @@ export reads those pages, HTML plus compiled CSS, rather than SCSS and JSX. That
 removes every mirrored Sass map from this side, brings in the three components a
 source scan cannot follow because the page has already made the runtime choices,
 and makes composition visible because Modal's page contains real Buttons. Icons
-are skipped in the first pass. Shape being settled with the other two sessions.
+are skipped in the first pass.
+
+**What the page format must give, measured 2026-09-28** (figma-import-export
+a7c02bf). 170 boolean props across the 99 components; 60 map to a part today,
+110 do not; 30 of those sit in the components a source scan cannot follow, 20 in
+DataTable alone. The flag-to-part mapping is NOT declared in the page. The page
+renders **pairs of instances one prop apart** and the reader derives the mapping
+by diff, because a diff is an observation where a declared rule is BoilerPlate
+re-deriving from source what the reader already derives, with the same bugs. Where
+the page does know the rule cheaply it may state it too, and a disagreement
+between the stated rule and the observed diff is reported, not resolved.
+
+1. For every boolean flag, at least one pair of instances identical except that
+   flag. A curated gallery fails this silently: two instances two props apart are
+   attributable to neither.
+2. Every instance's props stated completely, defaults included. An unstated
+   default is the same hole as Figma omitting an alignment field.
+3. A stable part key on the element: `data-part`, which survives scoped-class
+   hashing and says which element is the part.
+4. A diff yields three kinds of change. A subtree appearing or vanishing is
+   `controls`, which the contract has. Text changing is a text property. A class
+   or attribute changing on an element that stays is a **state**, which the
+   contract does not model today. Decided: we want states, because in Figma
+   `disabled`, `open` and `loading` are a boolean variant axis whose values
+   restyle the same parts, which the builder already knows how to make. The field
+   is designed once a real diff exists, not before.
+
+36 of the 110 read as state and hide nothing. A behavioural flag (`loop`,
+`autoplay`, `allowMultiple`) has no static DOM difference at all, so absent keeps
+meaning unknown, never controls-nothing.
 
 ## Decided 2026-09-27: screens, navigation and rules each have one home
 
@@ -217,12 +246,10 @@ component using any theme should get them, they belong in the base. The other
 five varying tokens look deliberate: a theme wanting square cards declares no
 card radius.
 
-**5. The typography scale is one step per axis.** cia exports exactly
-`font-size-base`, `font-weight-medium` and `line-height-normal`. Every other size
-and weight in every component is applied as a correct number that cannot follow a
-theme. Promoting just `sm` and `xs` would make roughly 320 of 408 call sites
-themeable. This is the single biggest thing standing between "renders right" and
-"re-themes right".
+**5. Resolved without Jerry (2026-09-28).** The typography scale was one step
+per axis; the exporter now emits the 44 tokens cia computes, and the plugin binds
+them. Hardcoded typography values fell 354 to 76. Left here so the numbering
+above stays stable.
 
 ## Next, in order
 
