@@ -480,8 +480,28 @@ edited without being read. The difference is that these are published to a
 person, so the edit is the doc update that would otherwise be forgotten, and the
 failure is what remembers it.
 
+**Three published numbers were wrong** (`8dfa4d39`), found by checking rather than
+assuming the six pinned the day before were the only claims.
+
+The token step was the worst. The runbook told a tester to expect "133 created, 9
+modes added, no gaps" from a file holding **131 variables, 4 modes and 57 gaps**.
+That is the FIRST thing a person does, and "no gaps" against a panel showing 57
+looks exactly like a broken pipeline. The gaps are all CSS keywords like `none`,
+which no Figma Variable can hold, so the number was fine and the claim was not.
+
+The theme-switch step then named two modes that are not in the file. Eight themes
+are exported separately; the combined one carries sketchbook and terminal only.
+
+"42 components with real variants" was 39, **written by incrementing a number
+rather than measuring one**, which is wrong on arrival rather than stale. "69
+typography values applied as plain numbers" was 354.
+
+The token figures are pinned now alongside the component ones. The dated log
+entries are deliberately untouched: a log records what was true on a day, a status
+claims what is true now, and only the second can rot.
+
 Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 201 tests.**
+empty, 202 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
