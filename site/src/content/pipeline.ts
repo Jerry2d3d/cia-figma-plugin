@@ -22,13 +22,13 @@ export const STATUS: StatusItem[] = [
     title: 'All 99 components build',
     level: 'working',
     detail:
-      '233 components and 1142 live bindings across the whole library, 32 of them with real variants. Up from one component with variants two days ago.',
+      '233 components and 891 live bindings across the whole library, 32 of them with real variants. Up from one component with variants two days ago.',
   },
   {
     title: 'Typography builds at the right size',
     level: 'working',
     detail:
-      'Headings come out at six sizes rather than six identical ones. The sizes, weights, line heights and letter spacing are correct, and 92 of them are hardcoded rather than bound, because the design system exports no Variable for them yet.',
+      'Headings come out at six sizes rather than six identical ones. The sizes, weights, line heights and letter spacing are correct, and 69 of them are hardcoded rather than bound, because the design system exports no Variable for them yet.',
   },
   {
     title: 'Props and flags on instances',
@@ -225,7 +225,7 @@ export const NEXT_STEPS: NextStep[] = [
     owner: 'A person, in Figma',
     title: 'Import the whole library',
     detail:
-      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 233 components and 1142 live bindings, with nothing rejected. 61 gaps remain, and none of them is a builder fault: most are two tokens cia does not export, space-2xs and font-size-2xs.',
+      'Sync the themed collection, then build all 99 component specs against it in one pass. Verified from the plugin side: every spec builds, producing 233 components and 891 live bindings, with nothing rejected. 51 gaps remain, and none of them is a builder fault: most are two tokens cia does not export, space-2xs and font-size-2xs.',
   },
   {
     owner: 'Both',

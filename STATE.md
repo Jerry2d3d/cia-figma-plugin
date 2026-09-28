@@ -75,7 +75,17 @@ reported. No cases of the second exist today.
 | applied-unthemeable  | 0     | 92               | 92             |
 | empty frames         | 21    | 21               | 21             |
 
-Components with zero gaps: `ready` 5 of 9, `partial` 44 of 69, `blocked` 6 of 21.
+Then descendant paths landed, which corrected the node a lot of that was on:
+
+| | after descendants |
+|----------------------|-------|
+| variants             | 233   |
+| bindings             | 891   |
+| gaps                 | 51    |
+| applied-unthemeable  | 69    |
+| empty frames         | 25    |
+
+Components with zero gaps: `ready` 5 of 9, `partial` 49 of 69, `blocked` 6 of 21.
 
 The nine lost bindings are correct: Button and ToggleButton variants whose own
 size has no token used to keep the base binding and silently render at the base
@@ -87,12 +97,29 @@ remaining ones are upstream: `space-2xs` (five), `font-size-2xs` (one) and Stack
 because there is one occurrence. LightDarkToggle's `onChange`, which was typed as
 an enum because the union came off the callback's parameter, is fixed upstream.
 
-**Five font-size folds remain and none is a variant fold.** In every case a
-nested *descendant* selector was folded into its parent: `h3` and `p` inside
-`.startCard`, `.label` and `.helperText` inside `.inputWrapper[data-size="large"]`.
-Those sizes belong to child elements, so arguably none belongs to the root frame.
-The next upstream ask is the same trick the variant tag just pulled off, applied
-to parts: tag a declaration with the descendant it came from.
+**Descendant paths (`8ce48876`), and this one was a real correction.** The
+exporter now records the descendant selectors a declaration sat inside, so
+`.label { font-size: ... }` written inside `.inputWrapper` is distinguishable
+from the wrapper setting its own size. 501 declarations carry a path, 169 on
+blocks this version builds, and **those 169 were being painted onto the root
+frame**. A declaration inside a descendant now becomes a synthetic `part` block,
+so it stops reaching the root and flows into the existing "not built" reporting.
+
+That took bindings from 1142 to 891. The 251 are a correction, not a regression:
+they were root frames wearing their children's font sizes, colours and spacing,
+which is why some components looked plausible and wrong. Four more components now
+correctly report that all their styling is in children.
+
+All five font-size folds are gone, so the ambiguity machinery from `17ac709a` has
+nothing left to resolve in this library. It stays, because a block really can
+state two sizes for one element, but it is no longer load-bearing.
+
+**Three stale spec files.** `Calendar`, `ConfirmPopup` and `Stack` each exist
+twice, in `blocked/` and in `partial/` or `ready/`. The `blocked/` copies are from
+a known-broken intermediate build, and `blocked/Stack` has a mangled selector,
+`"start: flex-start, end: flex-end, center: center, stretch: stretch, .stack"`,
+where mixin arguments leaked into the selector. Take the newer copy of each.
+Reported upstream.
 
 Fixtures now pin the real shipped Button, Heading and Container specs, so the
 exporter and the builder fail together rather than drifting apart.

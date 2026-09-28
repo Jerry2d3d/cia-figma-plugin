@@ -139,8 +139,16 @@ export default function DocsPage() {
                 <li>Button C should read Build 99 components. Click it, then wait.</li>
               </ol>
               <CopyRow label="Button B · the component specs folder" value={PATHS.spec} />
+              <div className={styles.internalNote}>
+                <Alert variant="warning" title="Three files in that folder are stale">
+                  Calendar, ConfirmPopup and Stack each exist twice, once in the blocked subfolder
+                  and once in partial or ready. The blocked copies are left over from a build that
+                  was known broken, and one of them has a mangled selector. Take the newer copy of
+                  each, or the panel will report three duplicate sets. Reported upstream.
+                </Alert>
+              </div>
               <Alert variant="success" title="Expect">
-                Built 99 components, 233 variants and 1142 bindings, about 61 gaps, and a collapsed
+                Built 99 components, 233 variants and 891 bindings, about 51 gaps, and a collapsed
                 list of things not built. The component sets lay out in a grid rather than a pile.
               </Alert>
               <p className={styles.body}>
@@ -148,13 +156,13 @@ export default function DocsPage() {
                 the same, the build ran against an older plugin. Container should show five widths.
               </p>
               <p className={styles.body}>
-                21 components will look empty. That is known and not a fault of the build: their
+                25 components will look empty. That is known and not a fault of the build: their
                 styling lives in parts, which this version does not build yet. It is the largest
                 piece of work left on either side.
               </p>
               <div className={styles.internalNote}>
                 <Alert variant="warning" title="Sizes are right but not themeable">
-                  92 typography values are applied as plain numbers rather than bound, because cia
+                  69 typography values are applied as plain numbers rather than bound, because cia
                   exports no Variable for them. They render correctly and they will not change when
                   you switch theme. That is the single biggest upstream ask on the token side.
                 </Alert>
