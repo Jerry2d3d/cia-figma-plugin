@@ -135,6 +135,98 @@ function figmaFontStyle(weight: string, italic: boolean): string {
   return base === 'Regular' ? 'Italic' : `${base} Italic`;
 }
 
+/**
+ * cia's `$font-sizes`, in pixels at the 16px root. Copied from
+ * css-is-awesome's `scss/_system.scss`, aliases included, because
+ * `font-size(lg)` and `font-size(4)` are the same size by two names.
+ *
+ * Only `font-size-base` is exported as a Variable today, so a preset asking
+ * for step 7 has an exact stated value and nothing to bind it to. The number
+ * is applied, and the absent token is reported.
+ */
+const FONT_SIZE_SCALE: Record<string, number> = {
+  1: 12,
+  2: 14,
+  3: 16,
+  4: 18,
+  5: 20,
+  6: 24,
+  7: 30,
+  8: 36,
+  9: 48,
+  10: 60,
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 30,
+  '4xl': 36,
+  '5xl': 48,
+  '6xl': 60,
+};
+
+/**
+ * cia's `$line-heights`. These are unitless multipliers, which is why they
+ * cannot be bound to a Figma FLOAT variable: Figma stores a line height as a
+ * value plus a unit. It does accept PERCENT though, and a multiplier of 1.5 is
+ * exactly 150%, so the value itself is representable even when the token is not.
+ */
+const LINE_HEIGHT_SCALE: Record<string, number> = {
+  1: 1,
+  2: 1.25,
+  3: 1.375,
+  4: 1.5,
+  5: 1.625,
+  6: 2,
+  none: 1,
+  tight: 1.25,
+  snug: 1.375,
+  normal: 1.5,
+  relaxed: 1.625,
+  loose: 2,
+};
+
+/** cia's `$letter-spacings`, in em. Figma takes these as a percentage. */
+const LETTER_SPACING_SCALE: Record<string, number> = {
+  tighter: -0.05,
+  tight: -0.025,
+  normal: 0,
+  wide: 0.025,
+  wider: 0.05,
+  widest: 0.1,
+};
+
+/**
+ * cia's `$_type-scale`: the semantic presets `type()` takes, each expanding to
+ * a size step, a weight key, a line height key and sometimes letter spacing and
+ * a text transform. Copied from `scss/_mixins.scss`.
+ *
+ * Without this map every `type()` call was a gap, so all six Heading levels
+ * built at the same size. The expansion happens in Sass at compile time, so
+ * mirroring the map is the only way to see through it.
+ */
+interface TypePreset {
+  size: string;
+  weight: string;
+  lineHeight: string;
+  letterSpacing?: string;
+  uppercase?: boolean;
+}
+
+const TYPE_SCALE_PRESETS: Record<string, TypePreset> = {
+  display: { size: '8', weight: 'bold', lineHeight: '2', letterSpacing: 'tight' },
+  'heading-1': { size: '7', weight: 'bold', lineHeight: '2' },
+  'heading-2': { size: '6', weight: 'semibold', lineHeight: '2' },
+  'heading-3': { size: '5', weight: 'semibold', lineHeight: '3' },
+  'heading-4': { size: '4', weight: 'medium', lineHeight: '4' },
+  body: { size: '3', weight: 'normal', lineHeight: '4' },
+  'body-sm': { size: '2', weight: 'normal', lineHeight: '4' },
+  caption: { size: '1', weight: 'normal', lineHeight: '4' },
+  overline: { size: '1', weight: 'semibold', lineHeight: '4', letterSpacing: 'wider', uppercase: true },
+};
+
 /** Prop names that carry a component's visible text, best first. */
 const TEXT_PROP_NAMES = ['label', 'text', 'children', 'title', 'name'];
 
@@ -216,8 +308,13 @@ type Op =
       gap?: Variable;
     }
   | { kind: 'fontStyle'; style: string }
-  | { kind: 'fontSize'; variable: Variable }
+  | { kind: 'fontSize'; value: Variable | number }
   | { kind: 'fontWeight'; variable: Variable }
+  /** A unitless cia multiplier, applied to Figma as a percentage. */
+  | { kind: 'lineHeight'; multiplier: number }
+  /** A cia em value, applied to Figma as a percentage. */
+  | { kind: 'letterSpacing'; em: number }
+  | { kind: 'textCase'; value: 'UPPER' }
   | { kind: 'strokeWeight'; weight: number };
 
 /**
@@ -519,10 +616,8 @@ class Resolver {
         return [this.resolveFlex(call, where, signature)];
       case 'font':
         return this.resolveFont(call, where, signature);
-      case 'font-size': {
-        const variable = this.lookup(`font-size-${call.args[0]}`, 'FLOAT', where, `${signature} as font size`);
-        return variable ? [{ kind: 'fontSize', variable }] : [];
-      }
+      case 'font-size':
+        return this.resolveFontSize(call.args[0], where, signature);
       // `font-weight(x)` takes a weight key straight from cia's `$font-weights`.
       case 'font-weight':
         return this.resolveWeight(call.args[0], false, where, signature);
@@ -533,11 +628,7 @@ class Resolver {
         });
         return [];
       case 'line-height':
-        this.skipped.push({
-          where,
-          reason: `${signature} skipped: cia line height is a unitless multiplier, Figma binds px`,
-        });
-        return [];
+        return this.resolveLineHeight(call.args[0], where, signature);
       case 'font-family':
         this.skipped.push({
           where,
@@ -564,15 +655,7 @@ class Resolver {
         });
         return [];
       case 'type':
-        // A Sass type preset expanding to size + weight + line height at
-        // compile time. There is no single token to bind, and guessing which
-        // variables it resolves to would be exactly the kind of guess the
-        // contract exists to prevent.
-        this.gaps.push({
-          where,
-          reason: `${signature} is a Sass type preset with no token to bind; needs upstream expansion into font-size/font-weight`,
-        });
-        return [];
+        return this.resolveType(call.args[0], where, signature);
       default:
         this.gaps.push({ where, reason: `unsupported call ${signature} for property ${call.property}` });
         return [];
@@ -653,18 +736,94 @@ class Resolver {
     }
     const ops = this.resolveWeight(preset.weight, preset.italic, where, signature);
     if (size) {
-      const variable = this.lookup(`font-size-${size}`, 'FLOAT', where, `${signature} as font size`);
-      if (variable) {
-        ops.push({ kind: 'fontSize', variable });
-      }
+      ops.push(...this.resolveFontSize(size, where, signature));
     }
     if (lineHeight) {
-      this.skipped.push({
-        where,
-        reason: `${signature}: line height "${lineHeight}" not bound (cia token is a unitless multiplier, Figma binds px)`,
-      });
+      ops.push(...this.resolveLineHeight(lineHeight, where, signature));
     }
     return ops;
+  }
+
+  /**
+   * `type(heading-1)` expands in Sass before any CSS exists, so the spec records
+   * only the preset name. Mirroring cia's map is what lets a heading come out at
+   * its real size: without it every level built identically.
+   */
+  private resolveType(name: string, where: string, signature: string): Op[] {
+    const preset = TYPE_SCALE_PRESETS[name];
+    if (!preset) {
+      this.gaps.push({
+        where,
+        reason: `${signature} uses unknown cia type preset "${name}" (known: ${Object.keys(TYPE_SCALE_PRESETS).join(', ')})`,
+      });
+      return [];
+    }
+    const ops = this.resolveWeight(preset.weight, false, where, signature);
+    ops.push(...this.resolveFontSize(preset.size, where, signature));
+    ops.push(...this.resolveLineHeight(preset.lineHeight, where, signature));
+    if (preset.letterSpacing) {
+      const em = LETTER_SPACING_SCALE[preset.letterSpacing];
+      // cia itself drops a zero letter spacing rather than emitting it.
+      if (em !== undefined && em !== 0) {
+        ops.push({ kind: 'letterSpacing', em });
+      }
+    }
+    if (preset.uppercase) {
+      ops.push({ kind: 'textCase', value: 'UPPER' });
+    }
+    return ops;
+  }
+
+  /**
+   * A size is bound when a token exists, so it follows the theme, and written as
+   * a plain number when one does not. cia exports only `font-size-base` today,
+   * so most of the scale has an exact value and nothing to bind to. Applying it
+   * is better than reporting a gap and leaving the text at Figma's default,
+   * which is what made all six Heading levels look the same.
+   */
+  private resolveFontSize(size: string, where: string, signature: string): Op[] {
+    const variable = this.variablesByName.get(`font-size-${size}`);
+    if (variable) {
+      if (variable.resolvedType === 'FLOAT') {
+        return [{ kind: 'fontSize', value: variable }];
+      }
+      this.gaps.push({
+        where,
+        reason: `variable "font-size-${size}" is ${variable.resolvedType}, ${signature} needs FLOAT`,
+      });
+      return [];
+    }
+    const pixels = FONT_SIZE_SCALE[size];
+    if (pixels === undefined) {
+      this.gaps.push({
+        where,
+        reason: `${signature}: "${size}" is neither a variable named "font-size-${size}" nor a step in cia's size scale`,
+      });
+      return [];
+    }
+    this.skipped.push({
+      where,
+      reason: `${signature} applied as ${pixels}px: cia exports no "font-size-${size}" variable, so this size cannot follow a theme`,
+    });
+    return [{ kind: 'fontSize', value: pixels }];
+  }
+
+  /**
+   * cia line heights are unitless multipliers, which no Figma FLOAT variable can
+   * hold, because Figma stores a line height as a value plus a unit. The value
+   * is still exact: Figma accepts PERCENT, and 1.5 is 150%.
+   */
+  private resolveLineHeight(key: string, where: string, signature: string): Op[] {
+    const multiplier = LINE_HEIGHT_SCALE[key];
+    if (multiplier === undefined) {
+      this.gaps.push({ where, reason: `${signature}: "${key}" is not a step in cia's line height scale` });
+      return [];
+    }
+    this.skipped.push({
+      where,
+      reason: `${signature} applied as ${Math.round(multiplier * 100)}%: a unitless multiplier has no Figma Variable type, so this line height cannot follow a theme`,
+    });
+    return [{ kind: 'lineHeight', multiplier }];
   }
 
   private resolveWeight(weight: string, italic: boolean, where: string, signature: string): Op[] {
@@ -829,8 +988,27 @@ async function applyOps(
     bindNode(field, value);
   };
 
-  bindText('fontSize', lastOp(ops, 'fontSize')?.variable);
+  // Size first, then line height, so a percentage line height resolves against
+  // the size this component actually asked for rather than Figma's default.
+  const fontSize = lastOp(ops, 'fontSize')?.value;
+  if (typeof fontSize === 'number') {
+    text.fontSize = fontSize;
+  } else if (fontSize) {
+    bindText('fontSize', fontSize);
+  }
   bindText('fontWeight', lastOp(ops, 'fontWeight')?.variable);
+
+  const lineHeight = lastOp(ops, 'lineHeight')?.multiplier;
+  if (lineHeight !== undefined) {
+    text.lineHeight = { value: lineHeight * 100, unit: 'PERCENT' };
+  }
+  const letterSpacing = lastOp(ops, 'letterSpacing')?.em;
+  if (letterSpacing !== undefined) {
+    text.letterSpacing = { value: letterSpacing * 100, unit: 'PERCENT' };
+  }
+  if (lastOp(ops, 'textCase')) {
+    text.textCase = 'UPPER';
+  }
 
   // A variant's own border width wins over the base block's, so this is settled
   // once from the whole op list rather than inside the loop. A declared width
@@ -891,6 +1069,17 @@ async function applyOps(
         break;
     }
   });
+
+  // A component whose spec has no `flex()` call keeps Figma's default 100x100
+  // frame, which clips its own label the moment the type is larger than body
+  // text: a 30px heading came out looking truncated. The label is the only
+  // child, so hugging it is the size the spec implies, and it is also what makes
+  // any declared padding visible, since Figma ignores padding without a layout.
+  if (component.layoutMode === 'NONE') {
+    component.layoutMode = 'HORIZONTAL';
+    component.primaryAxisSizingMode = 'AUTO';
+    component.counterAxisSizingMode = 'AUTO';
+  }
 
   return bindings;
 }

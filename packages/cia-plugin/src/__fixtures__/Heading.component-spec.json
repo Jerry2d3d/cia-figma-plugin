@@ -1,0 +1,181 @@
+{
+  "specVersion": 2,
+  "component": "Heading",
+  "props": [
+    {
+      "name": "level",
+      "optional": false,
+      "type": "enum",
+      "values": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "name": "children",
+      "optional": false,
+      "type": "React.ReactNode",
+      "values": null
+    },
+    {
+      "name": "className",
+      "optional": true,
+      "type": "string",
+      "values": null
+    }
+  ],
+  "styleBlocks": [
+    {
+      "selector": ".headingComponent",
+      "kind": "base",
+      "ciaCalls": [
+        {
+          "fn": "color",
+          "args": [
+            "text-primary"
+          ],
+          "property": "color",
+          "state": "default"
+        },
+        {
+          "fn": "font-family",
+          "args": [
+            "primary"
+          ],
+          "property": "font-family",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".heading1",
+      "kind": "variant",
+      "prop": "level",
+      "value": "1",
+      "ciaCalls": [
+        {
+          "fn": "type",
+          "args": [
+            "display"
+          ],
+          "property": "typography",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".heading2",
+      "kind": "variant",
+      "prop": "level",
+      "value": "2",
+      "ciaCalls": [
+        {
+          "fn": "type",
+          "args": [
+            "heading-1"
+          ],
+          "property": "typography",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".heading3",
+      "kind": "variant",
+      "prop": "level",
+      "value": "3",
+      "ciaCalls": [
+        {
+          "fn": "type",
+          "args": [
+            "heading-2"
+          ],
+          "property": "typography",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".heading4",
+      "kind": "variant",
+      "prop": "level",
+      "value": "4",
+      "ciaCalls": [
+        {
+          "fn": "type",
+          "args": [
+            "heading-3"
+          ],
+          "property": "typography",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".heading5",
+      "kind": "variant",
+      "prop": "level",
+      "value": "5",
+      "ciaCalls": [
+        {
+          "fn": "type",
+          "args": [
+            "heading-4"
+          ],
+          "property": "typography",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    },
+    {
+      "selector": ".heading6",
+      "kind": "variant",
+      "prop": "level",
+      "value": "6",
+      "ciaCalls": [
+        {
+          "fn": "font-size",
+          "args": [
+            "sm"
+          ],
+          "property": "font-size",
+          "state": "default"
+        },
+        {
+          "fn": "font-weight",
+          "args": [
+            "semibold"
+          ],
+          "property": "font-weight",
+          "state": "default"
+        }
+      ],
+      "borders": [],
+      "consumes": [],
+      "defines": []
+    }
+  ],
+  "gaps": []
+}

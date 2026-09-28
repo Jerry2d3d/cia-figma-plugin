@@ -1,8 +1,10 @@
 import { BuildApi, buildComponent, DEFAULT_STROKE_WEIGHT } from '@/plugin/buildComponent';
 import { ComponentSpec } from '@/shared/componentSpec';
 import buttonSpecJson from '@/__fixtures__/Button.component-spec.json';
+import headingSpecJson from '@/__fixtures__/Heading.component-spec.json';
 
 const buttonSpec = buttonSpecJson as ComponentSpec;
+const headingSpec = headingSpecJson as ComponentSpec;
 
 class FakeVariable {
   constructor(
@@ -22,6 +24,15 @@ class FakeText {
   fontName: FontName = { family: '', style: '' };
 
   characters = '';
+
+  /** Figma's default for a new text node. */
+  fontSize = 12;
+
+  lineHeight: LineHeight = { unit: 'AUTO' };
+
+  letterSpacing: LetterSpacing = { value: 0, unit: 'PERCENT' };
+
+  textCase = 'ORIGINAL';
 
   fills: SolidPaint[] = [];
 
@@ -252,12 +263,10 @@ describe('buildComponent', () => {
     expect(reasons).toContain(
       '.small: no variable named "space-2xs" in the collection (needed for pad-asym(2xs, sm) as vertical padding)',
     );
-    expect(reasons).toContain(
-      '.small: no variable named "font-size-sm" in the collection (needed for font(semibold, sm, normal) as font size)',
-    );
-    expect(reasons).toContain(
-      '.large: no variable named "font-size-lg" in the collection (needed for font(semibold, lg, normal) as font size)',
-    );
+    // A size with no token behind it is applied from cia's scale rather than
+    // reported as a gap, so it no longer leaves the text at Figma's default.
+    expect(reasons.some((reason) => reason.includes('font-size-sm'))).toBe(false);
+    expect(reasons.some((reason) => reason.includes('font-size-lg'))).toBe(false);
     // The spec has carried real border widths since 2026-09-24, so the old
     // "no border width" contract gap must no longer be reported.
     expect(reasons.some((reason) => reason.includes('no border width'))).toBe(false);
@@ -279,10 +288,30 @@ describe('buildComponent', () => {
     );
     expect(skipped.some((s) => s.startsWith('.button: transition('))).toBe(true);
     expect(skipped.some((s) => s.startsWith('.button: font-family(primary) skipped'))).toBe(true);
+    // A line height is applied as a percentage and reported as unthemeable,
+    // rather than dropped: the value is exact, only the binding is impossible.
     expect(skipped).toContain(
-      '.button: font(semibold, base, normal): line height "normal" not bound (cia token is a unitless multiplier, Figma binds px)',
+      '.button: font(semibold, base, normal) applied as 150%: a unitless multiplier has no Figma Variable type, so this line height cannot follow a theme',
+    );
+    expect(skipped).toContain(
+      '.small: font(semibold, sm, normal) applied as 14px: cia exports no "font-size-sm" variable, so this size cannot follow a theme',
     );
     expect(result.gaps.some((gap) => gap.reason.includes('hover'))).toBe(false);
+  });
+
+  it('applies a size and line height that have no token, so the text is not left at Figma defaults', async () => {
+    const { api, components } = createFakeApi();
+
+    await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
+
+    // .small is font(semibold, sm, normal): 14px at a 1.5 multiplier.
+    const small = components.find((component) => component.name.includes('small'));
+    expect(small).toBeDefined();
+    const label = small!.children[0];
+    expect(label.fontSize).toBe(14);
+    expect(label.lineHeight).toEqual({ value: 150, unit: 'PERCENT' });
+    // The weight has no token either, but the Figma style needs none.
+    expect(label.fontName.style).toBe('Semi Bold');
   });
 
   it('builds a single plain component when the spec has no variant blocks', async () => {
@@ -437,8 +466,8 @@ describe('buildComponent', () => {
     ]);
   });
 
-  it('reports a Sass type preset as a gap rather than guessing which tokens it expands to', async () => {
-    const { api } = createFakeApi();
+  it('expands a Sass type preset into a size, weight, line height and letter spacing', async () => {
+    const { api, components } = createFakeApi();
     const spec: ComponentSpec = {
       specVersion: 2,
       component: 'Titleish',
@@ -458,18 +487,46 @@ describe('buildComponent', () => {
 
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
-    expect(result.gaps).toEqual([
-      {
-        where: '.title',
-        reason:
-          'type(display) is a Sass type preset with no token to bind; ' +
-          'needs upstream expansion into font-size/font-weight',
-      },
-    ]);
+    // `display` is size 8, weight bold, line height 1.25, letter spacing -0.025em.
+    const label = components[0].children[0];
+    expect(label.fontName.style).toBe('Bold');
+    expect(label.fontSize).toBe(36);
+    expect(label.letterSpacing).toEqual({ value: -2.5, unit: 'PERCENT' });
+    // The preset's own 1.25 is overridden by the later explicit line-height(normal).
+    expect(label.lineHeight).toEqual({ value: 150, unit: 'PERCENT' });
+    // The weight is the one part of the preset with a token, so it is bound.
+    expect(label.bound.fontWeight).toBe('font-weight-bold');
+
+    expect(result.gaps).toEqual([]);
     expect(result.skipped.map((skip) => skip.reason)).toEqual([
+      'type(display) applied as 36px: cia exports no "font-size-8" variable, so this size cannot follow a theme',
+      'type(display) applied as 125%: a unitless multiplier has no Figma Variable type, so this line height cannot follow a theme',
       'z(tooltip) skipped: z-index has no Figma equivalent',
-      'line-height(normal) skipped: cia line height is a unitless multiplier, Figma binds px',
+      'line-height(normal) applied as 150%: a unitless multiplier has no Figma Variable type, so this line height cannot follow a theme',
     ]);
+  });
+
+  it('reports an unknown type preset rather than guessing a size for it', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Oddity',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.title',
+          kind: 'base',
+          ciaCalls: [{ fn: 'type', args: ['mega-shout'], property: 'typography', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps).toHaveLength(1);
+    expect(result.gaps[0].reason).toContain('unknown cia type preset "mega-shout"');
+    // The message lists what is valid, so the reader can see the typo.
+    expect(result.gaps[0].reason).toContain('heading-1');
   });
 
   it('reports a type mismatch instead of binding the wrong kind of variable', async () => {
@@ -1186,5 +1243,63 @@ describe('spacing with no token behind it', () => {
     expect(result.skipped[0].reason).toBe(
       'grid(1) is 4px on margin-left, which has no Figma equivalent',
     );
+  });
+});
+
+/**
+ * Built from the real shipped Heading spec rather than a hand-written one. Five
+ * of its six variants carry nothing but a `type()` call, so before the type
+ * scale was mirrored every level came out at the same size: the component was
+ * ready by placement and broken by outcome.
+ */
+describe('Heading, from the real spec', () => {
+  it('gives each of the six levels its own size and weight', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(headingSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(components).toHaveLength(6);
+    const byLevel = new Map(
+      components.map((component) => {
+        const level = /level=(\d)/.exec(component.name)?.[1] ?? '?';
+        return [level, component.children[0]];
+      }),
+    );
+
+    // cia's $_type-scale, in pixels at the 16px root.
+    expect(byLevel.get('1')?.fontSize).toBe(36);
+    expect(byLevel.get('2')?.fontSize).toBe(30);
+    expect(byLevel.get('3')?.fontSize).toBe(24);
+    expect(byLevel.get('4')?.fontSize).toBe(20);
+    expect(byLevel.get('5')?.fontSize).toBe(18);
+    // Level 6 is the one variant written longhand rather than as a preset.
+    expect(byLevel.get('6')?.fontSize).toBe(14);
+
+    const sizes = [...byLevel.values()].map((label) => label?.fontSize);
+    expect(new Set(sizes).size).toBe(6);
+
+    expect(byLevel.get('1')?.fontName.style).toBe('Bold');
+    expect(byLevel.get('3')?.fontName.style).toBe('Semi Bold');
+    expect(byLevel.get('5')?.fontName.style).toBe('Medium');
+
+    // Only `display` carries letter spacing, so the others must not inherit it.
+    expect(byLevel.get('1')?.letterSpacing).toEqual({ value: -2.5, unit: 'PERCENT' });
+    expect(byLevel.get('2')?.letterSpacing).toEqual({ value: 0, unit: 'PERCENT' });
+
+    // The base block's colour is the one thing here that is a real token, and it
+    // must still reach all six levels rather than being lost to the variants.
+    [...byLevel.values()].forEach((label) => {
+      expect(label?.fills).toHaveLength(1);
+    });
+
+    // The gap that used to stand in for the whole type scale is gone, and no
+    // heading level reports a missing size.
+    const reasons = result.gaps.map((gap) => gap.reason);
+    expect(reasons.some((reason) => reason.includes('type preset with no token'))).toBe(false);
+    expect(reasons.some((reason) => reason.includes('font-size'))).toBe(false);
+
+    // What remains is honest: the sizes are applied but cannot follow a theme.
+    const unthemeable = result.skipped.filter((skip) => skip.reason.includes('cannot follow a theme'));
+    expect(unthemeable.length).toBeGreaterThanOrEqual(6);
   });
 });
