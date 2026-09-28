@@ -353,8 +353,27 @@ direct calls. They now carry every value with the qualifier that selects it.
   through the spacing path, which said "no Figma equivalent" for `width`: true of
   that path, false of the property. Size logic is now one function both use.
 
+**A theme override names a second token, which Figma cannot bind** (`697b06fd`).
+figma-import-export advised building the 29 `color()` theme overrides as ordinary
+per-mode values, on the grounds they follow the mode for free. Checked before
+acting: **27 of the 29 name a DIFFERENT token for dark**, not the same token at a
+different value. `surface-default` becomes `surface-subtle`, and in sketchbook
+Dark those are `#1a1815` and `#2a2520`. A Figma binding names one variable and the
+mode chooses its value; nothing says "this variable in light, that one in dark".
+Binding the unqualified token gives the light choice in every theme.
+
+The build was already right, since these were reported rather than built. The
+REASON was wrong: "no declared prop names that qualifier" is true and shallow, and
+a reader would blame the theme system when it is the one part working.
+
+**A third upstream demand heading, and the largest by count.** Not a missing
+token and not a migration: 27 components override a semantic colour in dark, which
+usually means the semantic token is not carrying its own dark value well enough.
+If `surface-default` were right in dark, Checkbox would not reach for
+`surface-subtle`. That is token design, not a token gap.
+
 Final: **282 variants, 4610 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 178 tests.**
+empty, 180 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
