@@ -48,6 +48,15 @@ export interface BuildResult {
   gaps: BuildGap[];
   /** Things v1 deliberately does not build (non-default states, parts, media queries, transitions). */
   skipped: BuildSkip[];
+  /**
+   * The element the component was built from, when it has an element tree.
+   *
+   * Reported because it is the one choice here that can be wrong without anything
+   * looking wrong: Textarea was built from its toolbar, a sibling, and the output
+   * was a plausible component of the wrong thing. Naming it makes that checkable
+   * from outside rather than only visible to someone reading the tree.
+   */
+  builtFrom?: string;
 }
 
 /**
@@ -2147,6 +2156,7 @@ export async function buildComponent(
     node,
     result: {
       component: built.component,
+      builtFrom: rootSelector ?? undefined,
       collection: collection.name,
       variantNames: plans.map((plan) => plan.name),
       bindings,

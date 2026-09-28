@@ -220,6 +220,7 @@ describeLibrary('the whole shipped library', () => {
     const totals = { variants: 0, bindings: 0, gaps: 0, skips: 0, unthemeable: 0, empty: 0 };
     const shapes = new Map<string, number>();
     const invalid: string[] = [];
+    const builtFromWrongElement: string[] = [];
     const clean: Record<string, { n: number; zero: number }> = {};
 
     for (const { file, bucket } of files) {
@@ -248,6 +249,31 @@ describeLibrary('the whole shipped library', () => {
         const key = gap.reason.replace(/"[^"]*"/g, '"…"').replace(/\d+/g, 'N').slice(0, 72);
         shapes.set(key, (shapes.get(key) ?? 0) + 1);
       });
+      // Walk up from the styled element: the root it was built from must be on
+      // that path, or the build describes a different element entirely.
+      const tree = spec.tree ?? null;
+      const base = spec.styleBlocks.filter((block) => block.kind === "base").map((block) => block.selector);
+      if (tree && result.builtFrom && base.some((selector) => tree.some((node) => node.selector === selector))) {
+        const bySelector = new Map(tree.map((node) => [node.selector, node]));
+        const seen = new Set<string>();
+        const queue = base.filter((selector) => bySelector.has(selector));
+        let contains = false;
+        while (queue.length > 0 && !contains) {
+          const current = queue.shift() as string;
+          if (seen.has(current)) continue;
+          seen.add(current);
+          if (current === result.builtFrom) { contains = true; break; }
+          const node = bySelector.get(current);
+          const positions = node?.parents ?? [node?.parent ?? null];
+          positions.forEach((position) => {
+            if (position && bySelector.has(position)) queue.push(position);
+          });
+        }
+        if (!contains) {
+          builtFromWrongElement.push(`${spec.component}: built from ${result.builtFrom}, which does not contain ${base.join(" or ")}`);
+        }
+      }
+
       clean[bucket] = clean[bucket] ?? { n: 0, zero: 0 };
       clean[bucket].n += 1;
       if (result.gaps.length === 0) {
@@ -275,5 +301,13 @@ describeLibrary('the whole shipped library', () => {
     // A spec the validator rejects is the one hard failure: it means the two
     // repos disagree about the contract, which no amount of reporting fixes.
     expect(invalid).toEqual([]);
+
+    // The component must be built from something that CONTAINS the element its
+    // base style block names. This is the one choice here that can be wrong while
+    // everything still looks right: Textarea was built from its toolbar, a
+    // sibling, and produced a perfectly plausible component of the wrong thing.
+    // Checking it over the whole set is how that class of mistake gets caught,
+    // since no single output looks wrong.
+    expect(builtFromWrongElement).toEqual([]);
   }, 60000);
 });
