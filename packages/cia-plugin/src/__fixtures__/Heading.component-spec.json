@@ -188,8 +188,7 @@
     {
       "selector": ".headingComponent",
       "parent": null,
-      "tag": "Tag",
-      "declaredIn": "Tag"
+      "tag": "Tag"
     }
   ],
   "gaps": []

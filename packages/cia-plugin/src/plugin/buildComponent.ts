@@ -1378,9 +1378,38 @@ function chooseRoot(
   if (roots.length === 1) {
     return { rootSelector: roots[0], orphanRoots: [] };
   }
-  const named = roots.find((selector) => baseSelectors.includes(selector));
+  // The base block names the component's own element, which is usually the top
+  // but need not be: Menu styles `.menu`, and `.menu` is rendered inside
+  // `.menuPopup`, which is the top. Eight components are shaped that way. So if
+  // the named element is not itself a root, the root above it is the one wanted,
+  // rather than whichever top happened to come first in the file.
+  const named = roots.find((selector) => baseSelectors.includes(selector)) ?? rootAbove(tree, baseSelectors, roots);
   const chosen = named ?? roots[0];
   return { rootSelector: chosen, orphanRoots: roots.filter((selector) => selector !== chosen) };
+}
+
+/** Walks up from a styled element to whichever top contains it, if any. */
+function rootAbove(tree: PartTreeNode[], baseSelectors: string[], roots: string[]): string | undefined {
+  const bySelector = new Map(tree.map((node) => [node.selector, node]));
+  const seen = new Set<string>();
+  const queue = baseSelectors.filter((selector) => bySelector.has(selector));
+
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    if (seen.has(current)) {
+      continue;
+    }
+    seen.add(current);
+    if (roots.includes(current)) {
+      return current;
+    }
+    positionsOf(bySelector.get(current) as PartTreeNode).forEach((position) => {
+      if (position !== null && bySelector.has(position)) {
+        queue.push(position);
+      }
+    });
+  }
+  return undefined;
 }
 
 /**

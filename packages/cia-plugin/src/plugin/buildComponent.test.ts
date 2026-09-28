@@ -2520,3 +2520,48 @@ describe('a file that declares more than one thing rendering markup', () => {
     expect(result.gaps.some((gap) => gap.reason.includes('tops ('))).toBe(false);
   });
 });
+
+describe('a base block that is not itself the top of the tree', () => {
+  const nested = (roots: string[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Nestish',
+    props: [],
+    tree: [
+      // Menu's real shape after the declarations were joined: the styled element
+      // sits inside the component's own root, and a sibling component's root is
+      // also in the file.
+      { selector: roots[0], parent: null, tag: 'div', declaredIn: 'Other' },
+      { selector: '.popup', parent: null, tag: 'div', declaredIn: 'Nestish' },
+      { selector: '.menu', parent: '.popup', tag: 'ul', declaredIn: 'MenuList' },
+      { selector: '.item', parent: '.menu', tag: 'li', declaredIn: 'MenuList' },
+    ],
+    styleBlocks: [
+      { selector: '.menu', kind: 'base', ciaCalls: [] },
+      { selector: '.item', kind: 'part', ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }] },
+    ],
+  });
+
+  it('walks up to the top that contains the styled element', async () => {
+    const { api, components } = createFakeApi();
+
+    // `.other` comes first in the tree, so taking the first top would build the
+    // wrong component. Textarea was doing exactly that, building from its toolbar.
+    await buildComponent(nested(['.other']), { collectionName: 'boilerplate' }, api);
+
+    expect(frameNamed(components[0], 'menu')).toBeDefined();
+    expect(frameNamed(components[0], 'item')).toBeDefined();
+    expect(frameNamed(components[0], 'other')).toBeUndefined();
+  });
+
+  it('still prefers a top the base block names directly', async () => {
+    const { api, components } = createFakeApi();
+    const spec = nested(['.other']);
+    spec.styleBlocks.push({ selector: '.popup', kind: 'base', ciaCalls: [] });
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // Both `.popup` and `.menu` are named by a base block; the one that is itself
+    // a top wins without any walking.
+    expect(frameNamed(components[0], 'menu')).toBeDefined();
+  });
+});
