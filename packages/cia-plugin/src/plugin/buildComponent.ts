@@ -1,4 +1,14 @@
-import { BorderSpec, CiaCall, ComponentProp, ComponentSpec, ConsumedFrom, ConsumedToken, StyleBlock } from '@/shared/componentSpec';
+import {
+  BorderSpec,
+  CiaCall,
+  ComponentProp,
+  ComponentSpec,
+  ConsumedFrom,
+  ConsumedToken,
+  DeclarationVariant,
+  DimensionSpec,
+  StyleBlock,
+} from '@/shared/componentSpec';
 
 export interface BuildGap {
   /** The style block selector the gap came from, or `contract` for a spec-level gap. */
@@ -458,19 +468,18 @@ class Resolver {
   /**
    * Resolves a block that sets `font-size` more than once.
    *
-   * Checkbox's base block sets it three times, 14px then 16px then 18px, because
-   * its `[data-size="sm"]`, `[data-size="md"]` and `[data-size="lg"]` rules are
-   * three mutually exclusive variants that the exporter folded into one block
-   * rather than classifying as a variant axis. Seven components do this. So this
-   * is not a cascade, where the last value would win, and not a shorthand, where
-   * both are wanted: it is an ambiguity, and it is already reported at the spec
-   * level as an unclassified variant axis.
+   * Once variant-tagged declarations are split out, what is left is a block that
+   * really does state several sizes for one element, and in every remaining case
+   * in the library the cause is a nested *descendant* selector folded into its
+   * parent: `h3` and `p` inside `.startCard`, or `.label` and `.helperText`
+   * inside `.inputWrapper[data-size="large"]`. Those sizes belong to child
+   * elements, so arguably none of them belongs to the root frame at all.
    *
-   * Among the candidates the one cia exports as a token is preferred, because a
-   * folded block gives no way to tell which value belongs to the default variant,
-   * and of the available answers the themeable one is the only one that stays
-   * correct when somebody switches theme. Every candidate is named in the report
-   * so the choice is visible rather than silent.
+   * The builder cannot tell the two causes apart, so the report names both rather
+   * than asserting the one that used to be true. Among the candidates the one cia
+   * exports as a token is preferred: of the available answers it is the only one
+   * that stays correct when somebody switches theme. Every candidate is named, so
+   * the choice is visible rather than silent.
    *
    * Before the type scale was mirrored this happened by accident: an unbindable
    * size produced no operation at all, so whichever value had a token was the
@@ -495,8 +504,9 @@ class Resolver {
       where: selector,
       reason:
         `font-size is set ${sizes.length} times in one block (${[...distinct].join(', ')}); ` +
-        `used ${describe(winner)}. Mutually exclusive variant rules folded into this block, ` +
-        'so the variant axis they belong to is missing rather than the values',
+        `used ${describe(winner)}. Either a nested descendant selector was folded into this ` +
+        'block, in which case these sizes belong to child elements, or a variant axis is ' +
+        'missing. The values are right and their owner is not recorded',
     });
     return ops.filter((op) => op.kind !== 'fontSize' || op === winner);
   }
@@ -1060,10 +1070,104 @@ function isSpacingCall(call: CiaCall): boolean {
   return isSpacingFn(call.fn);
 }
 
+/**
+ * Splits declarations that name a prop value out of their block and into real
+ * variant blocks.
+ *
+ * `&[data-size="sm"]` nested inside the root rule belongs to a variant, not to
+ * the base. The exporter now says so per declaration, so Checkbox's three font
+ * sizes stop being "this block sets font-size three times, pick one" and become
+ * three variants of a `size` axis. 8 components gain an axis this way.
+ *
+ * Done as a spec rewrite rather than threaded through the resolver, so every
+ * downstream step (axis discovery, the cartesian product, per-block op caching)
+ * works on the result unchanged.
+ */
+function splitVariantDeclarations(spec: ComponentSpec, gaps: BuildGap[]): ComponentSpec {
+  const rewritten: StyleBlock[] = [];
+
+  spec.styleBlocks.forEach((block) => {
+    // Only blocks that describe the root frame are split. A tagged declaration
+    // inside a `part` block styles a child element, so turning it into a variant
+    // of the root would move styling onto the wrong node. Parts keep their
+    // declarations and stay reported as not built, which is still true of them.
+    if (block.kind !== 'base' && block.kind !== 'variant') {
+      rewritten.push(block);
+      return;
+    }
+    const keep: StyleBlock = { ...block, ciaCalls: [], borders: [], dimensions: [], consumes: [] };
+    // Keyed `prop=value`, in first-seen order, so the synthetic blocks come out
+    // in the order the stylesheet declared them.
+    const split = new Map<string, StyleBlock>();
+
+    const bucket = (tag: DeclarationVariant): StyleBlock => {
+      const key = `${tag.prop}=${tag.value}`;
+      let target = split.get(key);
+      if (!target) {
+        target = {
+          selector: `${block.selector} [${key}]`,
+          kind: 'variant',
+          prop: tag.prop,
+          value: tag.value,
+          ciaCalls: [],
+          borders: [],
+          dimensions: [],
+          consumes: [],
+        };
+        split.set(key, target);
+      }
+      return target;
+    };
+
+    // A declaration nested inside a block that is already a variant belongs to
+    // two axes at once, which one synthetic block cannot express. There are no
+    // such cases in the library today, so this reports rather than mis-builds.
+    const crossAxis = (tag: DeclarationVariant) =>
+      block.kind === 'variant' && block.prop !== undefined && block.prop !== tag.prop;
+
+    const route = <T extends { variant?: DeclarationVariant }>(
+      items: T[] | undefined,
+      pick: (target: StyleBlock) => T[],
+    ) => {
+      (items ?? []).forEach((item) => {
+        if (!item.variant) {
+          pick(keep).push(item);
+          return;
+        }
+        if (crossAxis(item.variant)) {
+          gaps.push({
+            where: block.selector,
+            reason:
+              `a declaration for ${item.variant.prop}=${item.variant.value} is nested inside the ` +
+              `${block.prop}=${block.value} block, so it belongs to two variant axes at once; ` +
+              'built into that block rather than split out',
+          });
+          pick(keep).push(item);
+          return;
+        }
+        pick(bucket(item.variant)).push(item);
+      });
+    };
+
+    route(block.ciaCalls, (target) => target.ciaCalls);
+    route(block.borders, (target) => target.borders as BorderSpec[]);
+    route(block.dimensions, (target) => target.dimensions as DimensionSpec[]);
+    route(block.consumes, (target) => target.consumes as ConsumedToken[]);
+
+    rewritten.push(keep, ...split.values());
+  });
+
+  return { ...spec, styleBlocks: rewritten };
+}
+
 interface VariantAxis {
   prop: string;
   values: string[];
-  blockByValue: Map<string, StyleBlock>;
+  /**
+   * A list rather than one block: a value can be described by its own `variant`
+   * selector and by declarations split out of the base block, and both apply.
+   */
+  blocksByValue: Map<string, StyleBlock[]>;
 }
 
 /**
@@ -1080,10 +1184,13 @@ function variantAxes(spec: ComponentSpec): VariantAxis[] {
     if (blocks.length === 0) {
       return;
     }
-    const blockByValue = new Map<string, StyleBlock>();
-    blocks.forEach((block) => blockByValue.set(block.value as string, block));
-    const values = prop.values ?? Array.from(blockByValue.keys());
-    axes.push({ prop: prop.name, values: defaultFirst(values, prop.default), blockByValue });
+    const blocksByValue = new Map<string, StyleBlock[]>();
+    blocks.forEach((block) => {
+      const value = block.value as string;
+      blocksByValue.set(value, [...(blocksByValue.get(value) ?? []), block]);
+    });
+    const values = prop.values ?? Array.from(blocksByValue.keys());
+    axes.push({ prop: prop.name, values: defaultFirst(values, prop.default), blocksByValue });
   });
 
   return axes;
@@ -1139,10 +1246,9 @@ function planVariants(spec: ComponentSpec, gaps: BuildGap[]): VariantPlan[] {
     name: combination.map(({ prop, value }) => `${prop}=${value}`).join(', '),
     blocks: [
       ...baseBlocks,
-      ...combination.flatMap(({ prop, value }) => {
-        const block = axes.find((axis) => axis.prop === prop)?.blockByValue.get(value);
-        return block ? [block] : [];
-      }),
+      ...combination.flatMap(
+        ({ prop, value }) => axes.find((axis) => axis.prop === prop)?.blocksByValue.get(value) ?? [],
+      ),
     ],
   }));
 }
@@ -1425,9 +1531,13 @@ export async function buildComponent(
   });
 
   const resolver = new Resolver(variablesByName);
+
+  // Declarations naming a prop value become real variant blocks before anything
+  // else looks at the spec, so axis discovery and op caching both see them.
+  const built = splitVariantDeclarations(spec, resolver.gaps);
   const opsByBlock = new Map<StyleBlock, Op[]>();
   let unbuiltPartCalls = 0;
-  spec.styleBlocks.forEach((block) => {
+  built.styleBlocks.forEach((block) => {
     if (block.kind === 'part') {
       unbuiltPartCalls += block.ciaCalls.filter((call) => call.state === 'default').length;
       resolver.skipped.push({ where: block.selector, reason: 'part skipped: v1 builds the root frame and its label only' });
@@ -1442,14 +1552,14 @@ export async function buildComponent(
 
   // Specs produced before 2026-09-24 carry border colours with no widths at
   // all. Newer ones always declare a width, so this only fires on a stale spec.
-  if (resolver.usesStroke && !spec.styleBlocks.some((block) => block.borders?.length)) {
+  if (resolver.usesStroke && !built.styleBlocks.some((block) => block.borders?.length)) {
     resolver.gaps.push({
       where: 'contract',
       reason: `spec carries border-color but no border widths; stroke weight defaulted to ${DEFAULT_STROKE_WEIGHT}px`,
     });
   }
 
-  if (!spec.styleBlocks.some((block) => block.kind === 'base')) {
+  if (!built.styleBlocks.some((block) => block.kind === 'base')) {
     resolver.gaps.push({
       where: 'contract',
       reason: 'spec has no base style block, so the component is built unstyled',
@@ -1460,9 +1570,9 @@ export async function buildComponent(
   // tie its style blocks to those props — the component builds flat, losing
   // every variant. Naming that plainly is the point; inventing a selector
   // naming convention here would be the guess the contract exists to prevent.
-  const enumProps = spec.props.filter((prop) => prop.values && prop.values.length > 0);
-  const partCount = spec.styleBlocks.filter((block) => block.kind === 'part').length;
-  if (enumProps.length > 0 && variantAxes(spec).length === 0 && partCount > 0) {
+  const enumProps = built.props.filter((prop) => prop.values && prop.values.length > 0);
+  const partCount = built.styleBlocks.filter((block) => block.kind === 'part').length;
+  if (enumProps.length > 0 && variantAxes(built).length === 0 && partCount > 0) {
     resolver.gaps.push({
       where: 'contract',
       reason:
@@ -1471,10 +1581,28 @@ export async function buildComponent(
     });
   }
 
-  const plans = planVariants(spec, resolver.gaps);
+  const plans = planVariants(built, resolver.gaps);
+
+  // An axis whose blocks all resolve to nothing still multiplies the set. Checkbox
+  // gains a `color` axis of four values whose declarations set the component's own
+  // custom properties, which the `.checkmark` part consumes, and parts are not
+  // built yet. Four variants that look identical read as a broken component, so
+  // the reason is stated rather than left for somebody to discover.
+  variantAxes(built).forEach((axis) => {
+    const blocks = axis.values.flatMap((value) => axis.blocksByValue.get(value) ?? []);
+    if (blocks.length === 0 || blocks.some((block) => (opsByBlock.get(block) ?? []).length > 0)) {
+      return;
+    }
+    resolver.skipped.push({
+      where: 'contract',
+      reason:
+        `the ${axis.prop} axis builds ${axis.values.length} variants that look alike: its styling sets ` +
+        'the component\'s own custom properties, which a part consumes, and parts are not built in v1',
+    });
+  });
   // Same placeholder the TEXT property defaults to, so the canvas and the
   // property panel agree before anyone types anything.
-  const placeholder = textProp(spec)?.default ?? spec.component;
+  const placeholder = textProp(built)?.default ?? built.component;
   const components: ComponentNode[] = [];
   const texts: TextNode[] = [];
   let bindings = 0;
@@ -1496,15 +1624,15 @@ export async function buildComponent(
   let node: ComponentNode | ComponentSetNode = components[0];
   if (components.length > 1) {
     node = api.combineAsVariants(components, api.currentPage);
-    node.name = spec.component;
+    node.name = built.component;
   }
 
-  const properties = addComponentProperties(spec, node, texts, resolver.skipped);
+  const properties = addComponentProperties(built, node, texts, resolver.skipped);
 
   return {
     node,
     result: {
-      component: spec.component,
+      component: built.component,
       collection: collection.name,
       variantNames: plans.map((plan) => plan.name),
       bindings,

@@ -6,6 +6,24 @@ export type CiaCallState = 'default' | 'hover' | 'focus' | 'active' | 'disabled'
 const BLOCK_KINDS: StyleBlockKind[] = ['base', 'part', 'variant', 'other'];
 const CALL_STATES: CiaCallState[] = ['default', 'hover', 'focus', 'active', 'disabled'];
 
+/**
+ * The prop value a declaration belongs to, when it came from a selector nested
+ * inside its block rather than from the block itself.
+ *
+ * `&[data-size="sm"]` written inside the root rule is a variant, not part of the
+ * base. Without this the three sizes Checkbox declares were indistinguishable in
+ * the spec, so the only available reading was "this block sets font-size three
+ * times" and a builder had to pick one. Added upstream 2026-09-28.
+ *
+ * Absent rather than null when a declaration belongs to its block, so presence
+ * carries the meaning. Where selectors nest, the innermost one naming a prop
+ * value wins.
+ */
+export interface DeclarationVariant {
+  prop: string;
+  value: string;
+}
+
 /** One `cia.<fn>(...)` call found in a component's SCSS, tagged with what it sets. */
 export interface CiaCall {
   fn: string;
@@ -13,6 +31,7 @@ export interface CiaCall {
   /** The CSS property the call sets (`background-color`, `padding`, ...), or null when it could not be derived. */
   property: string | null;
   state: CiaCallState;
+  variant?: DeclarationVariant;
 }
 
 /**
@@ -26,6 +45,7 @@ export interface BorderSpec {
   /** Null when the width was declared longhand, with no style alongside it. */
   style: string | null;
   state: CiaCallState;
+  variant?: DeclarationVariant;
 }
 
 /**
@@ -57,6 +77,7 @@ export interface ConsumedToken {
   /** The local custom property, e.g. `--dropdown-bg-color`. */
   localToken: string;
   state: CiaCallState;
+  variant?: DeclarationVariant;
   /**
    * Where the local's value came from, or null when the producer could not
    * resolve it: usually a local defined twice with different values, which is
@@ -80,6 +101,7 @@ export interface DimensionSpec {
   /** As written: `640px`, `100%`, `auto`, `none`, `0`, `1.5em`. */
   value: string;
   state: CiaCallState;
+  variant?: DeclarationVariant;
 }
 
 export interface StyleBlock {
@@ -121,6 +143,28 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
+/**
+ * Shared by all four declaration arrays. Absent is valid and common; present
+ * means both fields must be there, because half a variant tag would silently
+ * build the declaration into the base.
+ */
+function validateVariantTag(value: unknown, where: string, errors: string[]): void {
+  if (value === undefined) {
+    return;
+  }
+  if (typeof value !== 'object' || value === null) {
+    errors.push(`${where}.variant must be an object when present`);
+    return;
+  }
+  const tag = value as Record<string, unknown>;
+  if (typeof tag.prop !== 'string' || tag.prop.length === 0) {
+    errors.push(`${where}.variant.prop must be a non-empty string`);
+  }
+  if (typeof tag.value !== 'string' || tag.value.length === 0) {
+    errors.push(`${where}.variant.value must be a non-empty string`);
+  }
+}
+
 function validateCall(call: unknown, where: string, errors: string[]): void {
   if (typeof call !== 'object' || call === null) {
     errors.push(`${where} is not an object`);
@@ -139,6 +183,7 @@ function validateCall(call: unknown, where: string, errors: string[]): void {
   if (typeof c.state !== 'string' || !CALL_STATES.includes(c.state as CiaCallState)) {
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
+  validateVariantTag(c.variant, where, errors);
 }
 
 function validateBlock(block: unknown, where: string, errors: string[]): void {
@@ -208,6 +253,7 @@ function validateDimension(entry: unknown, where: string, errors: string[]): voi
   if (typeof d.state !== 'string' || !CALL_STATES.includes(d.state as CiaCallState)) {
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
+  validateVariantTag(d.variant, where, errors);
 }
 
 function validateConsumed(entry: unknown, where: string, errors: string[]): void {
@@ -225,6 +271,7 @@ function validateConsumed(entry: unknown, where: string, errors: string[]): void
   if (typeof c.state !== 'string' || !CALL_STATES.includes(c.state as CiaCallState)) {
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
+  validateVariantTag(c.variant, where, errors);
   // Null is a real value here: the producer could not resolve the local and
   // says so in its own gaps rather than picking between two definitions.
   if (c.from === null) {
@@ -266,6 +313,7 @@ function validateBorder(border: unknown, where: string, errors: string[]): void 
   if (typeof b.state !== 'string' || !CALL_STATES.includes(b.state as CiaCallState)) {
     errors.push(`${where}.state must be one of ${CALL_STATES.join(', ')}`);
   }
+  validateVariantTag(b.variant, where, errors);
 }
 
 /**

@@ -3,10 +3,12 @@ import { ComponentSpec } from '@/shared/componentSpec';
 import buttonSpecJson from '@/__fixtures__/Button.component-spec.json';
 import headingSpecJson from '@/__fixtures__/Heading.component-spec.json';
 import containerSpecJson from '@/__fixtures__/Container.component-spec.json';
+import checkboxSpecJson from '@/__fixtures__/Checkbox.component-spec.json';
 
 const buttonSpec = buttonSpecJson as ComponentSpec;
 const headingSpec = headingSpecJson as ComponentSpec;
 const containerSpec = containerSpecJson as ComponentSpec;
+const checkboxSpec = checkboxSpecJson as ComponentSpec;
 
 class FakeVariable {
   constructor(
@@ -1580,5 +1582,137 @@ describe('an argument the exporter could not resolve', () => {
     expect(result.gaps[0].reason).toContain('unresolved Sass variable "$gap"');
     // Nobody should go looking for a token by this name.
     expect(result.gaps[0].reason).not.toContain('no variable named');
+  });
+});
+
+describe('declarations tagged with the prop value they belong to', () => {
+  it('splits them into a real variant axis instead of folding them into the base', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Sizeish',
+      props: [{ name: 'size', optional: true, type: 'enum', values: ['sm', 'md', 'lg'], default: 'md' }],
+      styleBlocks: [
+        {
+          selector: '.thing',
+          kind: 'base',
+          ciaCalls: [
+            { fn: 'color', args: ['text-primary'], property: 'color', state: 'default' },
+            { fn: 'font-size', args: ['sm'], property: 'font-size', state: 'default', variant: { prop: 'size', value: 'sm' } },
+            { fn: 'font-size', args: ['base'], property: 'font-size', state: 'default', variant: { prop: 'size', value: 'md' } },
+            { fn: 'font-size', args: ['lg'], property: 'font-size', state: 'default', variant: { prop: 'size', value: 'lg' } },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.variantNames).toEqual(['size=md', 'size=sm', 'size=lg']);
+    const byValue = new Map(components.map((c) => [/size=(\w+)/.exec(c.name)?.[1], c.children[0]]));
+    expect(byValue.get('sm')?.fontSize).toBe(14);
+    expect(byValue.get('lg')?.fontSize).toBe(18);
+    expect(byValue.get('md')?.bound.fontSize).toBe('font-size-base');
+    components.forEach((component) => expect(component.children[0].fills).toHaveLength(1));
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('applies a tagged dimension and border to their variant only', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Edgeish',
+      props: [{ name: 'tone', optional: true, type: 'enum', values: ['flat', 'raised'] }],
+      styleBlocks: [
+        {
+          selector: '.thing',
+          kind: 'base',
+          ciaCalls: [],
+          borders: [
+            { property: 'border-width', width: '3px', style: 'solid', state: 'default', variant: { prop: 'tone', value: 'raised' } },
+          ],
+          dimensions: [
+            { property: 'max-width', value: '480px', state: 'default', variant: { prop: 'tone', value: 'flat' } },
+          ],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    const byValue = new Map(components.map((c) => [/tone=(\w+)/.exec(c.name)?.[1], c]));
+    expect(byValue.get('raised')?.strokeWeight).toBe(3);
+    expect(byValue.get('raised')?.maxWidth).toBeNull();
+    expect(byValue.get('flat')?.maxWidth).toBe(480);
+  });
+
+  it('leaves a tagged declaration inside a part alone, because it styles a child', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Partish',
+      props: [{ name: 'size', optional: true, type: 'enum', values: ['sm', 'lg'] }],
+      styleBlocks: [
+        { selector: '.root', kind: 'base', ciaCalls: [] },
+        {
+          selector: '.label',
+          kind: 'part',
+          ciaCalls: [
+            { fn: 'font-size', args: ['lg'], property: 'font-size', state: 'default', variant: { prop: 'size', value: 'lg' } },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.variantNames).toHaveLength(1);
+    expect(components[0].children[0].fontSize).toBe(12);
+    expect(result.skipped.some((s) => s.reason.includes('part skipped'))).toBe(true);
+  });
+
+  it('reports a declaration that would belong to two axes at once rather than mis-building it', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Crossish',
+      props: [
+        { name: 'variant', optional: true, type: 'enum', values: ['primary'] },
+        { name: 'size', optional: true, type: 'enum', values: ['sm'] },
+      ],
+      styleBlocks: [
+        { selector: '.root', kind: 'base', ciaCalls: [] },
+        {
+          selector: '.primary',
+          kind: 'variant',
+          prop: 'variant',
+          value: 'primary',
+          ciaCalls: [
+            { fn: 'font-size', args: ['sm'], property: 'font-size', state: 'default', variant: { prop: 'size', value: 'sm' } },
+          ],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps.some((g) => g.reason.includes('two variant axes at once'))).toBe(true);
+  });
+});
+
+describe('Checkbox, from the real spec', () => {
+  it('builds the size axis that used to be three sizes in one block', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(checkboxSpec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.variantNames).toHaveLength(12);
+    const sizes = new Set(
+      components.map((component) => `${/size=(\w+)/.exec(component.name)?.[1]}:${component.children[0].fontSize}`),
+    );
+    expect(sizes).toContain('sm:14');
+    expect(sizes).toContain('lg:18');
+    expect(result.gaps.some((g) => g.reason.includes('times in one block'))).toBe(false);
+    expect(result.skipped.some((s) => s.reason.includes('the color axis builds 4 variants'))).toBe(true);
   });
 });
