@@ -78,7 +78,19 @@ class FakeComponent extends FakeProperties {
 
   paddingTop = 0;
 
+  paddingBottom = 0;
+
   paddingLeft = 0;
+
+  paddingRight = 0;
+
+  topLeftRadius = 0;
+
+  topRightRadius = 0;
+
+  bottomLeftRadius = 0;
+
+  bottomRightRadius = 0;
 
   fills: SolidPaint[] = [FIGMA_DEFAULT_FILL];
 
@@ -187,7 +199,19 @@ class FakeFrame {
 
   paddingTop = 0;
 
+  paddingBottom = 0;
+
   paddingLeft = 0;
+
+  paddingRight = 0;
+
+  topLeftRadius = 0;
+
+  topRightRadius = 0;
+
+  bottomLeftRadius = 0;
+
+  bottomRightRadius = 0;
 
   fills: SolidPaint[] = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
 
@@ -335,18 +359,26 @@ const BOILERPLATE_FLOATS = [
   'space-lg',
   'radius-lg',
   'font-size-base',
-  'font-size-xs',
   'font-weight-medium',
-  'font-weight-bold',
   'line-height-normal',
 ];
 
-function createFakeApi(collectionName = 'boilerplate') {
+/**
+ * The collection a test builds against. Its default contents mirror the REAL cia
+ * export exactly, because a fake that claims tokens reality does not have passes
+ * tests reality would fail: the whole typography scale is one step per axis, and
+ * two invented names here had a test asserting a binding that can never happen.
+ *
+ * `extra` is for the opposite need: exercising the bind-when-present path for a
+ * token that does not exist yet. Passing it says the test is hypothetical.
+ */
+function createFakeApi(collectionName = 'boilerplate', extra: { name: string; type: VariableResolvedDataType }[] = []) {
   const collection = { id: 'c1', name: collectionName } as unknown as VariableCollection;
   const variables: FakeVariable[] = [
     ...BOILERPLATE_COLORS.map((name) => new FakeVariable(name, 'c1', 'COLOR')),
     ...BOILERPLATE_FLOATS.map((name) => new FakeVariable(name, 'c1', 'FLOAT')),
     new FakeVariable('font-primary', 'c1', 'STRING'),
+    ...extra.map((entry) => new FakeVariable(entry.name, 'c1', entry.type)),
     // Same name in another collection must not be picked up.
     new FakeVariable('surface-muted', 'other', 'COLOR'),
   ];
@@ -576,7 +608,13 @@ describe('buildComponent', () => {
   });
 
   it('binds background, brand, font-size and font-weight the way the other components use them', async () => {
-    const { api, components } = createFakeApi();
+    const { api, components } = createFakeApi('boilerplate', [
+      // Hypothetical. cia exports one font-size and one font-weight in total, so
+      // these cannot bind against the real collection; they are here to exercise
+      // the bind-when-present path, which is what would run if the scale grew.
+      { name: 'font-size-xs', type: 'FLOAT' },
+      { name: 'font-weight-bold', type: 'FLOAT' },
+    ]);
     const spec: ComponentSpec = {
       specVersion: 2,
       component: 'Badgeish',
@@ -681,7 +719,13 @@ describe('buildComponent', () => {
   });
 
   it('expands a Sass type preset into a size, weight, line height and letter spacing', async () => {
-    const { api, components } = createFakeApi();
+    const { api, components } = createFakeApi('boilerplate', [
+      // Hypothetical. cia exports one font-size and one font-weight in total, so
+      // these cannot bind against the real collection; they are here to exercise
+      // the bind-when-present path, which is what would run if the scale grew.
+      { name: 'font-size-xs', type: 'FLOAT' },
+      { name: 'font-weight-bold', type: 'FLOAT' },
+    ]);
     const spec: ComponentSpec = {
       specVersion: 2,
       component: 'Titleish',
@@ -3222,5 +3266,78 @@ describe('a logical border reached through a local', () => {
     );
 
     expect(result.skipped.some((skip) => skip.reason.includes('which is not a px width'))).toBe(true);
+  });
+});
+
+describe('the fields nothing was checking', () => {
+  // Found by auditing which node fields the builder writes against which the fake
+  // declares. Four radius corners and two padding sides were being set on a fake
+  // that had never heard of them, so JavaScript accepted the write and no test
+  // could have caught a typo or a missing one.
+  it('sets all four padding sides, not just the two the fake used to declare', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Paddish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.root',
+          kind: 'base',
+          ciaCalls: [{ fn: 'space', args: ['md'], property: 'padding', state: 'default' }],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].bound.paddingTop).toBe('space-md');
+    expect(components[0].bound.paddingBottom).toBe('space-md');
+    expect(components[0].bound.paddingLeft).toBe('space-md');
+    expect(components[0].bound.paddingRight).toBe('space-md');
+  });
+
+  it('sets all four radius corners', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Roundish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.root',
+          kind: 'base',
+          ciaCalls: [{ fn: 'radius', args: ['lg'], property: 'border-radius', state: 'default' }],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].bound.topLeftRadius).toBe('radius-lg');
+    expect(components[0].bound.topRightRadius).toBe('radius-lg');
+    expect(components[0].bound.bottomLeftRadius).toBe('radius-lg');
+    expect(components[0].bound.bottomRightRadius).toBe('radius-lg');
+  });
+
+  it('writes a literal radius to all four corners too, not only the bound path', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Roundish',
+      props: [],
+      styleBlocks: [
+        {
+          selector: '.root',
+          kind: 'base',
+          ciaCalls: [{ fn: 'grid', args: ['2'], property: 'border-radius', state: 'default' }],
+        },
+      ],
+    };
+
+    await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].topLeftRadius).toBe(8);
+    expect(components[0].bottomRightRadius).toBe(8);
   });
 });
