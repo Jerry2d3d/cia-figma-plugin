@@ -398,8 +398,26 @@ fact about a set of siblings rather than the element declaring it.
 consumptions until upstream resolved them, and is now true of 14. Left alone it
 would have told a reader the upstream fix had not landed.
 
-Final: **282 variants, 4610 bindings, 152 build gaps plus 58 relayed, 3 arriving
-empty, 184 tests.**
+**A fourth expired impossibility, and it was mine** (`4ea7debb`). Sweeping for the
+class is what found it. `border-bottom-width skipped: Figma has no equivalent` is
+false: Figma holds a stroke weight per edge and those fields are bindable. 128 of
+the library's 454 border entries, and Panel's header rule was being dropped whole.
+An edge declared means an edge drawn, so the other three are zeroed explicitly. An
+outline is still genuinely absent, being a ring drawn outside the box.
+
+Upstream swept its own contracts at the same time and found one with a capability
+behind it: its schema claimed cia has no border-width mixin, which is false, and
+**because the contract said so nothing ever looked for one**. ToggleButton's real
+2px border was absent from the spec for weeks. Re-pulling brings 11 border entries
+across 9 components, plus `resolvedArgs`, the mixin's arguments with defaults
+filled in, so the border mixin now binds the colour it draws.
+
+That is the strongest version of the contract point: a wrong sentence in a
+contract does not only mislead a reader, it can stop the thing it describes from
+ever being implemented.
+
+Final: **282 variants, 4622 bindings, 152 build gaps plus 58 relayed, 3 arriving
+empty, 189 tests.**
 
 ## WHY THE WHOLE-SET CHECKS KEPT WORKING
 
