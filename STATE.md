@@ -467,6 +467,19 @@ A third check pins that cia's typography is still one step per axis: not a claim
 that it is right, but that it is still true, so the hypothetical tests written for
 the day it grows get revisited on that day.
 
+**The runbook's numbers check themselves** (`76db0be4`). The page tells a tester
+what the panel should say, and those figures rot the moment either side changes
+anything. When page and panel disagree a tester cannot tell whether the build is
+wrong or the page is stale, and stale is likelier while looking exactly like a
+bug. They now live in `site/src/content/measured.ts`, the site renders from it,
+and the dry run asserts a real build of all 99 still produces them.
+
+This is the ONE place totals are asserted, and the argument against doing it
+elsewhere still stands: a test that must be edited on every real improvement gets
+edited without being read. The difference is that these are published to a
+person, so the edit is the doc update that would otherwise be forgotten, and the
+failure is what remembers it.
+
 Final: **282 variants, 4639 bindings, 152 build gaps plus 58 relayed, 3 arriving
 empty, 201 tests.**
 
