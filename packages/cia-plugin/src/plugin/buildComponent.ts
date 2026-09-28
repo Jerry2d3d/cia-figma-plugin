@@ -168,6 +168,38 @@ const FONT_SIZE_SCALE: Record<string, number> = {
 };
 
 /**
+ * cia's `$font-sizes-aliases`, both ways round. `$font-sizes` merges the
+ * numbered scale with these, so `font-size-3` and `font-size-base` are not two
+ * tokens that happen to match: they are one entry under two names.
+ *
+ * It matters because the type scale is written in numbers and the export names
+ * only `font-size-base`. Without this, `type(body)` asked for step 3, missed,
+ * and applied 16px as a literal, throwing away a binding that was right there.
+ */
+const FONT_SIZE_ALIASES: Record<string, string> = {
+  1: 'xs',
+  2: 'sm',
+  3: 'base',
+  4: 'lg',
+  5: 'xl',
+  6: '2xl',
+  7: '3xl',
+  8: '4xl',
+  9: '5xl',
+  10: '6xl',
+  xs: '1',
+  sm: '2',
+  base: '3',
+  lg: '4',
+  xl: '5',
+  '2xl': '6',
+  '3xl': '7',
+  '4xl': '8',
+  '5xl': '9',
+  '6xl': '10',
+};
+
+/**
  * cia's `$line-heights`. These are unitless multipliers, which is why they
  * cannot be bound to a Figma FLOAT variable: Figma stores a line height as a
  * value plus a unit. It does accept PERCENT though, and a multiplier of 1.5 is
@@ -393,7 +425,53 @@ class Resolver {
       });
     });
 
-    return ops;
+    return this.pickOneFontSize(ops, block.selector);
+  }
+
+  /**
+   * Resolves a block that sets `font-size` more than once.
+   *
+   * Checkbox's base block sets it three times, 14px then 16px then 18px, because
+   * its `[data-size="sm"]`, `[data-size="md"]` and `[data-size="lg"]` rules are
+   * three mutually exclusive variants that the exporter folded into one block
+   * rather than classifying as a variant axis. Seven components do this. So this
+   * is not a cascade, where the last value would win, and not a shorthand, where
+   * both are wanted: it is an ambiguity, and it is already reported at the spec
+   * level as an unclassified variant axis.
+   *
+   * Among the candidates the one cia exports as a token is preferred, because a
+   * folded block gives no way to tell which value belongs to the default variant,
+   * and of the available answers the themeable one is the only one that stays
+   * correct when somebody switches theme. Every candidate is named in the report
+   * so the choice is visible rather than silent.
+   *
+   * Before the type scale was mirrored this happened by accident: an unbindable
+   * size produced no operation at all, so whichever value had a token was the
+   * only one left. Making every size resolvable turned that luck into a real
+   * decision, which is why it is now written down.
+   */
+  private pickOneFontSize(ops: Op[], selector: string): Op[] {
+    const sizes = ops.filter((op): op is Extract<Op, { kind: 'fontSize' }> => op.kind === 'fontSize');
+    if (sizes.length < 2) {
+      return ops;
+    }
+    const describe = (op: Extract<Op, { kind: 'fontSize' }>) =>
+      typeof op.value === 'number' ? `${op.value}px` : op.value.name;
+    const distinct = new Set(sizes.map(describe));
+    if (distinct.size < 2) {
+      // The same size stated twice is not a conflict and not worth a line.
+      const first = sizes[0];
+      return ops.filter((op) => op.kind !== 'fontSize' || op === first);
+    }
+    const winner = sizes.find((op) => typeof op.value !== 'number') ?? sizes[0];
+    this.gaps.push({
+      where: selector,
+      reason:
+        `font-size is set ${sizes.length} times in one block (${[...distinct].join(', ')}); ` +
+        `used ${describe(winner)}. Mutually exclusive variant rules folded into this block, ` +
+        'so the variant axis they belong to is missing rather than the values',
+    });
+    return ops.filter((op) => op.kind !== 'fontSize' || op === winner);
   }
 
   /**
@@ -782,16 +860,21 @@ class Resolver {
    * which is what made all six Heading levels look the same.
    */
   private resolveFontSize(size: string, where: string, signature: string): Op[] {
-    const variable = this.variablesByName.get(`font-size-${size}`);
-    if (variable) {
-      if (variable.resolvedType === 'FLOAT') {
+    // The step and its alias name the same entry in cia's map, so either
+    // variable is the right one to bind. The spelling asked for is tried first.
+    const names = [size, FONT_SIZE_ALIASES[size]].filter(Boolean);
+    for (const name of names) {
+      const variable = this.variablesByName.get(`font-size-${name}`);
+      if (variable?.resolvedType === 'FLOAT') {
         return [{ kind: 'fontSize', value: variable }];
       }
-      this.gaps.push({
-        where,
-        reason: `variable "font-size-${size}" is ${variable.resolvedType}, ${signature} needs FLOAT`,
-      });
-      return [];
+      if (variable) {
+        this.gaps.push({
+          where,
+          reason: `variable "font-size-${name}" is ${variable.resolvedType}, ${signature} needs FLOAT`,
+        });
+        return [];
+      }
     }
     const pixels = FONT_SIZE_SCALE[size];
     if (pixels === undefined) {
@@ -826,12 +909,40 @@ class Resolver {
     return [{ kind: 'lineHeight', multiplier }];
   }
 
+  /**
+   * A weight reaches Figma through the font style, not through a number: Figma
+   * derives `fontWeight` from `fontName.style` and will not let you set it
+   * directly. So a missing `font-weight-*` variable costs the binding, never the
+   * weight itself: the text is already Semi Bold whether the token exists or
+   * not. Reporting it as a gap claimed the weight had been lost, which was the
+   * same mistake as reporting an unbindable font size.
+   */
   private resolveWeight(weight: string, italic: boolean, where: string, signature: string): Op[] {
-    const ops: Op[] = [{ kind: 'fontStyle', style: figmaFontStyle(weight, italic) }];
-    const variable = this.lookup(`font-weight-${weight}`, 'FLOAT', where, `${signature} as font weight`);
-    if (variable) {
+    const style = figmaFontStyle(weight, italic);
+    const ops: Op[] = [{ kind: 'fontStyle', style }];
+    const variable = this.variablesByName.get(`font-weight-${weight}`);
+    if (variable?.resolvedType === 'FLOAT') {
       ops.push({ kind: 'fontWeight', variable });
+      return ops;
     }
+    if (variable) {
+      this.gaps.push({
+        where,
+        reason: `variable "font-weight-${weight}" is ${variable.resolvedType}, ${signature} needs FLOAT`,
+      });
+      return ops;
+    }
+    if (!FIGMA_STYLE_BY_WEIGHT[weight]) {
+      this.gaps.push({
+        where,
+        reason: `${signature}: "${weight}" is neither a variable named "font-weight-${weight}" nor a weight cia defines`,
+      });
+      return ops;
+    }
+    this.skipped.push({
+      where,
+      reason: `${signature} applied as ${style}: cia exports no "font-weight-${weight}" variable, so this weight cannot follow a theme`,
+    });
     return ops;
   }
 }

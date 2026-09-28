@@ -257,9 +257,9 @@ describe('buildComponent', () => {
     const { result } = await buildComponent(buttonSpec, { collectionName: 'boilerplate' }, api);
 
     const reasons = result.gaps.map((gap) => `${gap.where}: ${gap.reason}`);
-    expect(reasons).toContain(
-      '.button: no variable named "font-weight-semibold" in the collection (needed for font(semibold, base, normal) as font weight)',
-    );
+    // A weight with no token is not a gap: Figma derives the weight from the
+    // font style, which is set either way, so only the binding is missing.
+    expect(reasons.some((reason) => reason.includes('font-weight-semibold'))).toBe(false);
     expect(reasons).toContain(
       '.small: no variable named "space-2xs" in the collection (needed for pad-asym(2xs, sm) as vertical padding)',
     );
@@ -423,9 +423,12 @@ describe('buildComponent', () => {
 
     const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
 
-    expect(result.gaps.map((gap) => gap.reason)).toEqual([
-      'no variable named "font-weight-normal" in the collection (needed for font(reg, base) as font weight)',
-    ]);
+    // `normal` has no token, but the weight still reaches Figma as the style, so
+    // this is an unthemeable value rather than a lost one.
+    expect(result.gaps).toEqual([]);
+    expect(result.skipped.map((skip) => skip.reason)).toContain(
+      'font(reg, base) applied as Regular: cia exports no "font-weight-normal" variable, so this weight cannot follow a theme',
+    );
     // The italic preset resolves to a real Figma style and a real weight token.
     expect(components[0].children[0].fontName).toEqual({ family: 'Inter', style: 'Medium Italic' });
     expect(components[0].children[0].bound.fontWeight).toBe('font-weight-medium');
@@ -1243,6 +1246,95 @@ describe('spacing with no token behind it', () => {
     expect(result.skipped[0].reason).toBe(
       'grid(1) is 4px on margin-left, which has no Figma equivalent',
     );
+  });
+});
+
+describe('a block that sets font-size more than once', () => {
+  const foldedSpec = (args: string[]): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Sizeish',
+    props: [],
+    styleBlocks: [
+      {
+        selector: '.thing',
+        kind: 'base',
+        ciaCalls: args.map((arg) => ({
+          fn: 'font-size',
+          args: [arg],
+          property: 'font-size',
+          state: 'default' as const,
+        })),
+      },
+    ],
+  });
+
+  it('prefers the size that has a token, because a fold gives no way to tell which is the default', async () => {
+    const { api, components } = createFakeApi();
+
+    // Checkbox's real shape: [data-size=sm], [data-size=md], [data-size=lg]
+    // folded into one block. Only `base` has a variable in the collection.
+    const { result } = await buildComponent(foldedSpec(['sm', 'base', 'lg']), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children[0].bound.fontSize).toBe('font-size-base');
+    expect(result.gaps).toHaveLength(1);
+    expect(result.gaps[0].reason).toContain('font-size is set 3 times in one block');
+    expect(result.gaps[0].reason).toContain('14px, font-size-base, 18px');
+    expect(result.gaps[0].reason).toContain('used font-size-base');
+    // The point of the message: the values are fine, the variant axis is missing.
+    expect(result.gaps[0].reason).toContain('variant axis');
+  });
+
+  it('falls back to the first when none of the candidates has a token', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(foldedSpec(['sm', 'lg']), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children[0].fontSize).toBe(14);
+    expect(components[0].children[0].bound.fontSize).toBeUndefined();
+    expect(result.gaps[0].reason).toContain('used 14px');
+  });
+
+  it('says nothing when the same size is stated twice', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(foldedSpec(['sm', 'sm']), { collectionName: 'boilerplate' }, api);
+
+    expect(components[0].children[0].fontSize).toBe(14);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('lets a variant override the base size, which is the one case that is a real cascade', async () => {
+    const { api, components } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Buttonish',
+      props: [{ name: 'size', optional: true, type: 'enum', values: ['base', 'small'] }],
+      styleBlocks: [
+        {
+          selector: '.btn',
+          kind: 'base',
+          ciaCalls: [{ fn: 'font-size', args: ['base'], property: 'font-size', state: 'default' }],
+        },
+        {
+          selector: '.small',
+          kind: 'variant',
+          prop: 'size',
+          value: 'small',
+          ciaCalls: [{ fn: 'font-size', args: ['sm'], property: 'font-size', state: 'default' }],
+        },
+      ],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    // Two separate blocks, so no fold and nothing to report.
+    expect(result.gaps).toEqual([]);
+    const small = components.find((component) => component.name.includes('small'));
+    const base = components.find((component) => !component.name.includes('small'));
+    // The small variant costs a binding to gain the right size. Before the scale
+    // was mirrored it kept the binding and rendered at the base size instead.
+    expect(small?.children[0].fontSize).toBe(14);
+    expect(base?.children[0].bound.fontSize).toBe('font-size-base');
   });
 });
 
