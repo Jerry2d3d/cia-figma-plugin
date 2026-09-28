@@ -1305,88 +1305,105 @@
     {
       "selector": ".overlay",
       "parent": null,
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".modal",
       "parent": ".overlay",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".header",
       "parent": ".modal",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".title",
       "parent": ".header",
-      "tag": "h2"
+      "tag": "h2",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".subtitle",
       "parent": ".header",
-      "tag": "p"
+      "tag": "p",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".error",
       "parent": ".header",
-      "tag": "p"
+      "tag": "p",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".tabs",
       "parent": ".modal",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".tab",
       "parent": ".tabs",
-      "tag": "button"
+      "tag": "button",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".tabActive",
       "parent": ".tabs",
       "tag": "button",
+      "declaredIn": "FOCUSABLE_SELECTOR",
       "modifierOf": ".tab"
     },
     {
       "selector": ".content",
       "parent": ".modal",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".tabContent",
       "parent": ".content",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".section",
       "parent": ".tabContent",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".label",
       "parent": ".section",
-      "tag": "span"
+      "tag": "span",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".buttonGroup",
       "parent": ".section",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".colorPicker",
       "parent": ".section",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".colorInput",
       "parent": ".colorPicker",
-      "tag": "input"
+      "tag": "input",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".hexInput",
       "parent": ".colorPicker",
       "tag": "Input",
+      "declaredIn": "FOCUSABLE_SELECTOR",
       "parents": [
         ".colorPicker",
         ".bgColorField"
@@ -1396,6 +1413,7 @@
       "selector": ".colorError",
       "parent": ".section",
       "tag": "p",
+      "declaredIn": "FOCUSABLE_SELECTOR",
       "parents": [
         ".section",
         ".bgColorField"
@@ -1404,28 +1422,33 @@
     {
       "selector": ".colorPresets",
       "parent": ".section",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".colorSwatch",
       "parent": ".colorPresets",
-      "tag": "button"
+      "tag": "button",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".selected",
       "parent": ".colorPresets",
       "tag": "button",
+      "declaredIn": "FOCUSABLE_SELECTOR",
       "modifierOf": ".colorSwatch"
     },
     {
       "selector": ".bgColorField",
       "parent": ".section",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".helperText",
       "parent": ".section",
       "tag": "p",
+      "declaredIn": "FOCUSABLE_SELECTOR",
       "parents": [
         ".section",
         ".footer"
@@ -1434,47 +1457,56 @@
     {
       "selector": ".fileInput",
       "parent": ".section",
-      "tag": "input"
+      "tag": "input",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".uploadingIndicator",
       "parent": ".section",
-      "tag": "p"
+      "tag": "p",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".textInputWrapper",
       "parent": ".section",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".inputLabel",
       "parent": ".textInputWrapper",
-      "tag": "label"
+      "tag": "label",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".inputContainer",
       "parent": ".textInputWrapper",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".textInput",
       "parent": ".inputContainer",
-      "tag": "Input"
+      "tag": "Input",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".characterCounter",
       "parent": ".inputContainer",
-      "tag": "span"
+      "tag": "span",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".footer",
       "parent": ".modal",
-      "tag": "div"
+      "tag": "div",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     },
     {
       "selector": ".resetButton",
       "parent": ".footer",
-      "tag": "Button"
+      "tag": "Button",
+      "declaredIn": "FOCUSABLE_SELECTOR"
     }
   ],
   "gaps": [

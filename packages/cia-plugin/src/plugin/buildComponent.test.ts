@@ -2122,7 +2122,7 @@ describe('the component element tree', () => {
     expect(frameNamed(components[0], 'label')).toBeDefined();
     // `.icon` has no known position, so it is not placed somewhere plausible.
     expect(frameNamed(components[0], 'icon')).toBeUndefined();
-    const reported = result.gaps.find((gap) => gap.reason.includes('claiming no parent'));
+    const reported = result.gaps.find((gap) => gap.reason.includes('tops ('));
     expect(reported?.reason).toContain('built the subtree under .root');
     expect(result.skipped.some((s) => s.where === '.icon' && s.reason.includes('not in the component element tree'))).toBe(true);
   });
@@ -2185,7 +2185,7 @@ describe('a conditional class, which is not an element', () => {
     );
 
     // Counting it as a root is what made 5 of 18 components look ambiguous.
-    expect(result.gaps.some((gap) => gap.reason.includes('claiming no parent'))).toBe(false);
+    expect(result.gaps.some((gap) => gap.reason.includes('tops ('))).toBe(false);
   });
 
   it('still builds an ordinary child that has no conditional class', async () => {
@@ -2451,6 +2451,72 @@ describe('a part rendered in several places', () => {
     // It is built where it is contained, and its standalone position is not
     // invented as a child of the component root.
     expect(frameNamed(frameNamed(components[0], 'lines')!, 'skeleton')).toBeDefined();
-    expect(result.gaps.some((gap) => gap.reason.includes('claiming no parent'))).toBe(false);
+    expect(result.gaps.some((gap) => gap.reason.includes('tops ('))).toBe(false);
+  });
+});
+
+describe('a file that declares more than one thing rendering markup', () => {
+  const menuish = (): ComponentSpec => ({
+    specVersion: 2,
+    component: 'Menuish',
+    props: [],
+    tree: [
+      // Menu.tsx's real shape: three declarations in one file.
+      { selector: '.menu', parent: null, tag: 'ul', declaredIn: 'MenuList' },
+      { selector: '.item', parent: '.menu', tag: 'li', declaredIn: 'MenuList' },
+      { selector: '.menuPopup', parent: null, parents: [null, '.contextTarget'], tag: 'div', declaredIn: 'Menu' },
+      { selector: '.contextTarget', parent: null, tag: 'div', declaredIn: 'ContextMenu' },
+    ],
+    styleBlocks: [
+      { selector: '.menu', kind: 'base', ciaCalls: [] },
+      { selector: '.item', kind: 'part', ciaCalls: [{ fn: 'color', args: ['text-primary'], property: 'color', state: 'default' }] },
+    ],
+  });
+
+  it('says the file declares several things rather than blaming the scan', async () => {
+    const { api, components } = createFakeApi();
+
+    const { result } = await buildComponent(menuish(), { collectionName: 'boilerplate' }, api);
+
+    // The base block names `.menu`, so MenuList's subtree is the one built.
+    expect(frameNamed(components[0], 'item')).toBeDefined();
+    expect(frameNamed(components[0], 'contextTarget')).toBeUndefined();
+    const reported = result.gaps.find((gap) => gap.reason.includes('declares more than one thing'));
+    expect(reported?.reason).toContain('built .menu from MenuList');
+    // Whether the others are separate components or parts of this one is not this
+    // builder's call, and the message says so rather than picking.
+    expect(reported?.reason).toContain('is not stated');
+  });
+
+  it('counts a node as a top when only another declaration contains it', async () => {
+    const { api } = createFakeApi();
+
+    const { result } = await buildComponent(menuish(), { collectionName: 'boilerplate' }, api);
+
+    // `.menuPopup` has a root position, and its other position belongs to
+    // ContextMenu, so nothing in Menu's own markup contains it. Having a second
+    // position must not hide it the way it correctly hides Skeleton's reused child.
+    const reported = result.gaps.find((gap) => gap.reason.includes('declares more than one thing'));
+    expect(reported?.reason).toContain('.menuPopup in Menu');
+  });
+
+  it('still hides a reused child whose container shares its declaration', async () => {
+    const { api } = createFakeApi();
+    const spec: ComponentSpec = {
+      specVersion: 2,
+      component: 'Skeletish',
+      props: [],
+      tree: [
+        { selector: '.root', parent: null, tag: 'div', declaredIn: 'Skeletish' },
+        { selector: '.lines', parent: '.root', tag: 'div', declaredIn: 'Skeletish' },
+        { selector: '.skeleton', parent: '.lines', parents: ['.lines', null], tag: 'div', declaredIn: 'Skeletish' },
+      ],
+      styleBlocks: [{ selector: '.root', kind: 'base', ciaCalls: [] }],
+    };
+
+    const { result } = await buildComponent(spec, { collectionName: 'boilerplate' }, api);
+
+    expect(result.gaps.some((gap) => gap.reason.includes('declares more than one thing'))).toBe(false);
+    expect(result.gaps.some((gap) => gap.reason.includes('tops ('))).toBe(false);
   });
 });

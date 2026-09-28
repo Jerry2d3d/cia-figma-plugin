@@ -202,6 +202,21 @@ export interface PartTreeNode {
    * alternatives of both, so the set spans more nodes than exist.
    */
   alternativeTo?: string[];
+  /**
+   * The name of the declaration this node's markup was written in.
+   *
+   * One `.tsx` usually declares several things that render JSX, and the tree
+   * covers the whole file, so `Menu.tsx` produces nodes for MenuList, Menu and
+   * ContextMenu together. Without this, a component built from the whole tree is
+   * all of them merged.
+   *
+   * It is NOT a reliable split: a second declaration is often a real part of the
+   * component rather than a sibling. ScrollTop's `DEFAULT_ICON` is markup that
+   * ScrollTop renders, and the file name does not always match a declaration
+   * name, so which declaration is "the component" cannot be settled from this
+   * field alone. Absent on a single-declaration file and on older specs.
+   */
+  declaredIn?: string;
 }
 
 export interface ComponentProp {
@@ -349,6 +364,9 @@ function validateTree(value: unknown, errors: string[]): void {
     }
     if (node.modifierOf !== undefined && (typeof node.modifierOf !== 'string' || node.modifierOf.length === 0)) {
       errors.push(`${where}.modifierOf must be a non-empty string when present`);
+    }
+    if (node.declaredIn !== undefined && (typeof node.declaredIn !== 'string' || node.declaredIn.length === 0)) {
+      errors.push(`${where}.declaredIn must be a non-empty string when present`);
     }
     if (node.modifierOf === node.selector) {
       errors.push(`${where}.modifierOf names itself, so it modifies nothing`);

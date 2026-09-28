@@ -1354,15 +1354,24 @@ function chooseRoot(
   // A modifier with no parent is not a root: it is a second name for an element
   // that is already in the tree. Counting it as one is what made 5 of the 18
   // multi-root components look ambiguous when they were not.
-  // A node is only a root if EVERY position it is rendered in is a root position.
-  // Skeleton's `.skeleton` sits inside `.lines` and also stands alone, so it is a
-  // child that happens to be reused, not a second root competing with the first.
-  const roots = tree
-    .filter(
-      (node) =>
-        !node.modifierOf && positionsOf(node).every((position) => position === null),
-    )
-    .map((node) => node.selector);
+  const bySelector = new Map(tree.map((node) => [node.selector, node]));
+  /**
+   * A node stands at the top of the markup it was declared in.
+   *
+   * Having a root position is not enough on its own. Skeleton's `.skeleton` sits
+   * inside `.lines` and also stands alone, so it is a reused child rather than a
+   * second root. But Menu's `.menuPopup` also has a root position and its other
+   * position is `.contextTarget`, which belongs to a DIFFERENT declaration in the
+   * same file, so nothing in Menu's own markup contains it: there it really is the
+   * top. The difference is whether a containing position shares its declaration.
+   */
+  const isRoot = (node: PartTreeNode) =>
+    !node.modifierOf &&
+    positionsOf(node).includes(null) &&
+    !positionsOf(node).some(
+      (position) => position !== null && bySelector.get(position)?.declaredIn === node.declaredIn,
+    );
+  const roots = tree.filter(isRoot).map((node) => node.selector);
   if (roots.length === 0) {
     return { rootSelector: null, orphanRoots: [] };
   }
@@ -1949,13 +1958,25 @@ export async function buildComponent(
       });
     });
   }
-  if (orphanRoots.length > 0) {
+  if (orphanRoots.length > 0 && tree) {
+    // Ten of the fourteen are one file declaring several things that render JSX,
+    // not one component rendering several branches, so saying "could not be
+    // connected" asserted a cause that is wrong more often than right. When the
+    // tops belong to different declarations, that is what the report says. Which
+    // declaration is really the component is left open on purpose: a second one is
+    // often a real part of the first, so naming it a sibling would be a guess.
+    const declarationOf = (selector: string) => tree.find((node) => node.selector === selector)?.declaredIn;
+    const chosen = declarationOf(rootSelector as string);
+    const others = orphanRoots.map((selector) => `${selector} in ${declarationOf(selector) ?? 'the same declaration'}`);
     resolver.gaps.push({
       where: 'contract',
       reason:
-        `the element tree has ${orphanRoots.length + 1} nodes claiming no parent (${[rootSelector, ...orphanRoots].join(', ')}); ` +
-        `built the subtree under ${rootSelector}, which the base block names, and left the others unplaced. ` +
-        'Either the scan could not connect them or they are conditional classes on an element that already has one',
+        chosen && orphanRoots.some((selector) => declarationOf(selector) !== chosen)
+          ? `this file declares more than one thing that renders markup; built ${rootSelector} from ${chosen}, ` +
+            `which the base block names, and left ${others.join(', ')} unbuilt. Whether those are separate ` +
+            'components or parts of this one is not stated'
+          : `the element tree has ${orphanRoots.length + 1} tops (${[rootSelector, ...orphanRoots].join(', ')}); ` +
+            `built the subtree under ${rootSelector}, which the base block names, and left the others unplaced`,
     });
   }
   const opsByBlock = new Map<StyleBlock, Op[]>();
